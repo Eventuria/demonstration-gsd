@@ -1,3 +1,6 @@
+.idea/
 .stack-work/
+out/
 gsdFlow.cabal
+*.iml
 *~
