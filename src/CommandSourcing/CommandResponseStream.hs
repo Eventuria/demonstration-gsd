@@ -9,6 +9,7 @@ module CommandSourcing.CommandResponseStream (
 readForward,
 persist) where
 
+import CommandSourcing.EventStore
 import CommandSourcing.Core
 import CommandSourcing.CommandResponse
 import Control.Concurrent.Async (wait)
@@ -37,8 +38,7 @@ persist = awaitForever $ \(eventStoreConnection , commandResponse) ->  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
-    let credentials = Nothing
-        eventType  = UserDefined $ Text.pack $ serializedCommandResponseName commandResponse
+    let eventType  = UserDefined $ Text.pack $ serializedCommandResponseName commandResponse
         eventId = Just eventIdInEventStoreDomain
         eventData = withJson commandResponse
         eventInEventStoreDomain = createEvent eventType eventId eventData
@@ -47,15 +47,14 @@ persist = awaitForever $ \(eventStoreConnection , commandResponse) ->  do
             (getWorkspaceCommandResponseStreamName $ workspaceId commandResponse)
             anyVersion
             eventInEventStoreDomain
-            credentials >>= wait
+            getCredentials >>= wait
 
     liftIO $ infoM logger "command Response request persisted"
     yield $ Right $ PersistResult $ toInteger $ writeNextExpectedVersion writeResult
 
 readForward :: ConduitT (Connection,WorkspaceId,Offset) CommandResponse IO()
 readForward = awaitForever $ \(eventStoreConnection , workspaceId, fromOffset) -> do
-               let credentials = Nothing
-                   batchSize = 100 :: Integer
+               let batchSize = 100 :: Integer
                    resolveLinkTos = False
                asyncRead <- liftIO $ readStreamEventsForward
                                 eventStoreConnection
@@ -63,7 +62,7 @@ readForward = awaitForever $ \(eventStoreConnection , workspaceId, fromOffset) -
                                 (fromInteger fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
-                                credentials
+                                getCredentials
                commandFetched <- liftIO $ wait asyncRead
                case commandFetched of
                     ReadSuccess readResult -> do

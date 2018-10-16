@@ -9,6 +9,7 @@ module CommandSourcing.EventStream (
 readForwardWorkspaceStream,
 persist) where
 
+import CommandSourcing.EventStore
 import CommandSourcing.Core
 import CommandSourcing.Events
 import Control.Concurrent.Async (wait)
@@ -35,8 +36,7 @@ persist = awaitForever $ \(eventStoreConnection , workspaceEvent) ->  do
     liftIO $ updateGlobalLogger logger $ setLevel INFO
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
-    let credentials = Nothing
-        eventType  = UserDefined $ Text.pack $ serializedEventName workspaceEvent
+    let eventType  = UserDefined $ Text.pack $ serializedEventName workspaceEvent
         eventId = Just eventIdInEventStoreDomain
         eventData = withJson workspaceEvent
         eventInEventStoreDomain = createEvent eventType eventId eventData
@@ -45,15 +45,14 @@ persist = awaitForever $ \(eventStoreConnection , workspaceEvent) ->  do
             (getWorkspaceEventStreamName $ workspaceId workspaceEvent)
             anyVersion
             eventInEventStoreDomain
-            credentials >>= wait
+            getCredentials >>= wait
 
     liftIO $ infoM logger "Event persisted"
     yield $ Right $ PersistResult $ toInteger $ writeNextExpectedVersion writeResult
 
 readForwardWorkspaceStream :: ConduitT (Connection,WorkspaceId,Offset) WorkspaceEvent IO()
 readForwardWorkspaceStream = awaitForever $ \(eventStoreConnection , workSpaceId, fromOffset) -> do
-               let credentials = Nothing
-                   batchSize = 100 :: Integer
+               let batchSize = 100 :: Integer
                    resolveLinkTos = False
                asyncRead <- liftIO $ readStreamEventsForward
                                 eventStoreConnection
@@ -61,7 +60,7 @@ readForwardWorkspaceStream = awaitForever $ \(eventStoreConnection , workSpaceId
                                 (fromInteger fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
-                                credentials
+                                getCredentials
                eventFetched <- liftIO $ wait asyncRead
                case eventFetched of
                     ReadSuccess readResult -> do

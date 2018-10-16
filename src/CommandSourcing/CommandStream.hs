@@ -10,6 +10,7 @@ readForward,
 persist,
 subscribeToNewCommand) where
 
+import CommandSourcing.EventStore
 import CommandSourcing.Core
 import CommandSourcing.Commands
 import Control.Concurrent.Async (wait)
@@ -57,8 +58,7 @@ persist = awaitForever $ \(eventStoreConnection , command) ->  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
-    let credentials = getCre
-        eventType  = EventStore.UserDefined $ Text.pack $ serializedCommandName command
+    let eventType  = EventStore.UserDefined $ Text.pack $ serializedCommandName command
         eventId = Just eventIdInEventStoreDomain
         eventData = EventStore.withJson command
         eventInEventStoreDomain = EventStore.createEvent eventType eventId eventData
@@ -67,15 +67,14 @@ persist = awaitForever $ \(eventStoreConnection , command) ->  do
             (getWorkspaceCommandStreamName $ workspaceId command)
             EventStore.anyVersion
             eventInEventStoreDomain
-            credentials >>= wait
+            getCredentials >>= wait
 
-    liftIO $ infoM logger $ "[commandStream.persist] - command" ++ (show command)
+    liftIO $ infoM logger $ "[commandStream.persist] - command > " ++ (show command) ++ " persisted"
     yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 readForward :: ConduitT (EventStore.Connection,WorkspaceId,Offset) Command IO()
 readForward = awaitForever $ \(eventStoreConnection , workspaceId, fromOffset) -> do
-               let credentials = Nothing
-                   batchSize = 100 :: Integer
+               let batchSize = 100 :: Integer
                    resolveLinkTos = False
                asyncRead <- liftIO $ EventStore.readStreamEventsForward
                                 eventStoreConnection
@@ -83,7 +82,7 @@ readForward = awaitForever $ \(eventStoreConnection , workspaceId, fromOffset) -
                                 (fromInteger fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
-                                credentials
+                                getCredentials
                commandFetched <- liftIO $ wait asyncRead
                case commandFetched of
                     EventStore.ReadSuccess readResult -> do

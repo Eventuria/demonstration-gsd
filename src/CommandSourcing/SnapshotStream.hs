@@ -5,7 +5,7 @@ module CommandSourcing.SnapshotStream (
 retrieveLastSnapshot,
 persist
 ) where
-
+import CommandSourcing.EventStore
 import CommandSourcing.Core
 import Control.Concurrent.Async (wait)
 import qualified Database.EventStore as EventStore
@@ -27,15 +27,14 @@ data PersistResult = PersistResult {writeNextVersion :: Integer}
 
 retrieveLastSnapshot :: ConduitT (EventStore.Connection,WorkspaceId) (Maybe Snapshot)  IO()
 retrieveLastSnapshot = awaitForever $ \(eventStoreConnection , workspaceId) ->  do
-        let credentials = Nothing
-            resolveLinkTos = False
+        let resolveLinkTos = False
         readResult <- liftIO $ EventStore.readStreamEventsBackward
                     eventStoreConnection
                     (getStreamName workspaceId)
                     (fromInteger 0)
                     (fromInteger 1)
                     resolveLinkTos
-                    credentials >>= wait
+                    getCredentials >>= wait
         case readResult of
           EventStore.ReadSuccess responseContent -> do
               let snapshots = getSnapshotsFromResponse responseContent
@@ -54,8 +53,7 @@ persist = awaitForever $ \(eventStoreConnection , snapshot) ->  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
-    let credentials = Nothing
-        eventType  = EventStore.UserDefined $ Text.pack $  "workspaceState"
+    let eventType  = EventStore.UserDefined $ Text.pack $  "workspaceState"
         eventId = Just eventIdInEventStoreDomain
         eventData = EventStore.withJson snapshot
         eventInEventStoreDomain = EventStore.createEvent eventType eventId eventData
@@ -64,7 +62,7 @@ persist = awaitForever $ \(eventStoreConnection , snapshot) ->  do
             (getStreamName $ workspaceId $ state snapshot)
             EventStore.anyVersion
             eventInEventStoreDomain
-            credentials >>= wait
+            getCredentials >>= wait
 
     liftIO $ infoM logger "snapshot persisted"
     yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult

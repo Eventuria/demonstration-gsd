@@ -51,19 +51,16 @@ startHandlers connection = do
         let logger = "[gsd.main]"
         liftIO $ updateGlobalLogger logger $ setLevel INFO
 
-        (_, workspaceCreatedChannel) <- allocate (newTMChanIO)
-                                     (atomically . closeTMChan)
-
         (_, workspaceProcessingRequiredChannel) <- allocate (newTMChanIO)
                                              (atomically . closeTMChan)
 
-        lift $ forkIO .runConduit $ (WorkspaceStream.blockingStreamAll connection)
-                                    .| iterMC (\workSpaceId -> do
-                                          liftIO $ infoM logger $ "[processCommand] - stream workspace : " ++ (show  workSpaceId) ++ " into channel")
+        lift $ forkIO .runConduit $ (WorkspaceStream.streamAllInfinitely connection)
                                     .| sinkTMChan workspaceProcessingRequiredChannel
 
-        lift $ forkIO .runConduit $ sourceTMChan workspaceCreatedChannel
-                                    .| sinkTMChan workspaceProcessingRequiredChannel
+--        lift $ forkIO .runConduit $ (WorkspaceStream.streamAllInfinitely connection)
+--                                    .| (CommandStream.subscribeToNewCommand connection)
+--                                    .| mapC (\command -> getWorkspaceId command)
+--                                    .| sinkTMChan workspaceProcessingRequiredChannel
 
 --        lift $ forkIO .runConduit $ sourceTMChan workspaceCreatedChannel
 --                                    .| iterMC (\workSpaceId -> do
@@ -75,7 +72,8 @@ startHandlers connection = do
 --                                    .| sinkTMChan workspaceProcessingRequiredChannel
 
         lift $ runConduit $ sourceTMChan workspaceProcessingRequiredChannel
-                                    .| processCommand connection .| sinkNull
+                                    .| (\workSpaceId -> forkIO $ yield $ workSpaceId .| processCommand connection  )
+                                    .| sinkNull
         return ()
 
 
@@ -85,6 +83,7 @@ processCommand eventStoreConnection = awaitForever $ \workSpaceId -> do
               let logger = "[gsd.main]"
               liftIO $ updateGlobalLogger logger $ setLevel INFO
               liftIO $ infoM logger $ "[processCommand] - processing commands for workspace : " ++ (show  workSpaceId)
+              liftIO $ threadDelay (5 * 1000000) -- 5 seconds
               yield (eventStoreConnection, workSpaceId)
                 .| SnapshotStream.retrieveLastSnapshot
                 .| (awaitForever $ \snapshotMaybe -> do

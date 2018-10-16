@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module CommandSourcing.EventStore where
 import Conduit
 import Control.Monad.Trans.Resource
@@ -10,3 +11,5 @@ getEventStoreConnection = do
                                             EventStore.waitTillClosed connection)
     lift $ liftIO $ return connection
 
+getCredentials :: Maybe EventStore.Credentials
+getCredentials = Just $ EventStore.credentials "admin" "changeit"

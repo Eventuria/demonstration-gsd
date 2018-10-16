@@ -1,13 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 module CommandSourcing.WorkspaceStream (
-blockingStreamAll,
+streamAllInfinitely,
 streamAll,
 streamFromOffset,
 subscribeToNewWorkspaceCreated
 ) where
 
 import Prelude hiding (catch)
+import CommandSourcing.EventStore
 import CommandSourcing.Commands
 import CommandSourcing.CommandResponse
 import CommandSourcing.Events
@@ -37,8 +38,8 @@ type CorruptedStreamName = String
 getWorkspaceCreatedStreamName :: EventStore.StreamName
 getWorkspaceCreatedStreamName = EventStore.StreamName $ Text.pack $ "$et-createWorkspace"
 
-subscribeToNewWorkspaceCreatedWithCorruptedStreams :: ConduitT EventStore.Connection (Offset , Either CorruptedStreamName WorkspaceId) IO()
-subscribeToNewWorkspaceCreatedWithCorruptedStreams = awaitForever $ \eventStoreConnection ->  do
+subscribeToNewWorkspaceCreatedWithCorruptedStreams :: EventStore.Connection ->  ConduitT () (Offset , Either CorruptedStreamName WorkspaceId) IO()
+subscribeToNewWorkspaceCreatedWithCorruptedStreams eventStoreConnection =  do
               let logger = "[gsd.persist.command.request]"
               liftIO $ updateGlobalLogger logger $ setLevel INFO
               liftIO $ infoM logger "[workspaceStream.subscription] - subscribing to new workspace created"
@@ -48,12 +49,15 @@ subscribeToNewWorkspaceCreatedWithCorruptedStreams = awaitForever $ \eventStoreC
                 Left e @ SomeException {} -> do
                            liftIO $ infoM logger "[workspaceStream.subscription] - subscription to new workspace created stream failed!"
                            liftIO $ threadDelay (5 * 1000000) -- 5 seconds
-                           leftover eventStoreConnection
+                           subscribeToNewWorkspaceCreatedWithCorruptedStreams eventStoreConnection
                 Right _ -> do
                            liftIO $ infoM logger "[workspaceStream.subscription] - subscription started for commands handlers"
-                           resolvedEvent <- liftIO $ EventStore.nextEvent subscription
-                           liftIO $ infoM logger $ "[workspaceStream.subscription] - new workspace created stream event triggered : " ++ (show resolvedEvent)
-                           yield $ getCreatedWorkspace $ (EventStore.resolvedEventOriginal resolvedEvent)
+                           loopNextEvent subscription where
+                           loopNextEvent subscription = do
+                              resolvedEvent <- liftIO $ EventStore.nextEvent subscription
+                              liftIO $ infoM logger $ "[workspaceStream.subscription] - new workspace created stream event triggered : " ++ (show resolvedEvent)
+                              yield $ getCreatedWorkspace $ (EventStore.resolvedEventOriginal resolvedEvent)
+                              loopNextEvent subscription
 
 waitSubscriptionConfirmation :: EventStore.Subscription s => s -> IO (Either SomeException ())
 waitSubscriptionConfirmation subscription  = do
@@ -78,18 +82,17 @@ streamAll  eventStoreConnection = do
     .| streamAllWithCorruptedStreams
     .| discardCorruptedStreams
 
-blockingStreamAll :: EventStore.Connection -> ConduitT () WorkspaceId IO ()
-blockingStreamAll  eventStoreConnection = do
+streamAllInfinitely :: EventStore.Connection -> ConduitT () WorkspaceId IO ()
+streamAllInfinitely  eventStoreConnection = do
     yield eventStoreConnection
       .| streamAllWithCorruptedStreams
       .| discardCorruptedStreams
     subscribeToNewWorkspaceCreated eventStoreConnection
 
 subscribeToNewWorkspaceCreated :: EventStore.Connection -> ConduitT () WorkspaceId IO ()
-subscribeToNewWorkspaceCreated  eventStoreConnection = do
-    yield eventStoreConnection
-    .| subscribeToNewWorkspaceCreatedWithCorruptedStreams
-    .| discardCorruptedStreams
+subscribeToNewWorkspaceCreated eventStoreConnection = do
+  (subscribeToNewWorkspaceCreatedWithCorruptedStreams eventStoreConnection)
+   .| discardCorruptedStreams
 
 
 streamAllWithCorruptedStreams :: ConduitT EventStore.Connection (Offset,Either CorruptedStreamName WorkspaceId) IO()
@@ -99,8 +102,7 @@ streamAllWithCorruptedStreams = awaitForever $ \eventStoreConnection -> do
 
 streamFromOffset :: ConduitT (EventStore.Connection,Offset) (Offset,Either CorruptedStreamName WorkspaceId) IO()
 streamFromOffset = awaitForever $ \(eventStoreConnection,fromOffset) -> do
-               let credentials = Just $ EventStore.credentials "admin" "changeit"
-                   batchSize = 100 :: Integer
+               let batchSize = 100 :: Integer
                    resolveLinkTos = False
                asyncRead <- liftIO $ EventStore.readStreamEventsForward
                                 eventStoreConnection
@@ -108,7 +110,7 @@ streamFromOffset = awaitForever $ \(eventStoreConnection,fromOffset) -> do
                                 (fromInteger fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
-                                credentials
+                                getCredentials
                commandFetched <- liftIO $ wait asyncRead
                case commandFetched of
                     EventStore.ReadSuccess readResult -> do
