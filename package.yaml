@@ -21,12 +21,6 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
   - base >= 4.7 && < 5
-  - conduit >= 1.3.0.3
-  - stm-conduit
-  - stm
-  - stm-chans
-  - unliftio
-  - resourcet
   - wreq >= 0.5.2.1
   - scotty == 0.11.2
   - uuid
@@ -40,10 +34,22 @@ dependencies:
   - hslogger
   - bytestring
   - foundation
+  - streamly
+  - random
 library:
   source-dirs: src
 
 executables:
+  gsd-sandbox:
+    main:                Sandbox.hs
+    source-dirs:         app
+    ghc-options:
+    - -main-is Sandbox
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - gsdFlow
   gsd-api:
     main:                Api.hs
     source-dirs:         app

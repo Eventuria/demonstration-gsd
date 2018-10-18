@@ -10,7 +10,8 @@ import qualified Data.Text as Text
 
 type CommandName = String
 data Command  = CreateWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId }
-                     | IntroduceIdea { commandId :: CommandId , workspaceId ::WorkspaceId , ideaContent :: String} deriving (Show,Eq)
+                     | IntroduceIdea { commandId :: CommandId , workspaceId ::WorkspaceId , ideaContent :: String}
+                     | NonDeserializedCommand deriving (Show,Eq)
 
 serializedCommandNameForCreateWorkspace :: CommandName
 serializedCommandNameForCreateWorkspace = "createWorkspace"
@@ -33,21 +34,21 @@ instance CommandIdRetrievable Command where
   getCommandId IntroduceIdea   { commandId = commandId} = commandId
 
 class CommandSerializable command where
-  serializedCommandName :: command -> CommandName
+  getCommandName :: command -> CommandName
 
 instance CommandSerializable Command where
-  serializedCommandName CreateWorkspace {} = serializedCommandNameForCreateWorkspace
-  serializedCommandName IntroduceIdea {} = serializedCommandNameForIntroduceIdea
+  getCommandName CreateWorkspace {} = serializedCommandNameForCreateWorkspace
+  getCommandName IntroduceIdea {} = serializedCommandNameForIntroduceIdea
 
 instance ToJSON Command where
    toJSON (command @ (CreateWorkspace commandId workspaceId)) = object [
           "commandId" .= commandId,
           "workspaceId" .= workspaceId,
-          "commandName" .= serializedCommandName command]
+          "commandName" .= getCommandName command]
    toJSON (command @ (IntroduceIdea commandId workspaceId ideaContent)) = object [
              "commandId" .= commandId,
              "workspaceId" .= workspaceId,
-             "commandName" .= serializedCommandName command,
+             "commandName" .= getCommandName command,
              "ideaContent" .= ideaContent]
 
 instance FromJSON Command  where

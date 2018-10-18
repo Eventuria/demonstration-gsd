@@ -2,9 +2,18 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TypeFamilies #-}
 module CommandSourcing.SnapshotStream (
-retrieveLastSnapshot,
+retrieveLastOffsetConsumed,
+retrieveLast,
 persist
 ) where
+
+import Streamly
+import qualified Streamly.Prelude as S
+import Control.Monad.IO.Class (MonadIO(..))
+import Data.Function ((&))
+import Control.Concurrent
+
+import CommandSourcing.Logger
 import CommandSourcing.EventStore
 import CommandSourcing.Core
 import Control.Concurrent.Async (wait)
@@ -12,21 +21,21 @@ import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
 import Data.UUID
 import Data.Time
-import System.Log.Logger
+
 import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
-import Conduit
-import qualified Data.Conduit.Combinators as ConduitCombinators
-import qualified Data.Conduit.List as ConduitList
-import System.Log.Logger
+
 import Data.Aeson
 import CommandSourcing.Snapshot
+import CommandSourcing.Streams
 
-data PersistenceFailure = CommandAlreadyPersisted
-data PersistResult = PersistResult {writeNextVersion :: Integer}
 
-retrieveLastSnapshot :: ConduitT (EventStore.Connection,WorkspaceId) (Maybe Snapshot)  IO()
-retrieveLastSnapshot = awaitForever $ \(eventStoreConnection , workspaceId) ->  do
+retrieveLastOffsetConsumed :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> WorkspaceId -> stream IO (Maybe Offset)
+retrieveLastOffsetConsumed eventStoreConnection workspaceId =
+  (retrieveLast eventStoreConnection workspaceId) & S.map (\snapshotMaybe -> lastOffsetConsumed <$> snapshotMaybe)
+
+retrieveLast :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> WorkspaceId -> stream IO (Maybe Snapshot)
+retrieveLast eventStoreConnection workspaceId =  do
         let resolveLinkTos = False
         readResult <- liftIO $ EventStore.readStreamEventsBackward
                     eventStoreConnection
@@ -38,18 +47,15 @@ retrieveLastSnapshot = awaitForever $ \(eventStoreConnection , workspaceId) ->  
         case readResult of
           EventStore.ReadSuccess responseContent -> do
               let snapshots = getSnapshotsFromResponse responseContent
-              yield $ listToMaybe snapshots
-          EventStore.ReadNoStream -> yield Nothing
+              S.yield $ listToMaybe snapshots
+          EventStore.ReadNoStream -> S.yield Nothing
           e -> error $ "Read failure: " <> show e
 
 getSnapshotsFromResponse :: EventStore.StreamSlice -> [Snapshot]
 getSnapshotsFromResponse sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-persist :: ConduitT (EventStore.Connection, Snapshot) (Either PersistenceFailure PersistResult) IO()
-persist = awaitForever $ \(eventStoreConnection , snapshot) ->  do
-
-    let logger = "[gsd.persist.command.request]"
-    liftIO $ updateGlobalLogger logger $ setLevel INFO
+persist :: (IsStream stream, MonadIO (stream IO)) =>  Logger -> EventStore.Connection -> Snapshot -> stream IO (Either PersistenceFailure PersistResult)
+persist logger eventStoreConnection snapshot =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
@@ -64,8 +70,8 @@ persist = awaitForever $ \(eventStoreConnection , snapshot) ->  do
             eventInEventStoreDomain
             getCredentials >>= wait
 
-    liftIO $ infoM logger "snapshot persisted"
-    yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
+    liftIO $ logInfo logger $ "snapshot updated for workspace " ++ (show $ workspaceId $ state snapshot)
+    S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 
 getStreamName :: WorkspaceId -> EventStore.StreamName

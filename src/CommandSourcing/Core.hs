@@ -3,6 +3,7 @@ module CommandSourcing.Core where
 import Data.UUID
 import Data.Time
 
+
 type CommandId = UUID
 type WorkspaceId = UUID
 type IdeaId = UUID

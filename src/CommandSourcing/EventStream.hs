@@ -6,55 +6,54 @@
 {-# LANGUAGE TypeFamilies   #-}
 
 module CommandSourcing.EventStream (
-readForwardWorkspaceStream,
+readForward,
 persist) where
 
+import Streamly
+import qualified Streamly.Prelude as S
+import Control.Concurrent
+import Control.Monad.IO.Class (MonadIO(..))
+import Data.Function ((&))
 import CommandSourcing.EventStore
+import qualified Database.EventStore as EventStore
 import CommandSourcing.Core
 import CommandSourcing.Events
+import CommandSourcing.Streams
+import CommandSourcing.Logger
 import Control.Concurrent.Async (wait)
-import Database.EventStore hiding (Command)
+
 import qualified Data.Text as Text
 import Data.UUID
 import Data.Time
-import System.Log.Logger
 import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
-import Conduit
-import qualified Data.Conduit.Combinators as ConduitCombinators
-import qualified Data.Conduit.List as ConduitList
-import System.Log.Logger
+
 import Data.Aeson
 
-data PersistenceFailure = EventAlreadyPersisted
-data PersistResult = PersistResult {writeNextVersion :: Integer}
 
-persist :: ConduitT (Connection,WorkspaceEvent) (Either PersistenceFailure PersistResult) IO()
-persist = awaitForever $ \(eventStoreConnection , workspaceEvent) ->  do
 
-    let logger = "[gsd.persist.command.request]"
-    liftIO $ updateGlobalLogger logger $ setLevel INFO
+persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Connection -> WorkspaceEvent -> stream IO (Either PersistenceFailure PersistResult)
+persist logger eventStoreConnection workspaceEvent =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
-    let eventType  = UserDefined $ Text.pack $ serializedEventName workspaceEvent
-        eventId = Just eventIdInEventStoreDomain
-        eventData = withJson workspaceEvent
-        eventInEventStoreDomain = createEvent eventType eventId eventData
-    writeResult <- liftIO $ sendEvent
+    let eventType  = EventStore.UserDefined $ Text.pack $ getEventName workspaceEvent
+        eventData = EventStore.withJson workspaceEvent
+        eventInEventStoreDomain = EventStore.createEvent eventType (Just eventIdInEventStoreDomain) eventData
+    writeResult <- liftIO $ EventStore.sendEvent
             eventStoreConnection
             (getWorkspaceEventStreamName $ workspaceId workspaceEvent)
-            anyVersion
+            EventStore.anyVersion
             eventInEventStoreDomain
             getCredentials >>= wait
 
-    liftIO $ infoM logger "Event persisted"
-    yield $ Right $ PersistResult $ toInteger $ writeNextExpectedVersion writeResult
+    liftIO $ logInfo logger $ "Event " ++ (getEventName workspaceEvent) ++ " : id " ++ (toString $ getEventId workspaceEvent) ++ " persisted"
+    S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
-readForwardWorkspaceStream :: ConduitT (Connection,WorkspaceId,Offset) WorkspaceEvent IO()
-readForwardWorkspaceStream = awaitForever $ \(eventStoreConnection , workSpaceId, fromOffset) -> do
+readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO WorkspaceEvent)) => EventStore.Connection -> WorkspaceId -> Offset -> stream IO WorkspaceEvent
+readForward eventStoreConnection  workSpaceId fromOffset = do
                let batchSize = 100 :: Integer
                    resolveLinkTos = False
-               asyncRead <- liftIO $ readStreamEventsForward
+               asyncRead <- liftIO $ EventStore.readStreamEventsForward
                                 eventStoreConnection
                                 (getWorkspaceEventStreamName workSpaceId)
                                 (fromInteger fromOffset)
@@ -63,40 +62,17 @@ readForwardWorkspaceStream = awaitForever $ \(eventStoreConnection , workSpaceId
                                 getCredentials
                eventFetched <- liftIO $ wait asyncRead
                case eventFetched of
-                    ReadSuccess readResult -> do
+                    EventStore.ReadSuccess readResult -> do
                         let events = getEventsFromResponse readResult
                         if (length events) /= 0 then do
-                            yieldMany events
-                            leftover (eventStoreConnection , workSpaceId, fromOffset + batchSize)
-                            CommandSourcing.EventStream.readForwardWorkspaceStream
-                        else yieldMany $ events
+                            (S.fromList events) <> (readForward eventStoreConnection workSpaceId $ fromOffset + batchSize)
+                        else S.fromList events
                     e -> error $ "Read failure: " <> show e
 
 
-getEventsFromResponse :: StreamSlice -> [WorkspaceEvent]
-getEventsFromResponse sl = catMaybes $ resolvedEventDataAsJson <$> sliceEvents sl
+getEventsFromResponse :: EventStore.StreamSlice -> [WorkspaceEvent]
+getEventsFromResponse sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-getWorkspaceEventStreamName :: WorkspaceId -> StreamName
-getWorkspaceEventStreamName workspaceId = StreamName $ Text.pack $ "workspace_event-" ++ toString workspaceId
+getWorkspaceEventStreamName :: WorkspaceId -> EventStore.StreamName
+getWorkspaceEventStreamName workspaceId = EventStore.StreamName $ Text.pack $ "workspace_event-" ++ toString workspaceId
 
-instance ToJSON PersistResult where
-   toJSON (PersistResult writeNextVersion) = object [
-             "writeNextVersion" .= writeNextVersion]
-
-
-instance FromJSON PersistResult  where
-
-    parseJSON (Object jsonObject) = PersistResult <$> jsonObject .: "writeNextVersion"
-
-
-instance ToJSON PersistenceFailure where
-   toJSON (EventAlreadyPersisted) = object [("errorName" ,"EventAlreadyPersisted")]
-
-
-instance FromJSON PersistenceFailure  where
-
-    parseJSON (Object jsonObject) = do
-             errorNameMaybe <- jsonObject .: "errorName"
-             case errorNameMaybe of
-                  Just (String errorName) | (Text.unpack errorName) == "EventAlreadyPersisted" -> return EventAlreadyPersisted
-                  Nothing -> error $ "error name not provided or invalid"

@@ -9,54 +9,54 @@ module CommandSourcing.CommandResponseStream (
 readForward,
 persist) where
 
+import Streamly
+import qualified Streamly.Prelude as S
+import Control.Concurrent
+import Control.Monad.IO.Class (MonadIO(..))
+import Data.Function ((&))
+
+import CommandSourcing.EventStore
+import qualified Database.EventStore as EventStore
+
 import CommandSourcing.EventStore
 import CommandSourcing.Core
 import CommandSourcing.CommandResponse
+import CommandSourcing.Logger
 import Control.Concurrent.Async (wait)
-import Database.EventStore hiding (Command)
 import qualified Data.Text as Text
 import Data.UUID
 import Data.Time
-import System.Log.Logger
+
 import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
-import Conduit
-import qualified Data.Conduit.Combinators as ConduitCombinators
-import qualified Data.Conduit.List as ConduitList
-import System.Log.Logger
+
 import Data.Aeson
+import CommandSourcing.Streams
 
-
-data PersistenceFailure = CommandAlreadyPersisted
-data PersistResult = PersistResult {writeNextVersion :: Integer}
-
-persist :: ConduitT (Connection,CommandResponse) (Either PersistenceFailure PersistResult) IO()
-persist = awaitForever $ \(eventStoreConnection , commandResponse) ->  do
-
-    let logger = "[gsd.persist.command.request]"
-    liftIO $ updateGlobalLogger logger $ setLevel INFO
+persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Connection -> CommandResponse -> stream IO (Either PersistenceFailure PersistResult)
+persist logger eventStoreConnection commandResponse =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
-    let eventType  = UserDefined $ Text.pack $ serializedCommandResponseName commandResponse
+    let eventType  = EventStore.UserDefined $ Text.pack $ getCommandResponseName commandResponse
         eventId = Just eventIdInEventStoreDomain
-        eventData = withJson commandResponse
-        eventInEventStoreDomain = createEvent eventType eventId eventData
-    writeResult <- liftIO $ sendEvent
+        eventData = EventStore.withJson commandResponse
+        eventInEventStoreDomain = EventStore.createEvent eventType eventId eventData
+    writeResult <- liftIO $ EventStore.sendEvent
             eventStoreConnection
             (getWorkspaceCommandResponseStreamName $ workspaceId commandResponse)
-            anyVersion
+            EventStore.anyVersion
             eventInEventStoreDomain
             getCredentials >>= wait
 
-    liftIO $ infoM logger "command Response request persisted"
-    yield $ Right $ PersistResult $ toInteger $ writeNextExpectedVersion writeResult
+    liftIO $ logInfo logger $ "Command Response " ++ (getCommandResponseName commandResponse) ++ " : command id " ++ (toString $ getCommandId commandResponse) ++ " persisted"
+    S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
-readForward :: ConduitT (Connection,WorkspaceId,Offset) CommandResponse IO()
-readForward = awaitForever $ \(eventStoreConnection , workspaceId, fromOffset) -> do
+readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO CommandResponse)) => EventStore.Connection -> WorkspaceId -> Offset -> stream IO CommandResponse
+readForward eventStoreConnection  workspaceId fromOffset =  do
                let batchSize = 100 :: Integer
                    resolveLinkTos = False
-               asyncRead <- liftIO $ readStreamEventsForward
+               asyncRead <- liftIO $ EventStore.readStreamEventsForward
                                 eventStoreConnection
                                 (getWorkspaceCommandResponseStreamName workspaceId)
                                 (fromInteger fromOffset)
@@ -65,41 +65,16 @@ readForward = awaitForever $ \(eventStoreConnection , workspaceId, fromOffset) -
                                 getCredentials
                commandFetched <- liftIO $ wait asyncRead
                case commandFetched of
-                    ReadSuccess readResult -> do
+                    EventStore.ReadSuccess readResult -> do
                         let commandResponses = getCommandResponseRequestFromReadResult readResult
                         if (length commandResponses) /= 0 then do
-                            yieldMany commandResponses
-                            leftover (eventStoreConnection , workspaceId, fromOffset + batchSize)
-                            CommandSourcing.CommandResponseStream.readForward
-                        else yieldMany $ commandResponses
+                            (S.fromList commandResponses) <> (readForward eventStoreConnection workspaceId $ fromOffset + batchSize)
+                        else S.fromList commandResponses
                     e -> error $ "Read failure: " <> show e
 
 
-getCommandResponseRequestFromReadResult :: StreamSlice -> [CommandResponse]
-getCommandResponseRequestFromReadResult sl = catMaybes $ resolvedEventDataAsJson <$> sliceEvents sl
+getCommandResponseRequestFromReadResult :: EventStore.StreamSlice -> [CommandResponse]
+getCommandResponseRequestFromReadResult sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-getWorkspaceCommandResponseStreamName :: WorkspaceId -> StreamName
-getWorkspaceCommandResponseStreamName workspaceId = StreamName $ Text.pack $ "workspace_response_command-" ++ toString workspaceId
-
-
-instance ToJSON PersistResult where
-   toJSON (PersistResult writeNextVersion) = object [
-             "writeNextVersion" .= writeNextVersion]
-
-
-instance FromJSON PersistResult  where
-
-    parseJSON (Object jsonObject) = PersistResult <$> jsonObject .: "writeNextVersion"
-
-
-instance ToJSON PersistenceFailure where
-   toJSON (CommandAlreadyPersisted) = object [("errorName" ,"CommandAlreadyPersisted")]
-
-
-instance FromJSON PersistenceFailure  where
-
-    parseJSON (Object jsonObject) = do
-             errorNameMaybe <- jsonObject .: "errorName"
-             case errorNameMaybe of
-                  Just (String errorName) | (Text.unpack errorName) == "CommandAlreadyPersisted" -> return CommandAlreadyPersisted
-                  Nothing -> error $ "error name not provided or invalid"
+getWorkspaceCommandResponseStreamName :: WorkspaceId -> EventStore.StreamName
+getWorkspaceCommandResponseStreamName workspaceId = EventStore.StreamName $ Text.pack $ "workspace_response_command-" ++ toString workspaceId

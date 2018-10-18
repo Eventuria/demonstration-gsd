@@ -13,19 +13,23 @@ data WorkspaceEvent = WorkspaceCreated { createdOn :: UTCTime , eventId :: UUID 
            | IdeaIntroduced   { createdOn :: UTCTime , eventId :: UUID , commandId :: UUID , workspaceId ::WorkspaceId, ideaContent :: String } deriving (Eq,Show)
 
 
-serializedEventNameForWorkspaceCreated :: String
-serializedEventNameForWorkspaceCreated = "workspaceCreated"
+eventNameForWorkspaceCreated :: String
+eventNameForWorkspaceCreated = "workspaceCreated"
 
-serializedEventNameForIdeaIntroduced :: String
-serializedEventNameForIdeaIntroduced = "ideaIntroduced"
+eventNameForIdeaIntroduced :: String
+eventNameForIdeaIntroduced = "ideaIntroduced"
 
 class EventSerializable event where
-  serializedEventName :: event -> String
+  getEventName :: event -> String
+  getEventId :: event -> UUID
 
 
 instance EventSerializable WorkspaceEvent where
-  serializedEventName WorkspaceCreated {} = serializedEventNameForWorkspaceCreated
-  serializedEventName IdeaIntroduced {} = serializedEventNameForIdeaIntroduced
+  getEventName WorkspaceCreated {} = eventNameForWorkspaceCreated
+  getEventName IdeaIntroduced {} = eventNameForIdeaIntroduced
+
+  getEventId WorkspaceCreated { eventId = eventId} = eventId
+  getEventId IdeaIntroduced { eventId = eventId} = eventId
 
 
 instance ToJSON WorkspaceEvent where
@@ -34,7 +38,7 @@ instance ToJSON WorkspaceEvent where
             "eventId" .= eventId,
             "commandId" .= commandId,
             "workspaceId" .= workspaceId,
-            "eventName" .= serializedEventName event]
+            "eventName" .= getEventName event]
 
   toJSON (event @ (IdeaIntroduced createdOn eventId commandId workspaceId ideaContent)) = object [
           "createdOn" .= createdOn,
@@ -42,19 +46,19 @@ instance ToJSON WorkspaceEvent where
           "commandId" .= commandId,
           "workspaceId" .= workspaceId,
           "ideaContent" .= ideaContent,
-          "eventName" .= serializedEventName event]
+          "eventName" .= getEventName event]
 
 instance FromJSON WorkspaceEvent where
 
     parseJSON (Object jsonObject) = do
                  eventNameMaybe <- jsonObject .: "eventName"
                  case eventNameMaybe of
-                      Just (String eventName) | (Text.unpack eventName) == serializedEventNameForWorkspaceCreated -> WorkspaceCreated
+                      Just (String eventName) | (Text.unpack eventName) == eventNameForWorkspaceCreated -> WorkspaceCreated
                           <$> jsonObject .: "createdOn"
                           <*> jsonObject .: "eventId"
                           <*> jsonObject .: "commandId"
                           <*> jsonObject .: "workspaceId"
-                      Just (String eventName) | (Text.unpack eventName) == serializedEventNameForIdeaIntroduced -> IdeaIntroduced
+                      Just (String eventName) | (Text.unpack eventName) == eventNameForIdeaIntroduced -> IdeaIntroduced
                           <$> jsonObject .: "createdOn"
                           <*> jsonObject .: "eventId"
                           <*> jsonObject .: "commandId"
