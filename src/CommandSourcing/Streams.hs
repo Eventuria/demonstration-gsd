@@ -3,6 +3,9 @@ module CommandSourcing.Streams where
 import Data.Aeson
 import qualified Data.Text as Text
 
+
+type Offset = Integer
+
 data PersistenceFailure = ItemAlreadyPersisted
 data PersistResult = PersistResult {writeNextVersion :: Integer}
 
