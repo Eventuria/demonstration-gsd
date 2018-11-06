@@ -1,21 +1,21 @@
 module Sandbox where
 
 
-import qualified CommandSourcing.WorkspaceStream as WorkspaceStream
-import qualified CommandSourcing.CommandStream as CommandStream
-import CommandSourcing.Core
-import Streamly
-import qualified Streamly.Prelude as S
-import Control.Concurrent
-import Control.Monad.IO.Class (MonadIO(..))
-import Data.Function ((&))
-import System.Random
-import Data.UUID
-import qualified Database.EventStore as EventStore
-import Control.Exception
-import System.Log.Logger
-import CommandSourcing.Commands
-import Data.Semigroup (Semigroup(..))
+--import qualified Cqrs.WorkspaceStream as WorkspaceStream
+--import qualified Cqrs.CommandStream as CommandStream
+--import Cqrs.Core
+--import Streamly
+--import qualified Streamly.Prelude as S
+--import Control.Concurrent
+--import Control.Monad.IO.Class (MonadIO(..))
+--import Data.Function ((&))
+--import System.Random
+--import Data.UUID
+--import qualified Database.EventStore as EventStore
+--import Control.Exception
+--import System.Log.Logger
+--import Cqrs.Commands.Command
+--import Data.Semigroup (Semigroup(..))
 
 main :: IO ()
 main = do return ()

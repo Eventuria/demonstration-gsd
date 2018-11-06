@@ -3,10 +3,10 @@
 module Api where
 
 import Web.Scotty
-import CommandSourcing.CommandHandler
-import CommandSourcing.Logger
-import qualified CommandSourcing.CommandStream as CommandStream
-import qualified CommandSourcing.WorkspaceStream as WorkspaceStream
+import Cqrs.CommandProcessingStarter
+import Cqrs.Logger
+import qualified Cqrs.CommandStream as CommandStream
+import qualified Cqrs.AggregateStream as WorkspaceStream
 import Data.Aeson.Encoding
 
 import qualified Database.EventStore as EventStore

@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module CommandSourcing.CommandResponse where
+module Cqrs.CommandResponse where
 
 import Data.UUID
 import Data.Time

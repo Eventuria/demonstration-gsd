@@ -21,7 +21,6 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
   - base >= 4.7 && < 5
-  - wreq >= 0.5.2.1
   - scotty == 0.11.2
   - uuid
   - aeson
@@ -87,3 +86,5 @@ tests:
     - generic-arbitrary
     - quickcheck-instances
     - aeson-qq
+    - generic-random
+    - wreq >= 0.5.2.1

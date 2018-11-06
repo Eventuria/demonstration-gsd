@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE TypeFamilies #-}
-module CommandSourcing.SnapshotStream (
+module Cqrs.SnapshotStream (
 retrieveLastOffsetConsumed,
 retrieveLast,
 persist
@@ -13,9 +13,9 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Data.Function ((&))
 import Control.Concurrent
 
-import CommandSourcing.Logger
-import CommandSourcing.EventStore
-import CommandSourcing.Core
+import Cqrs.Logger
+import Cqrs.EventStore
+import Cqrs.Core
 import Control.Concurrent.Async (wait)
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
@@ -26,20 +26,20 @@ import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
 
 import Data.Aeson
-import CommandSourcing.Snapshot
-import CommandSourcing.Streams
+import Cqrs.Snapshot
+import Cqrs.Streams
 
 
-retrieveLastOffsetConsumed :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> WorkspaceId -> stream IO (Maybe Offset)
-retrieveLastOffsetConsumed eventStoreConnection workspaceId =
-  (retrieveLast eventStoreConnection workspaceId) & S.map (\snapshotMaybe -> lastOffsetConsumed <$> snapshotMaybe)
+retrieveLastOffsetConsumed :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> AggregateId -> stream IO (Maybe Offset)
+retrieveLastOffsetConsumed eventStoreConnection aggregateId =
+  (retrieveLast eventStoreConnection aggregateId) & S.map (\snapshotMaybe -> lastOffsetConsumed <$> snapshotMaybe)
 
-retrieveLast :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> WorkspaceId -> stream IO (Maybe Snapshot)
-retrieveLast eventStoreConnection workspaceId =  do
+retrieveLast :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> AggregateId -> stream IO (Maybe AggregateSnapshot)
+retrieveLast eventStoreConnection aggregateId =  do
         let resolveLinkTos = False
         readResult <- liftIO $ EventStore.readStreamEventsBackward
                     eventStoreConnection
-                    (getStreamName workspaceId)
+                    (getStreamName aggregateId)
                     (fromInteger 0)
                     (fromInteger 1)
                     resolveLinkTos
@@ -51,10 +51,10 @@ retrieveLast eventStoreConnection workspaceId =  do
           EventStore.ReadNoStream -> S.yield Nothing
           e -> error $ "Read failure: " <> show e
 
-getSnapshotsFromResponse :: EventStore.StreamSlice -> [Snapshot]
+getSnapshotsFromResponse :: EventStore.StreamSlice -> [AggregateSnapshot]
 getSnapshotsFromResponse sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-persist :: (IsStream stream, MonadIO (stream IO)) =>  Logger -> EventStore.Connection -> Snapshot -> stream IO (Either PersistenceFailure PersistResult)
+persist :: (IsStream stream, MonadIO (stream IO)) =>  Logger -> EventStore.Connection -> AggregateSnapshot -> stream IO (Either PersistenceFailure PersistResult)
 persist logger eventStoreConnection snapshot =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
@@ -65,36 +65,36 @@ persist logger eventStoreConnection snapshot =  do
         eventInEventStoreDomain = EventStore.createEvent eventType eventId eventData
     writeResult <- liftIO $ EventStore.sendEvent
             eventStoreConnection
-            (getStreamName $ workspaceId $ state snapshot)
+            (getStreamName $ aggregateId $ state snapshot)
             EventStore.anyVersion
             eventInEventStoreDomain
             getCredentials >>= wait
 
-    liftIO $ logInfo logger $ "snapshot updated for workspace " ++ (show $ workspaceId $ state snapshot)
+    liftIO $ logInfo logger $ "snapshot updated for workspace " ++ (show $ aggregateId $ state snapshot)
     S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 
-getStreamName :: WorkspaceId -> EventStore.StreamName
-getStreamName workspaceId = EventStore.StreamName $ Text.pack $ "workspace_snapshot-" ++ toString workspaceId
+getStreamName :: AggregateId -> EventStore.StreamName
+getStreamName aggregateId = EventStore.StreamName $ Text.pack $ "workspace_snapshot-" ++ (toString aggregateId)
 
 
 
-instance ToJSON WorkspaceState where
-   toJSON (WorkspaceState workspaceId) = object ["workspaceId" .= workspaceId]
+instance ToJSON AggregateState where
+   toJSON (AggregateState aggregateId) = object ["aggregateId" .= aggregateId]
 
-instance ToJSON Snapshot where
-   toJSON (Snapshot lastOffsetConsumed commandsProcessed state) = object [
+instance ToJSON AggregateSnapshot where
+   toJSON (AggregateSnapshot lastOffsetConsumed commandsProcessed state) = object [
       "lastOffsetConsumed" .= lastOffsetConsumed,
       "commandsProcessed" .= commandsProcessed,
       "state" .= state
       ]
 
-instance FromJSON Snapshot  where
+instance FromJSON AggregateSnapshot  where
 
-    parseJSON (Object jsonObject) = Snapshot <$> jsonObject .: "lastOffsetConsumed"
+    parseJSON (Object jsonObject) = AggregateSnapshot <$> jsonObject .: "lastOffsetConsumed"
                                              <*> jsonObject .: "commandsProcessed"
                                              <*> jsonObject .: "state"
 
-instance FromJSON WorkspaceState  where
+instance FromJSON AggregateState  where
 
-    parseJSON (Object jsonObject) = WorkspaceState <$> jsonObject .: "workspaceId"
+    parseJSON (Object jsonObject) = AggregateState <$> jsonObject .: "aggregateId"

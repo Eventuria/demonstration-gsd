@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module CommandSourcing.Streams where
+module Cqrs.Streams where
 import Data.Aeson
 import qualified Data.Text as Text
 

@@ -5,7 +5,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies   #-}
 
-module CommandSourcing.CommandResponseStream (
+module Cqrs.CommandResponseStream (
 readForward,
 persist) where
 
@@ -15,13 +15,13 @@ import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Function ((&))
 
-import CommandSourcing.EventStore
+import Cqrs.EventStore
 import qualified Database.EventStore as EventStore
 
-import CommandSourcing.EventStore
-import CommandSourcing.Core
-import CommandSourcing.CommandResponse
-import CommandSourcing.Logger
+import Cqrs.EventStore
+import Cqrs.Core
+import Cqrs.CommandResponse
+import Cqrs.Logger
 import Control.Concurrent.Async (wait)
 import qualified Data.Text as Text
 import Data.UUID
@@ -31,7 +31,7 @@ import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
 
 import Data.Aeson
-import CommandSourcing.Streams
+import Cqrs.Streams
 
 persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Connection -> CommandResponse -> stream IO (Either PersistenceFailure PersistResult)
 persist logger eventStoreConnection commandResponse =  do
@@ -52,7 +52,7 @@ persist logger eventStoreConnection commandResponse =  do
     liftIO $ logInfo logger $ "Command Response " ++ (getCommandResponseName commandResponse) ++ " : command id " ++ (toString $ getCommandId commandResponse) ++ " persisted"
     S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
-readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO CommandResponse)) => EventStore.Connection -> WorkspaceId -> Offset -> stream IO CommandResponse
+readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO CommandResponse)) => EventStore.Connection -> AggregateId -> Offset -> stream IO CommandResponse
 readForward eventStoreConnection  workspaceId fromOffset =  do
                let batchSize = 100 :: Integer
                    resolveLinkTos = False
@@ -76,5 +76,5 @@ readForward eventStoreConnection  workspaceId fromOffset =  do
 getCommandResponseRequestFromReadResult :: EventStore.StreamSlice -> [CommandResponse]
 getCommandResponseRequestFromReadResult sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-getWorkspaceCommandResponseStreamName :: WorkspaceId -> EventStore.StreamName
+getWorkspaceCommandResponseStreamName :: AggregateId -> EventStore.StreamName
 getWorkspaceCommandResponseStreamName workspaceId = EventStore.StreamName $ Text.pack $ "workspace_response_command-" ++ toString workspaceId
