@@ -47,7 +47,7 @@ type CorruptedStreamName = String
 data PersistedAggregate = PersistedAggregate { offset :: Offset, aggregateIdPersisted :: AggregateId } deriving (Show,Eq)
 
 getAggregateCreatedStreamName :: EventStore.StreamName
-getAggregateCreatedStreamName = EventStore.StreamName $ Text.pack $ "$et-createAggregate"
+getAggregateCreatedStreamName = EventStore.StreamName $ Text.pack $ "$et-createWorkspace"
 
 
 yieldAndSubscribeToAggregateUpdates :: (IsStream stream,
