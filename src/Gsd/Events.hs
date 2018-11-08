@@ -1,9 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Gsd.Events.WorkspaceCreated where
+module Gsd.Events where
 
-import Gsd.CreateWorkspace.Command
-import qualified Gsd.CreateWorkspace.Command as CreateWorkspaceModule
+import Gsd.Commands
 import Gsd.Core
 import Cqrs.Core
 import Cqrs.Events
@@ -12,14 +10,7 @@ import Data.Time
 import Data.Aeson
 import qualified Data.Text as Text
 
-data WorkspaceCreated = WorkspaceCreated { workspaceId ::WorkspaceId , eventId :: EventId , createdOn :: UTCTime  } deriving (Eq,Show)
-
-
-workspaceCreated :: EventId -> UTCTime -> CreateWorkspace -> WorkspaceCreated
-workspaceCreated eventId createdOn createWorkspace =
-  WorkspaceCreated {  eventId = eventId ,
-                      createdOn = createdOn,
-                      workspaceId = CreateWorkspaceModule.workspaceId createWorkspace}
+data GsdEvent = WorkspaceCreated { workspaceId ::WorkspaceId , eventId :: EventId , createdOn :: UTCTime  } deriving (Eq,Show)
 
 
 eventNameForWorkspaceCreated = "workspaceCreated" :: String
@@ -27,7 +18,7 @@ eventNameForWorkspaceCreated = "workspaceCreated" :: String
 isCreateWorkspaceEvent :: Event -> Bool
 isCreateWorkspaceEvent event = (eventName $ eventHeader event) == eventNameForWorkspaceCreated
 
-toEvent :: WorkspaceCreated -> Event
+toEvent :: GsdEvent -> Event
 toEvent  WorkspaceCreated {eventId = eventId, workspaceId = workspaceId, createdOn = createdOn} =
   Event { eventHeader = EventHeader { eventId = eventId,
                             aggregateId = workspaceId ,
@@ -35,7 +26,7 @@ toEvent  WorkspaceCreated {eventId = eventId, workspaceId = workspaceId, created
                             eventName = eventNameForWorkspaceCreated } ,
             payload = []}
 
-fromEvent :: Event -> Maybe WorkspaceCreated
+fromEvent :: Event -> Maybe GsdEvent
 fromEvent event =
   case (eventName $ eventHeader event) of
     "workspaceCreated" -> Just WorkspaceCreated {eventId = CoreEvent.eventId $ eventHeader event,
