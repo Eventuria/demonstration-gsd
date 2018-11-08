@@ -31,53 +31,52 @@ import Cqrs.CommandHandler
 import Gsd.CommandPredicates
 
 gsdCommandHandler :: CommandHandler
-gsdCommandHandler logger eventStoreConnection persistedCommand@PersistedCommand {offset = offset , command = command } snapshotMaybe = do
-  liftIO $ logInfo logger $ "processing " ++ (show persistedCommand) ++ " with " ++ (show snapshotMaybe)
-  case (command) of
-      command | commandsAreAllAlreadyProcessed offset snapshotMaybe ->
+gsdCommandHandler logger eventStoreConnection persistedCommand@PersistedCommand {offset = offset , command = command } snapshotMaybe
+   | commandsAreAllAlreadyProcessed offset snapshotMaybe =
          liftIO $ logInfo logger $ "commands from workspace " ++ (show $ getAggregateId persistedCommand) ++ " all processed"
-      command | isFirstCommandProcessed command snapshotMaybe  ->
-         runStream $ handleFirstCommand logger eventStoreConnection $ fromJust $ fromCommand (command::Command)
-      command | isCreateWorkspaceCommand command ->
-         runStream $ handleCreateWorkspaceIsNotFirstCommandProcessedScenario logger eventStoreConnection snapshotMaybe $ fromJust $ fromCommand (command::Command)
+   | isFirstCommandProcessed command snapshotMaybe  =
+         handleFirstCommand logger eventStoreConnection $ fromJust $ fromCommand (command::Command)
+   | (isCreateWorkspaceCommand command) && (snapshotMaybe /= Nothing) =
+         handleCreateWorkspaceIsNotFirstCommandProcessedScenario logger eventStoreConnection snapshotMaybe $ fromJust $ fromCommand (command::Command)
+   | otherwise = unknownCommandFlow logger eventStoreConnection snapshotMaybe $ command
 
 
 
-handleFirstCommand ::  (IsStream stream,MonadIO (stream IO)) =>Logger -> EventStore.Connection -> GsdCommand -> stream IO ()
+handleFirstCommand ::  Logger -> EventStore.Connection -> GsdCommand -> IO ()
 handleFirstCommand logger eventStoreConnection createWorkspace @ CreateWorkspace {commandId = commandId, workspaceId = workspaceId}  = do
   now <- liftIO $ getCurrentTime
   eventId <- liftIO $ Uuid.nextRandom
-  serially $
-    S.map ( \result -> ()) $
-      (EventStream.persist logger eventStoreConnection  $ toEvent $ WorkspaceCreated {  eventId = eventId ,
-                                                                                          createdOn = now,
-                                                                                          workspaceId = workspaceId}) <>
-      (SnapshotStream.persist logger eventStoreConnection AggregateSnapshot {lastOffsetConsumed = 0 ,
-                                                          commandsProcessed = Set.fromList [commandId] ,
-                                                          state = AggregateState { aggregateId = workspaceId }}) <>
-      (CommandResponseStream.persist logger eventStoreConnection CommandSuccessfullyProcessed {
-                                                                     commandId = commandId ,
-                                                                     workspaceId = workspaceId })
+  EventStream.persist logger eventStoreConnection  $ toEvent $ WorkspaceCreated {  eventId = eventId ,
+                                                                                      createdOn = now,
+                                                                                      workspaceId = workspaceId}
+  SnapshotStream.persist logger eventStoreConnection AggregateSnapshot {lastOffsetConsumed = 0 ,
+                                                      commandsProcessed = Set.fromList [commandId] ,
+                                                      state = AggregateState { aggregateId = workspaceId }}
+  CommandResponseStream.persist logger eventStoreConnection CommandSuccessfullyProcessed {
+                                                                 commandId = commandId ,
+                                                                 workspaceId = workspaceId }
+  return ()
 
-handleCreateWorkspaceIsNotFirstCommandProcessedScenario :: (IsStream stream,MonadIO (stream IO)) =>Logger -> EventStore.Connection -> Maybe AggregateSnapshot -> GsdCommand ->  stream IO ()
-handleCreateWorkspaceIsNotFirstCommandProcessedScenario logger eventStoreConnection snapshotMaybe createWorkspace @ CreateWorkspace {commandId = commandId, workspaceId = workspaceId} = do
-  now <- liftIO $ getCurrentTime
-  eventId <- liftIO $ Uuid.nextRandom
-  serially $
-    S.map ( \result -> ())  $
-    (case snapshotMaybe of
-        Nothing -> (SnapshotStream.persist logger eventStoreConnection AggregateSnapshot {lastOffsetConsumed = 0 ,
-                             commandsProcessed = Set.fromList [commandId] ,
-                             state = AggregateState { aggregateId = workspaceId }}) <>
-                   (CommandResponseStream.persist logger eventStoreConnection CommandFailed { commandId = commandId ,
-                                                   workspaceId = workspaceId ,
-                                                   reason = "first command muste be CreateWorkspace "  })
+handleCreateWorkspaceIsNotFirstCommandProcessedScenario :: Logger -> EventStore.Connection -> Maybe AggregateSnapshot -> GsdCommand ->  IO ()
+handleCreateWorkspaceIsNotFirstCommandProcessedScenario logger eventStoreConnection Nothing createWorkspace @ CreateWorkspace {commandId = commandId, workspaceId = workspaceId} = do
+     now <- liftIO $ getCurrentTime
+     eventId <- liftIO $ Uuid.nextRandom
+     SnapshotStream.persist logger eventStoreConnection AggregateSnapshot {lastOffsetConsumed = 0 ,
+               commandsProcessed = Set.fromList [commandId] ,
+               state = AggregateState { aggregateId = workspaceId }}
+     CommandResponseStream.persist logger eventStoreConnection CommandFailed { commandId = commandId ,
+                                     workspaceId = workspaceId ,
+                                     reason = "first command muste be CreateWorkspace "  }
+     return ()
 
-        Just snapshot -> (SnapshotStream.persist logger eventStoreConnection AggregateSnapshot {
-                                   lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
-                                   commandsProcessed = Set.insert commandId (commandsProcessed snapshot),
-                                   state = state snapshot}) <>
-                         (CommandResponseStream.persist logger eventStoreConnection CommandFailed {
-                                                   commandId = commandId  ,
-                                                   workspaceId = workspaceId,
-                                                   reason = "scenario not handle yet"  }))
+unknownCommandFlow :: Logger -> EventStore.Connection -> Maybe AggregateSnapshot -> Command ->  IO ()
+unknownCommandFlow logger eventStoreConnection (Just snapshot) command @ Command { commandHeader = CommandHeader { commandId = commandId , aggregateId = workspaceId}}  = do
+      SnapshotStream.persist logger eventStoreConnection AggregateSnapshot {
+               lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
+               commandsProcessed = Set.insert commandId (commandsProcessed snapshot),
+               state = state snapshot}
+      CommandResponseStream.persist logger eventStoreConnection CommandFailed {
+                               commandId = commandId  ,
+                               workspaceId = workspaceId,
+                               reason = "scenario not handle yet"  }
+      return ()

@@ -40,7 +40,7 @@ instance Show PersistedEvent where
     "PersistedEvent { offset = " ++ ( show $ offset) ++ " , event = " ++ (show $ eventName commandHeader) ++ ":"
     ++ (show $ aggregateId commandHeader) ++ " }"
 
-persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Connection -> Event -> stream IO (Either PersistenceFailure PersistResult)
+persist :: Logger -> EventStore.Connection -> Event -> IO (Either PersistenceFailure PersistResult)
 persist logger eventStoreConnection event =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
@@ -55,7 +55,7 @@ persist logger eventStoreConnection event =  do
             getCredentials >>= wait
 
     liftIO $ logInfo logger $ "Event " ++ (eventName $ eventHeader event) ++ " : id " ++ (toString $ eventId $ eventHeader event) ++ " persisted"
-    S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
+    return $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO PersistedEvent)) => EventStore.Connection -> AggregateId -> Offset -> stream IO PersistedEvent
 readForward eventStoreConnection  workSpaceId fromOffset = do

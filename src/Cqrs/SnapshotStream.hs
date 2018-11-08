@@ -54,7 +54,7 @@ retrieveLast eventStoreConnection aggregateId =  do
 getSnapshotsFromResponse :: EventStore.StreamSlice -> [AggregateSnapshot]
 getSnapshotsFromResponse sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-persist :: (IsStream stream, MonadIO (stream IO)) =>  Logger -> EventStore.Connection -> AggregateSnapshot -> stream IO (Either PersistenceFailure PersistResult)
+persist :: Logger -> EventStore.Connection -> AggregateSnapshot -> IO (Either PersistenceFailure PersistResult)
 persist logger eventStoreConnection snapshot =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
@@ -71,7 +71,7 @@ persist logger eventStoreConnection snapshot =  do
             getCredentials >>= wait
 
     liftIO $ logInfo logger $ "snapshot updated for workspace " ++ (show $ aggregateId $ state snapshot)
-    S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
+    return $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 
 getStreamName :: AggregateId -> EventStore.StreamName

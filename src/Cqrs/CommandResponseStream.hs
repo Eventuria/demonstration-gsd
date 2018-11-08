@@ -33,7 +33,7 @@ import Data.Maybe
 import Data.Aeson
 import Cqrs.Streams
 
-persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Connection -> CommandResponse -> stream IO (Either PersistenceFailure PersistResult)
+persist :: Logger -> EventStore.Connection -> CommandResponse -> IO (Either PersistenceFailure PersistResult)
 persist logger eventStoreConnection commandResponse =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
@@ -50,7 +50,7 @@ persist logger eventStoreConnection commandResponse =  do
             getCredentials >>= wait
 
     liftIO $ logInfo logger $ "Command Response " ++ (getCommandResponseName commandResponse) ++ " : command id " ++ (toString $ getCommandId commandResponse) ++ " persisted"
-    S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
+    return $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO CommandResponse)) => EventStore.Connection -> AggregateId -> Offset -> stream IO CommandResponse
 readForward eventStoreConnection  workspaceId fromOffset =  do
