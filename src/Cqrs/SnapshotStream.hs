@@ -9,6 +9,7 @@ persist
 
 import Streamly
 import qualified Streamly.Prelude as S
+
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Function ((&))
 import Control.Concurrent
@@ -28,16 +29,16 @@ import Data.Maybe
 import Data.Aeson
 import Cqrs.Snapshot
 import Cqrs.Streams
+import Safe
 
-
-retrieveLastOffsetConsumed :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> AggregateId -> stream IO (Maybe Offset)
+retrieveLastOffsetConsumed :: EventStore.Connection -> AggregateId -> IO (Maybe Offset)
 retrieveLastOffsetConsumed eventStoreConnection aggregateId =
-  (retrieveLast eventStoreConnection aggregateId) & S.map (\snapshotMaybe -> lastOffsetConsumed <$> snapshotMaybe)
+  (fmap.fmap) lastOffsetConsumed (retrieveLast eventStoreConnection aggregateId)
 
-retrieveLast :: (IsStream stream, MonadIO (stream IO)) => EventStore.Connection -> AggregateId -> stream IO (Maybe AggregateSnapshot)
+retrieveLast :: EventStore.Connection -> AggregateId -> IO( Maybe AggregateSnapshot)
 retrieveLast eventStoreConnection aggregateId =  do
         let resolveLinkTos = False
-        readResult <- liftIO $ EventStore.readStreamEventsBackward
+        readResult <- EventStore.readStreamEventsBackward
                     eventStoreConnection
                     (getStreamName aggregateId)
                     (fromInteger 0)
@@ -47,8 +48,8 @@ retrieveLast eventStoreConnection aggregateId =  do
         case readResult of
           EventStore.ReadSuccess responseContent -> do
               let snapshots = getSnapshotsFromResponse responseContent
-              S.yield $ listToMaybe snapshots
-          EventStore.ReadNoStream -> S.yield Nothing
+              return $ listToMaybe snapshots
+          EventStore.ReadNoStream -> return Nothing
           e -> error $ "Read failure: " <> show e
 
 getSnapshotsFromResponse :: EventStore.StreamSlice -> [AggregateSnapshot]

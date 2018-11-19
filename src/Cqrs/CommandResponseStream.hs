@@ -44,7 +44,7 @@ persist logger eventStoreConnection commandResponse =  do
         eventInEventStoreDomain = EventStore.createEvent eventType eventId eventData
     writeResult <- liftIO $ EventStore.sendEvent
             eventStoreConnection
-            (getWorkspaceCommandResponseStreamName $ workspaceId commandResponse)
+            (getWorkspaceCommandResponseStreamName $ aggregateId commandResponse)
             EventStore.anyVersion
             eventInEventStoreDomain
             getCredentials >>= wait

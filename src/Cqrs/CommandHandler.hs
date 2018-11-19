@@ -1,8 +1,15 @@
-module Cqrs.CommandHandler where
+{-# LANGUAGE DeriveFunctor #-}
+module Cqrs.CommandHandler  where
 
-import Cqrs.Logger
-import qualified Database.EventStore as EventStore
 import Cqrs.PersistedCommand
 import Cqrs.Snapshot
+import Cqrs.Events
+import Cqrs.Core
+import Cqrs.EDsl
 
-type CommandHandler = Logger -> EventStore.Connection -> PersistedCommand -> Maybe AggregateSnapshot -> IO ()
+
+type CommandHandler = PersistedCommand -> Maybe AggregateSnapshot -> CommandDirective
+
+
+
+

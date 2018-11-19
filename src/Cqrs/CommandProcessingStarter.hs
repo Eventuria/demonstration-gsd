@@ -36,38 +36,31 @@ import Cqrs.Streams
 import Cqrs.PersistedCommand
 import Cqrs.AggregateStream
 import Cqrs.CommandHandler
-
+import Cqrs.EventStore.Interpreter
+import Cqrs.EventStore.Translation
+import Cqrs.EDsl
+import Cqrs.EventStore.EDsl
 
 startProcessingCommands :: Logger -> EventStore.Connection -> CommandHandler -> IO ()
 startProcessingCommands logger eventStoreConnection commandHandler = do
   logInfo logger "starting streams"
-  runStream $ parallely $ (AggregateStream.streamAllInfinitely logger eventStoreConnection) & S.mapM (\persistedWorkspace -> do
-    liftIO $ logInfo logger $ "detected workspace id : " ++ (show persistedWorkspace)
-    runStream $ serially $ yieldAndSubscribeToAggregateUpdates logger eventStoreConnection persistedWorkspace
-      & S.mapM (\ PersistedAggregate {aggregateIdPersisted = workspaceId}  -> do
-        runStream $ processCommand logger eventStoreConnection (commandHandler) workspaceId))
-
-
-processCommand :: (IsStream stream, MonadIO (stream IO )) =>  Logger -> EventStore.Connection -> CommandHandler -> AggregateId -> stream IO ()
-processCommand logger eventStoreConnection commandHandler workspaceId = do
-  liftIO $ logInfo logger $ "processing commands workspace for " ++ (show workspaceId)
-  (SnapshotStream.retrieveLastOffsetConsumed eventStoreConnection workspaceId)
-    & S.mapM ( \lastOffsetConsumed -> do
-      runStream $ (CommandStream.readForward eventStoreConnection workspaceId lastOffsetConsumed)
-        & S.mapM (\persistedCommand ->
-           runStream $ (SnapshotStream.retrieveLast eventStoreConnection workspaceId)
-              & S.mapM (\snapshotMaybe -> commandHandler logger eventStoreConnection persistedCommand snapshotMaybe)))
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  runStream
+    $ parallely
+    $ (AggregateStream.streamAllInfinitely logger eventStoreConnection)
+    & S.mapM (\persistedWorkspace -> do
+      liftIO $ logInfo logger $ "detected workspace id : " ++ (show persistedWorkspace)
+      runStream
+        $ serially
+        $ yieldAndSubscribeToAggregateUpdates logger eventStoreConnection persistedWorkspace
+        & S.mapM (\PersistedAggregate {aggregateIdPersisted = aggregateId}  -> do
+            liftIO $ logInfo logger $ "processing commands workspace for " ++ (show aggregateId)
+            lastOffsetConsumed <- liftIO $ SnapshotStream.retrieveLastOffsetConsumed eventStoreConnection aggregateId
+            runStream
+              $ (CommandStream.readForward eventStoreConnection aggregateId lastOffsetConsumed)
+              & S.mapM (\persistedCommand @PersistedCommand { command = Command { commandHeader = CommandHeader {commandId = commandId} }}  -> do
+                lastSnapshot <- liftIO $ SnapshotStream.retrieveLast eventStoreConnection aggregateId
+                let transaction = case (commandHandler persistedCommand lastSnapshot) of
+                                    Reject reason -> rejectCommandTransaction lastSnapshot aggregateId commandId reason
+                                    SkipBecauseAlreadyProcessed -> skipCommandTransaction aggregateId commandId
+                                    Transact commandTransaction -> (translate $ commandTransaction)
+                interpret transaction logger eventStoreConnection)))
