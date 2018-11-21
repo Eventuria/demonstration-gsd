@@ -15,7 +15,6 @@ import Data.Function ((&))
 import Control.Concurrent
 
 import Cqrs.Logger
-import Cqrs.EventStore
 import Cqrs.Core
 import Control.Concurrent.Async (wait)
 import qualified Database.EventStore as EventStore
@@ -31,12 +30,12 @@ import Cqrs.Snapshot
 import Cqrs.Streams
 import Safe
 
-retrieveLastOffsetConsumed :: EventStore.Connection -> AggregateId -> IO (Maybe Offset)
-retrieveLastOffsetConsumed eventStoreConnection aggregateId =
-  (fmap.fmap) lastOffsetConsumed (retrieveLast eventStoreConnection aggregateId)
+retrieveLastOffsetConsumed :: EventStore.Credentials -> EventStore.Connection -> AggregateId -> IO (Maybe Offset)
+retrieveLastOffsetConsumed credentials eventStoreConnection aggregateId =
+  (fmap.fmap) lastOffsetConsumed (retrieveLast credentials eventStoreConnection aggregateId)
 
-retrieveLast :: EventStore.Connection -> AggregateId -> IO( Maybe AggregateSnapshot)
-retrieveLast eventStoreConnection aggregateId =  do
+retrieveLast :: EventStore.Credentials -> EventStore.Connection -> AggregateId -> IO( Maybe AggregateSnapshot)
+retrieveLast credentials eventStoreConnection aggregateId =  do
         let resolveLinkTos = False
         readResult <- EventStore.readStreamEventsBackward
                     eventStoreConnection
@@ -44,7 +43,7 @@ retrieveLast eventStoreConnection aggregateId =  do
                     (fromInteger 0)
                     (fromInteger 1)
                     resolveLinkTos
-                    getCredentials >>= wait
+                    (Just credentials) >>= wait
         case readResult of
           EventStore.ReadSuccess responseContent -> do
               let snapshots = getSnapshotsFromResponse responseContent
@@ -55,8 +54,8 @@ retrieveLast eventStoreConnection aggregateId =  do
 getSnapshotsFromResponse :: EventStore.StreamSlice -> [AggregateSnapshot]
 getSnapshotsFromResponse sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-persist :: Logger -> EventStore.Connection -> AggregateSnapshot -> IO (Either PersistenceFailure PersistResult)
-persist logger eventStoreConnection snapshot =  do
+persist :: Logger -> EventStore.Credentials -> EventStore.Connection -> AggregateSnapshot -> IO (Either PersistenceFailure PersistResult)
+persist logger credentials eventStoreConnection snapshot =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
@@ -69,7 +68,7 @@ persist logger eventStoreConnection snapshot =  do
             (getStreamName $ aggregateId $ state snapshot)
             EventStore.anyVersion
             eventInEventStoreDomain
-            getCredentials >>= wait
+            (Just credentials) >>= wait
 
     liftIO $ logInfo logger $ "snapshot updated for workspace " ++ (show $ aggregateId $ state snapshot)
     return $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult

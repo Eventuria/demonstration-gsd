@@ -5,7 +5,7 @@ import Cqrs.CommandProcessingStarter
 import Cqrs.Logger
 import qualified Database.EventStore as EventStore
 import Control.Exception
-
+import Cqrs.EventStore
 import Data.UUID
 import qualified Control.Concurrent as Concurrent
 import Control.Concurrent.Async
@@ -20,7 +20,7 @@ main = do
          bracket (EventStore.connect EventStore.defaultSettings (EventStore.Static "127.0.0.1" 1113))
                    (\connection -> do EventStore.shutdown connection
                                       EventStore.waitTillClosed connection)
-                   (\connection -> startProcessingCommands logger connection gsdCommandHandler)
+                   (\connection -> startProcessingCommands logger getCredentials connection gsdCommandHandler)
 
 
 

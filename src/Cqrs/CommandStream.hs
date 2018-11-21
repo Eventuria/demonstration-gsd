@@ -12,7 +12,6 @@ module Cqrs.CommandStream (
                           subscribeToNewCommand) where
 
 import Cqrs.Logger
-import Cqrs.EventStore
 import Cqrs.Core
 import Cqrs.Command
 import Control.Concurrent.Async (wait)
@@ -69,8 +68,8 @@ subscribeToNewCommand logger eventStoreConnection workSpaceId = do
 convertJsonToPersistedCommand :: Offset -> EventStore.ResolvedEvent ->  PersistedCommand
 convertJsonToPersistedCommand offset eventData  = PersistedCommand { offset = offset, command = fromJust $ EventStore.resolvedEventDataAsJson eventData }
 
-persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Connection -> Command -> stream IO (Either PersistenceFailure PersistResult)
-persist logger eventStoreConnection Command { commandHeader = CommandHeader {commandId = commandId , aggregateId = aggregateId , commandName = commandName} , payload = payload } =  do
+persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Credentials -> EventStore.Connection -> Command -> stream IO (Either PersistenceFailure PersistResult)
+persist logger credentials eventStoreConnection Command { commandHeader = CommandHeader {commandId = commandId , aggregateId = aggregateId , commandName = commandName} , payload = payload } =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
@@ -87,13 +86,13 @@ persist logger eventStoreConnection Command { commandHeader = CommandHeader {com
             (getWorkspaceCommandStreamName $ aggregateId )
             EventStore.anyVersion
             eventInEventStoreDomain
-            getCredentials >>= wait
+            (Just credentials) >>= wait
 
     liftIO $ logInfo logger $ "Command " ++ commandName ++ " : command id " ++ (toString $ commandId) ++ " persisted"
     S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
-readForward :: (IsStream stream, MonadIO (stream IO),Semigroup (stream IO PersistedCommand)) => EventStore.Connection -> AggregateId -> Maybe Offset -> stream IO PersistedCommand
-readForward eventStoreConnection workspaceId fromOffset =  do
+readForward :: (IsStream stream, MonadIO (stream IO),Semigroup (stream IO PersistedCommand)) => EventStore.Credentials -> EventStore.Connection -> AggregateId -> Maybe Offset -> stream IO PersistedCommand
+readForward credentials eventStoreConnection workspaceId fromOffset =  do
                let batchSize = 100 :: Integer
                    resolveLinkTos = False
 
@@ -103,13 +102,13 @@ readForward eventStoreConnection workspaceId fromOffset =  do
                                 (fromInteger $ fromMaybe 0 fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
-                                getCredentials
+                                (Just credentials)
                commandFetched <- liftIO $ wait asyncRead
                case commandFetched of
                     EventStore.ReadSuccess readResult -> do
                         let persistedCommands = getPersistedCommandRequestFrom readResult
                         if (length persistedCommands) /= 0 then do
-                            (S.fromList persistedCommands) <> (readForward eventStoreConnection workspaceId $ ( (+ batchSize) <$> Just (fromMaybe 0 fromOffset)))
+                            (S.fromList persistedCommands) <> (readForward credentials eventStoreConnection workspaceId $ ( (+ batchSize) <$> Just (fromMaybe 0 fromOffset)))
                         else S.fromList $ persistedCommands
                     e -> error $ "Read failure: " <> show e
 

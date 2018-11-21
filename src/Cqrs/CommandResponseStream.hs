@@ -15,10 +15,9 @@ import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Function ((&))
 
-import Cqrs.EventStore
+
 import qualified Database.EventStore as EventStore
 
-import Cqrs.EventStore
 import Cqrs.Core
 import Cqrs.CommandResponse
 import Cqrs.Logger
@@ -33,8 +32,8 @@ import Data.Maybe
 import Data.Aeson
 import Cqrs.Streams
 
-persist :: Logger -> EventStore.Connection -> CommandResponse -> IO (Either PersistenceFailure PersistResult)
-persist logger eventStoreConnection commandResponse =  do
+persist :: Logger -> EventStore.Credentials -> EventStore.Connection -> CommandResponse -> IO (Either PersistenceFailure PersistResult)
+persist logger credentials eventStoreConnection commandResponse =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
 
@@ -47,13 +46,13 @@ persist logger eventStoreConnection commandResponse =  do
             (getWorkspaceCommandResponseStreamName $ aggregateId commandResponse)
             EventStore.anyVersion
             eventInEventStoreDomain
-            getCredentials >>= wait
+            (Just credentials) >>= wait
 
     liftIO $ logInfo logger $ "Command Response " ++ (getCommandResponseName commandResponse) ++ " : command id " ++ (toString $ getCommandId commandResponse) ++ " persisted"
     return $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
-readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO CommandResponse)) => EventStore.Connection -> AggregateId -> Offset -> stream IO CommandResponse
-readForward eventStoreConnection  workspaceId fromOffset =  do
+readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO CommandResponse)) => EventStore.Credentials -> EventStore.Connection -> AggregateId -> Offset -> stream IO CommandResponse
+readForward credentials eventStoreConnection  workspaceId fromOffset =  do
                let batchSize = 100 :: Integer
                    resolveLinkTos = False
                asyncRead <- liftIO $ EventStore.readStreamEventsForward
@@ -62,13 +61,13 @@ readForward eventStoreConnection  workspaceId fromOffset =  do
                                 (fromInteger fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
-                                getCredentials
+                                (Just credentials)
                commandFetched <- liftIO $ wait asyncRead
                case commandFetched of
                     EventStore.ReadSuccess readResult -> do
                         let commandResponses = getCommandResponseRequestFromReadResult readResult
                         if (length commandResponses) /= 0 then do
-                            (S.fromList commandResponses) <> (readForward eventStoreConnection workspaceId $ fromOffset + batchSize)
+                            (S.fromList commandResponses) <> (readForward credentials eventStoreConnection workspaceId $ fromOffset + batchSize)
                         else S.fromList commandResponses
                     e -> error $ "Read failure: " <> show e
 

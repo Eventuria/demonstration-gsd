@@ -40,13 +40,14 @@ import Cqrs.EventStore.Interpreter
 import Cqrs.EventStore.Translation
 import Cqrs.EDsl
 import Cqrs.EventStore.EDsl
+import Cqrs.PersistedAggregate
 
-startProcessingCommands :: Logger -> EventStore.Connection -> CommandHandler -> IO ()
-startProcessingCommands logger eventStoreConnection commandHandler = do
+startProcessingCommands :: Logger -> EventStore.Credentials -> EventStore.Connection -> CommandHandler -> IO ()
+startProcessingCommands logger credentials eventStoreConnection commandHandler = do
   logInfo logger "starting streams"
   runStream
     $ parallely
-    $ (AggregateStream.streamAllInfinitely logger eventStoreConnection)
+    $ (AggregateStream.streamAllInfinitely logger credentials eventStoreConnection)
     & S.mapM (\persistedWorkspace -> do
       liftIO $ logInfo logger $ "detected workspace id : " ++ (show persistedWorkspace)
       runStream
@@ -54,13 +55,13 @@ startProcessingCommands logger eventStoreConnection commandHandler = do
         $ yieldAndSubscribeToAggregateUpdates logger eventStoreConnection persistedWorkspace
         & S.mapM (\PersistedAggregate {aggregateIdPersisted = aggregateId}  -> do
             liftIO $ logInfo logger $ "processing commands workspace for " ++ (show aggregateId)
-            lastOffsetConsumed <- liftIO $ SnapshotStream.retrieveLastOffsetConsumed eventStoreConnection aggregateId
+            lastOffsetConsumed <- liftIO $ SnapshotStream.retrieveLastOffsetConsumed credentials eventStoreConnection aggregateId
             runStream
-              $ (CommandStream.readForward eventStoreConnection aggregateId lastOffsetConsumed)
+              $ (CommandStream.readForward credentials eventStoreConnection aggregateId lastOffsetConsumed)
               & S.mapM (\persistedCommand @PersistedCommand { command = Command { commandHeader = CommandHeader {commandId = commandId} }}  -> do
-                lastSnapshot <- liftIO $ SnapshotStream.retrieveLast eventStoreConnection aggregateId
+                lastSnapshot <- liftIO $ SnapshotStream.retrieveLast credentials eventStoreConnection aggregateId
                 let transaction = case (commandHandler persistedCommand lastSnapshot) of
                                     Reject reason -> rejectCommandTransaction lastSnapshot aggregateId commandId reason
                                     SkipBecauseAlreadyProcessed -> skipCommandTransaction aggregateId commandId
                                     Transact commandTransaction -> (translate $ commandTransaction)
-                interpret transaction logger eventStoreConnection)))
+                interpret transaction logger credentials eventStoreConnection)))

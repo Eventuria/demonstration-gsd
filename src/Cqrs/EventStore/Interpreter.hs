@@ -12,21 +12,21 @@ import qualified Data.UUID.V4 as Uuid
 import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.EDsl
 
-interpret :: EventStoreLanguage a -> Logger -> EventStore.Connection -> IO a
+interpret :: EventStoreLanguage a -> Logger -> EventStore.Credentials -> EventStore.Connection -> IO a
 
-interpret (Pure a) logger connection = return a
-interpret (Free (PersistEvent event next)) logger connection = do
-    EventStream.persist logger connection event
-    interpret next logger connection
-interpret (Free (PersistAggregate aggregateSnapshot next)) logger connection = do
-    SnapshotStream.persist logger connection aggregateSnapshot
-    interpret next logger connection
-interpret (Free (PersistCommandResponse commandResponse next)) logger connection = do
-    CommandResponseStream.persist logger connection commandResponse
-    interpret next logger connection
-interpret (Free (GetCurrentTime fct)) logger connection = do
+interpret (Pure a) logger credentials connection = return a
+interpret (Free (PersistEvent event next)) logger credentials connection = do
+    EventStream.persist logger credentials connection event
+    interpret next logger credentials connection
+interpret (Free (PersistAggregate aggregateSnapshot next)) logger credentials connection = do
+    SnapshotStream.persist logger credentials connection aggregateSnapshot
+    interpret next logger credentials connection
+interpret (Free (PersistCommandResponse commandResponse next)) logger credentials connection = do
+    CommandResponseStream.persist logger credentials connection commandResponse
+    interpret next logger credentials connection
+interpret (Free (GetCurrentTime fct)) logger credentials connection = do
     now <- Time.getCurrentTime
-    interpret (fct now) logger connection
-interpret (Free (GetNewEventId fct)) logger connection = do
+    interpret (fct now) logger credentials connection
+interpret (Free (GetNewEventId fct)) logger credentials connection = do
     eventId <- liftIO $ Uuid.nextRandom
-    interpret (fct eventId) logger connection
+    interpret (fct eventId) logger credentials connection

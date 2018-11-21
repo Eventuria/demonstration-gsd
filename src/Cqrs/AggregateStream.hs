@@ -1,21 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE FlexibleContexts #-}
-
-module Cqrs.AggregateStream (
-PersistedAggregate(..),
-streamAllInfinitely,
-streamAll,
-streamFromOffset,
-subscribeToNewAggregateCreated,
-subscribeToAggregateUpdates,
-yieldAndSubscribeToAggregateUpdates
-
-) where
+{-# LANGUAGE DuplicateRecordFields #-}
+module Cqrs.AggregateStream  where
 
 import qualified Cqrs.CommandStream as CommandStream
 import Prelude hiding (catch)
-import Cqrs.EventStore
+
 import Cqrs.Command
 import qualified Cqrs.Command as MyCommand
 import Cqrs.Events
@@ -35,6 +25,7 @@ import Data.ByteString.Char8 as Char8 (unpack)
 import qualified Control.Concurrent as Concurrent
 import Control.Exception
 import Cqrs.Streams
+import Cqrs.PersistedAggregate
 
 import Streamly
 import qualified Streamly.Prelude as S
@@ -42,9 +33,11 @@ import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Data.Function ((&))
 import Data.Either
+
+import qualified Cqrs.EventStore.Stream as StreamGeneric
+
 type CorruptedStreamName = String
 
-data PersistedAggregate = PersistedAggregate { offset :: Offset, aggregateIdPersisted :: AggregateId } deriving (Show,Eq)
 
 getAggregateCreatedStreamName :: EventStore.StreamName
 getAggregateCreatedStreamName = EventStore.StreamName $ Text.pack $ "$et-createWorkspace"
@@ -93,7 +86,7 @@ subscribeToNewAggregateCreated logger eventStoreConnection = do
                            loopNextEvent subscription = do
                               resolvedEvent <- liftIO $ EventStore.nextEvent subscription
                               liftIO $ logInfo logger $ "new aggregate created stream event triggered : " ++ (show resolvedEvent)
-                              (S.yield $ getCreatedAggregate $ (EventStore.resolvedEventOriginal resolvedEvent)) <> loopNextEvent subscription
+                              (S.yield $ recordedEventToPersistedAggregate $ (EventStore.resolvedEventOriginal resolvedEvent)) <> loopNextEvent subscription
 
 waitSubscriptionConfirmation :: EventStore.Subscription s => s -> IO (Either SomeException ())
 waitSubscriptionConfirmation subscription  = do
@@ -106,54 +99,36 @@ streamAll :: (IsStream stream,
               MonadIO (stream IO),
               Semigroup (stream IO PersistedAggregate)) =>
                 Logger ->
+                EventStore.Credentials ->
                 EventStore.Connection ->
                 stream IO PersistedAggregate
-streamAll logger eventStoreConnection = streamFromOffset logger eventStoreConnection 0
+streamAll logger credentials eventStoreConnection = streamFromOffset logger credentials eventStoreConnection 0
 
 streamAllInfinitely ::  (IsStream stream,
                          MonadIO (stream IO),
                          Semigroup (stream IO PersistedAggregate)) =>
                           Logger ->
+                          EventStore.Credentials ->
                           EventStore.Connection ->
                           stream IO PersistedAggregate
-streamAllInfinitely  logger eventStoreConnection =
+streamAllInfinitely  logger credentials eventStoreConnection =
   (subscribeToNewAggregateCreated logger eventStoreConnection)
-    `parallel` (streamAll logger eventStoreConnection)
+    `parallel` (streamAll logger credentials eventStoreConnection)
 
 
 streamFromOffset :: (IsStream stream,
                      MonadIO (stream IO),
                      Semigroup (stream IO PersistedAggregate)) =>
                       Logger ->
+                      EventStore.Credentials ->
                       EventStore.Connection ->
                       Offset ->
                       stream IO PersistedAggregate
-streamFromOffset logger eventStoreConnection fromOffset = do
-               liftIO $ logInfo logger $ "starting streaming commands from offset " ++ (show fromOffset)
-               let batchSize = 100 :: Integer
-                   resolveLinkTos = False
-               asyncRead <- liftIO $ EventStore.readStreamEventsForward
-                                eventStoreConnection
-                                getAggregateCreatedStreamName
-                                (fromInteger fromOffset)
-                                (fromInteger batchSize)
-                                resolveLinkTos
-                                getCredentials
-               commandFetched <- liftIO $ wait asyncRead
-               case commandFetched of
-                    EventStore.ReadSuccess readResult -> do
-                        let commandStreamNamesByAggregateId = getCreatedAggregate
-                                                              <$> EventStore.resolvedEventOriginal
-                                                              <$> EventStore.sliceEvents readResult
-                        if (length commandStreamNamesByAggregateId) /= 0 then do
-                            (S.fromList commandStreamNamesByAggregateId) <>
-                              (streamFromOffset logger eventStoreConnection $ fromOffset + batchSize)
-                        else S.fromList commandStreamNamesByAggregateId
-                    EventStore.ReadNoStream -> error $ "ReadNoStream "
-                    e -> error $ "Read failure: " <> show e
+streamFromOffset logger credentials eventStoreConnection fromOffset =
+  StreamGeneric.streamFromOffset logger credentials getAggregateCreatedStreamName eventStoreConnection recordedEventToPersistedAggregate fromOffset
 
-getCreatedAggregate :: EventStore.RecordedEvent -> PersistedAggregate
-getCreatedAggregate recordedEvent =
+recordedEventToPersistedAggregate :: EventStore.RecordedEvent -> PersistedAggregate
+recordedEventToPersistedAggregate recordedEvent =
   PersistedAggregate { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
                        aggregateIdPersisted = case (fromString $ drop (length  ("0@aggregate_command-" :: [Char])) $ unpack $ EventStore.recordedEventData recordedEvent) of
                                           Just aggregateId -> aggregateId

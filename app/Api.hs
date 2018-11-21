@@ -13,7 +13,7 @@ import qualified Database.EventStore as EventStore
 import Control.Exception
 import Data.UUID
 
-
+import Cqrs.EventStore
 import qualified Control.Concurrent as Concurrent
 import Control.Concurrent.Async
 
@@ -40,16 +40,16 @@ routing :: Logger -> EventStore.Connection -> IO()
 routing logger eventStoreConnection = scotty 3000 $ do
   get  "/health/liveness" $ do html "OK"
   get  "/workspaceIds" $ do
-     (liftIO $ runStream $ WorkspaceStream.streamAll logger eventStoreConnection) >>= json
+     (liftIO $ runStream $ WorkspaceStream.streamAll logger getCredentials eventStoreConnection) >>= json
   get  "/:workspaceIdGiven/commands/read" $ do
     workspaceIdString <- param "workspaceIdGiven"
     let workspaceIdOpt = fromString workspaceIdString
     case workspaceIdOpt of
                    Just (workspaceId) ->
-                      (liftIO $ runStream $ CommandStream.readForward eventStoreConnection workspaceId Nothing) >>= json
+                      (liftIO $ runStream $ CommandStream.readForward getCredentials eventStoreConnection workspaceId Nothing) >>= json
                    Nothing -> html "you've passed an invalid workspace id format"
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
      (liftIO $ runStream
-             $ CommandStream.persist logger eventStoreConnection command) >>= json
+             $ CommandStream.persist logger getCredentials eventStoreConnection command) >>= json
