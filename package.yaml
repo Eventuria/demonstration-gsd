@@ -40,6 +40,12 @@ dependencies:
   - safe
 library:
   source-dirs: src
+ghc-options:
+  -fwarn-tabs
+  -fwarn-unused-imports
+  -fwarn-missing-signatures
+  -fwarn-incomplete-patterns
+
 
 executables:
   gsd-sandbox:
