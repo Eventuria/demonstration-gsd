@@ -7,13 +7,12 @@ module Cqrs.EDsl (
   persistEvent,updateSnapshot,getNewEventID,getCurrentTime
  ) where
 
-import Cqrs.PersistedCommand
-import Cqrs.Snapshot
-import Cqrs.Events
-import Cqrs.Core
+import Cqrs.Events.Event
+import Cqrs.Aggregate.Snapshots.AggregateSnapshot
 import qualified Data.Time as Time
 import Control.Monad.Free
-import Cqrs.CommandResponse
+import Cqrs.Commands.Responses.CommandResponse
+import Cqrs.Events.EventId
 
 data CommandDirective = Reject RejectionReason | SkipBecauseAlreadyProcessed | Transact (CommandTransaction ())
 

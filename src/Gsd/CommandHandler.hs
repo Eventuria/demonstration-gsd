@@ -2,23 +2,17 @@
 
 module Gsd.CommandHandler where
 
-import Data.Set (Set)
-import qualified Data.Set as Set
-
+import Data.Set (fromList)
 
 import Data.Maybe
-import Data.Either
+
 
 import Data.Function ((&))
 
-import Cqrs.Logger
-import Cqrs.PersistedCommand
-import Cqrs.Snapshot
-import Cqrs.Command
-import Cqrs.Events
-import Cqrs.Streams
+import Cqrs.Aggregate.Snapshots.AggregateSnapshot
+import Cqrs.Commands.PersistedCommand
+import Cqrs.Commands.Command
 import Gsd.Commands
-import Cqrs.CommandResponse
 import Gsd.Events
 import Cqrs.CommandHandler
 import Cqrs.EDsl
@@ -32,7 +26,7 @@ gsdCommandHandler persistedCommand@PersistedCommand {offset = offset , command =
         eventId <- getNewEventID
         persistEvent $ toEvent $ WorkspaceCreated {  eventId = eventId , createdOn = now, workspaceId = workspaceId}
         updateSnapshot AggregateSnapshot {lastOffsetConsumed = 0 ,
-                                                            commandsProcessed = Set.fromList [commandId] ,
+                                                            commandsProcessed = fromList [commandId] ,
                                                             state = AggregateState { aggregateId = workspaceId }})
    | (not $ isFirstCommand snapshotMaybe ) && (isCreateWorkspaceCommand command) = Reject "first command muste be CreateWorkspace "
    | otherwise = Reject "scenario not handle yet"

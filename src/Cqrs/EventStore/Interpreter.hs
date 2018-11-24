@@ -2,15 +2,15 @@ module Cqrs.EventStore.Interpreter where
 
 import Cqrs.Logger
 import qualified Database.EventStore as EventStore
-import qualified Cqrs.CommandResponseStream as CommandResponseStream
-import qualified Cqrs.SnapshotStream as SnapshotStream
-import qualified Cqrs.EventStream as EventStream
+import qualified Cqrs.Commands.Responses.CommandResponseStream as CommandResponseStream
+import qualified Cqrs.Aggregate.Snapshots.AggregateSnapshotStream as SnapshotStream
+import qualified Cqrs.Events.EventStream as EventStream
 import Control.Monad.Free
-import Cqrs.Events
 import qualified Data.Time as Time
 import qualified Data.UUID.V4 as Uuid
 import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.EDsl
+
 
 interpret :: EventStoreLanguage a -> Logger -> EventStore.Credentials -> EventStore.Connection -> IO a
 

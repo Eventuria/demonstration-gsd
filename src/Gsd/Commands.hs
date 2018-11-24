@@ -1,9 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Gsd.Commands where
 
-import Cqrs.Core
-import Cqrs.Command
-import qualified Cqrs.Command as CommandModule
+import Cqrs.Commands.CommandId
+import Cqrs.Commands.Command
+import qualified Cqrs.Commands.Command as CommandModule
 import Gsd.Core
 
 
@@ -38,6 +38,7 @@ toCommand :: GsdCommand -> Command
 toCommand  CreateWorkspace {commandId = commandId, workspaceId = workspaceId} =
   Command { commandHeader = CommandHeader { commandId = commandId, aggregateId = workspaceId , commandName = "createWorkspace" } ,
             payload = []}
+toCommand _ = error "to handle..."
 
 fromCommand :: Command -> Maybe GsdCommand
 fromCommand command =

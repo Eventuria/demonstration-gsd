@@ -2,15 +2,16 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Cqrs.EventStore.EDsl where
 
-import Cqrs.CommandResponse
-import Cqrs.PersistedCommand
-import Cqrs.Snapshot
-import Cqrs.Events
-import Cqrs.Core
+import Cqrs.Commands.CommandId
+import Cqrs.Commands.Responses.CommandResponse
+import Cqrs.Aggregate.Snapshots.AggregateSnapshot
+import Cqrs.Events.Event
+import Cqrs.Events.EventId
+
 import Data.Time
 import Control.Monad.Free
 import qualified Data.Set as Set
-
+import Cqrs.Aggregate.Ids.AggregateId
 
 data Directive a = PersistEvent Event a
                 | PersistAggregate AggregateSnapshot a

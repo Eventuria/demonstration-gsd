@@ -1,7 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Cqrs.Events where
+module Cqrs.Events.Event where
 
+import Cqrs.Aggregate.Ids.AggregateId
+import Cqrs.Events.EventId
 import Cqrs.Core
 import Data.Aeson
 import Data.Text
@@ -29,6 +31,7 @@ instance FromJSON Event where
   parseJSON (Object jsonObject) =
     Event <$> jsonObject .: "eventHeader"
             <*> jsonObject .: "payload"
+  parseJSON _ =  error $ "Json format not expected"
 
 instance ToJSON EventHeader where
   toJSON (EventHeader {aggregateId = aggregateId , eventId = eventId , createdOn = createdOn,  eventName = commandName} ) =
@@ -44,7 +47,7 @@ instance FromJSON EventHeader where
               <*> jsonObject .: "eventId"
               <*> jsonObject .: "createdOn"
               <*> jsonObject .: "eventName"
-
+  parseJSON _ =  error $ "Json format not expected"
 
 
 

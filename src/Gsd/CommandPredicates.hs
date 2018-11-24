@@ -1,9 +1,7 @@
 module Gsd.CommandPredicates where
 
-import Cqrs.Snapshot
-import Cqrs.Command
+import Cqrs.Aggregate.Snapshots.AggregateSnapshot
 import Cqrs.Streams
-import Gsd.Commands
 
 isAlreadyProcessed :: Offset -> Maybe AggregateSnapshot -> Bool
 isAlreadyProcessed offset snapshotMaybe = Just offset == (lastOffsetConsumed <$> snapshotMaybe)

@@ -1,9 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Cqrs.Command where
+module Cqrs.Commands.Command where
 
-import Data.UUID
-import Data.Time
+import Cqrs.Aggregate.Ids.AggregateId
+import Cqrs.Commands.CommandId
 import Data.Aeson
 import Data.Text
 import Cqrs.Core
@@ -29,6 +29,7 @@ instance FromJSON Command where
   parseJSON (Object jsonObject) =
     Command <$> jsonObject .: "commandHeader"
             <*> jsonObject .: "payload"
+  parseJSON _ =  error $ "Json format not expected"
 
 
 instance ToJSON CommandHeader where
@@ -43,4 +44,5 @@ instance FromJSON CommandHeader where
      CommandHeader <$> jsonObject .: "aggregateId"
               <*> jsonObject .: "commandId"
               <*> jsonObject .: "commandName"
+  parseJSON _ =  error $ "Json format not expected"
 

@@ -1,8 +1,8 @@
-module Cqrs.PersistedCommand where
+module Cqrs.Commands.PersistedCommand where
 
-import Cqrs.Command
-import Cqrs.Core
+import Cqrs.Commands.Command
 import Cqrs.Streams
+import Cqrs.Aggregate.Ids.AggregateId
 
 data PersistedCommand = PersistedCommand {
                                 offset :: Offset ,

@@ -1,12 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Cqrs.CommandResponse where
+module Cqrs.Commands.Responses.CommandResponse where
 
-import Data.UUID
-import Data.Time
+import Cqrs.Commands.CommandId
 import Data.Aeson
-import Cqrs.Core
 import qualified Data.Text as Text
+import Cqrs.Aggregate.Ids.AggregateId
 
 type RejectionReason = String
 
@@ -69,3 +68,5 @@ instance FromJSON CommandResponse  where
                         <*> jsonObject .: "ideaContent"
                     Just (String unknownCommandResponseName) -> error $ "Command Response unknown : " ++ Text.unpack unknownCommandResponseName
                     Nothing -> error $ "Command Response name not provided"
+                    _ -> error $ "Json format not expected"
+  parseJSON _ = error $ "Json format not expected"

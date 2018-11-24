@@ -4,64 +4,53 @@
 {-# LANGUAGE Rank2Types #-}
 module Cqrs.CommandProcessingStarter  where
 
-import Cqrs.Command
-import qualified Cqrs.Command as CommandModule
-import qualified Cqrs.CommandResponse as CommandResponse
-import Cqrs.Events
-import Cqrs.Snapshot
+import Cqrs.Commands.Command
+import qualified Cqrs.Commands.CommandStream as CommandStream
 
-import Data.Maybe
-import Cqrs.CommandStream
-
-
-import qualified Cqrs.AggregateStream as AggregateStream
-import qualified Cqrs.CommandStream as CommandStream
-
-import qualified Cqrs.SnapshotStream as SnapshotStream
-import Control.Concurrent.Async (wait)
-import Data.Semigroup (Semigroup(..))
-
-
+import Cqrs.Aggregate.Snapshots.AggregateSnapshotStream
+import Cqrs.Aggregate.Snapshots.PersistedAggregateSnapshot
 import Streamly
 import qualified Streamly.Prelude as S
-import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Function ((&))
 
-import qualified Database.EventStore as EventStore
-import Control.Exception
 import Cqrs.Logger
-import Cqrs.Core
-import Cqrs.Streams
-import Cqrs.PersistedCommand
-import Cqrs.AggregateStream
+
+
+import Cqrs.Commands.PersistedCommand
+import Cqrs.Aggregate.Ids.AggregateIdStream
 import Cqrs.CommandHandler
 import Cqrs.EventStore.Interpreter
 import Cqrs.EventStore.Translation
 import Cqrs.EDsl
 import Cqrs.EventStore.EDsl
-import Cqrs.PersistedAggregate
+import Cqrs.Aggregate.Ids.PersistedAggregateId
+import Cqrs.EventStore.Streaming
 
-startProcessingCommands :: Logger -> EventStore.Credentials -> EventStore.Connection -> CommandHandler -> IO ()
-startProcessingCommands logger credentials eventStoreConnection commandHandler = do
+import Cqrs.EventStore.Querying
+import Cqrs.EventStore.Context
+
+startProcessingCommands :: Logger -> EventStoreContext -> AggregateStream  -> CommandHandler -> IO ()
+startProcessingCommands logger eventStoreContext @ Context { credentials = credentials, connection = connection } aggregateStream commandHandler = do
   logInfo logger "starting streams"
   runStream
     $ parallely
-    $ (AggregateStream.streamAllInfinitely logger credentials eventStoreConnection)
-    & S.mapM (\persistedWorkspace -> do
-      liftIO $ logInfo logger $ "detected workspace id : " ++ (show persistedWorkspace)
+    $ streamAllInfinitely aggregateStream
+    & S.mapM (\persistedAggregate -> do
+      liftIO $ logInfo logger $ "detected workspace id : " ++ (show persistedAggregate)
       runStream
         $ serially
-        $ yieldAndSubscribeToAggregateUpdates logger eventStoreConnection persistedWorkspace
-        & S.mapM (\PersistedAggregate {aggregateIdPersisted = aggregateId}  -> do
+        $ yieldAndSubscribeToAggregateUpdates eventStoreContext persistedAggregate
+        & S.mapM (\PersistedAggregateId {persistedAggregateId = aggregateId}  -> do
             liftIO $ logInfo logger $ "processing commands workspace for " ++ (show aggregateId)
-            lastOffsetConsumed <- liftIO $ SnapshotStream.retrieveLastOffsetConsumed credentials eventStoreConnection aggregateId
+            let aggregateSnapshotStream = getAggregateSnapshotStream eventStoreContext aggregateId
+            lastOffsetConsumed <- liftIO $ retrieveLastOffsetConsumed aggregateSnapshotStream
             runStream
-              $ (CommandStream.readForward credentials eventStoreConnection aggregateId lastOffsetConsumed)
+              $ (CommandStream.readForward credentials connection aggregateId lastOffsetConsumed)
               & S.mapM (\persistedCommand @PersistedCommand { command = Command { commandHeader = CommandHeader {commandId = commandId} }}  -> do
-                lastSnapshot <- liftIO $ SnapshotStream.retrieveLast credentials eventStoreConnection aggregateId
+                lastSnapshot <- liftIO $ (fmap.fmap) aggregateSnapshot $ retrieveLast aggregateSnapshotStream
                 let transaction = case (commandHandler persistedCommand lastSnapshot) of
                                     Reject reason -> rejectCommandTransaction lastSnapshot aggregateId commandId reason
                                     SkipBecauseAlreadyProcessed -> skipCommandTransaction aggregateId commandId
                                     Transact commandTransaction -> (translate $ commandTransaction)
-                interpret transaction logger credentials eventStoreConnection)))
+                interpret transaction logger credentials connection)))

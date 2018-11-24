@@ -1,9 +1,9 @@
-module Cqrs.Snapshot where
-import Cqrs.Core
+module Cqrs.Aggregate.Snapshots.AggregateSnapshot where
+
 import Cqrs.Streams
 import Data.Set (Set)
-import qualified Data.Set as Set
-
+import Cqrs.Commands.CommandId
+import Cqrs.Aggregate.Ids.AggregateId
 
 data AggregateSnapshot = AggregateSnapshot { lastOffsetConsumed::Offset , commandsProcessed :: Set CommandId, state :: AggregateState } deriving (Eq)
 

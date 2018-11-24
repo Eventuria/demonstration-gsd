@@ -5,29 +5,26 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies   #-}
 
-module Cqrs.EventStream (
+module Cqrs.Events.EventStream (
 readForward,
 persist) where
 
 import Streamly
 import qualified Streamly.Prelude as S
-import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(..))
-import Data.Function ((&))
 import qualified Database.EventStore as EventStore
-import Cqrs.Core
-import Cqrs.Events
+import Cqrs.Events.Event
 import Cqrs.Streams
 import Cqrs.Logger
 import Control.Concurrent.Async (wait)
+import Cqrs.Aggregate.Ids.AggregateId
 
 import qualified Data.Text as Text
 import Data.UUID
-import Data.Time
 import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
 
-import Data.Aeson
+
 
 data PersistedEvent = PersistedEvent {
                                 offset :: Offset ,

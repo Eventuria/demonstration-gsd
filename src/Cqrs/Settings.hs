@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Cqrs.EventStore where
+module Cqrs.Settings where
 
 import qualified Database.EventStore as EventStore
 

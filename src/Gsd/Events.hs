@@ -1,19 +1,17 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Gsd.Events where
 
-import Gsd.Commands
+
 import Gsd.Core
-import Cqrs.Core
-import Cqrs.Events
-import qualified Cqrs.Events as CoreEvent
+import Cqrs.Events.Event
+import Cqrs.Events.EventId
+import qualified Cqrs.Events.Event as CoreEvent
 import Data.Time
-import Data.Aeson
-import qualified Data.Text as Text
 
 data GsdEvent = WorkspaceCreated { workspaceId ::WorkspaceId , eventId :: EventId , createdOn :: UTCTime  } deriving (Eq,Show)
 
-
-eventNameForWorkspaceCreated = "workspaceCreated" :: String
+eventNameForWorkspaceCreated :: String
+eventNameForWorkspaceCreated = "workspaceCreated"
 
 isCreateWorkspaceEvent :: Event -> Bool
 isCreateWorkspaceEvent event = (eventName $ eventHeader event) == eventNameForWorkspaceCreated

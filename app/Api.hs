@@ -3,26 +3,21 @@
 module Api where
 
 import Web.Scotty
-import Cqrs.CommandProcessingStarter
+
 import Cqrs.Logger
-import qualified Cqrs.CommandStream as CommandStream
-import qualified Cqrs.AggregateStream as WorkspaceStream
-import Data.Aeson.Encoding
+import qualified Cqrs.Commands.CommandStream as CommandStream
+import Cqrs.Aggregate.Ids.AggregateIdStream
+import Cqrs.EventStore.Streaming
 
 import qualified Database.EventStore as EventStore
 import Control.Exception
 import Data.UUID
 
-import Cqrs.EventStore
-import qualified Control.Concurrent as Concurrent
-import Control.Concurrent.Async
+import Cqrs.Settings
 
 import Streamly
-import qualified Streamly.Prelude as S
-import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(..))
-import Data.Function ((&))
-
+import Cqrs.EventStore.Context
 
 main :: IO ()
 main = do
@@ -33,23 +28,23 @@ main = do
   bracket (EventStore.connect EventStore.defaultSettings (EventStore.Static "127.0.0.1" 1113))
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
-         (\connection -> routing logger connection)
+         (\connection -> routing Context {logger = logger, connection = connection , credentials = getCredentials})
 
 
-routing :: Logger -> EventStore.Connection -> IO()
-routing logger eventStoreConnection = scotty 3000 $ do
+routing :: EventStoreContext -> IO()
+routing eventStoreContext @ Context {logger = logger , connection = connection , credentials = credentials } = scotty 3000 $ do
   get  "/health/liveness" $ do html "OK"
   get  "/workspaceIds" $ do
-     (liftIO $ runStream $ WorkspaceStream.streamAll logger getCredentials eventStoreConnection) >>= json
+     (liftIO $ runStream $ streamAll (getAggregateStream eventStoreContext) ) >>= json
   get  "/:workspaceIdGiven/commands/read" $ do
     workspaceIdString <- param "workspaceIdGiven"
     let workspaceIdOpt = fromString workspaceIdString
     case workspaceIdOpt of
                    Just (workspaceId) ->
-                      (liftIO $ runStream $ CommandStream.readForward getCredentials eventStoreConnection workspaceId Nothing) >>= json
+                      (liftIO $ runStream $ CommandStream.readForward credentials connection workspaceId Nothing) >>= json
                    Nothing -> html "you've passed an invalid workspace id format"
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
      (liftIO $ runStream
-             $ CommandStream.persist logger getCredentials eventStoreConnection command) >>= json
+             $ CommandStream.persist logger credentials connection command) >>= json

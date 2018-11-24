@@ -5,31 +5,29 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies   #-}
 
-module Cqrs.CommandResponseStream (
+module Cqrs.Commands.Responses.CommandResponseStream (
 readForward,
 persist) where
 
 import Streamly
 import qualified Streamly.Prelude as S
-import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(..))
-import Data.Function ((&))
+
 
 
 import qualified Database.EventStore as EventStore
 
-import Cqrs.Core
-import Cqrs.CommandResponse
+import Cqrs.Aggregate.Ids.AggregateId
+import Cqrs.Commands.Responses.CommandResponse
 import Cqrs.Logger
 import Control.Concurrent.Async (wait)
 import qualified Data.Text as Text
 import Data.UUID
-import Data.Time
+
 
 import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
 
-import Data.Aeson
 import Cqrs.Streams
 
 persist :: Logger -> EventStore.Credentials -> EventStore.Connection -> CommandResponse -> IO (Either PersistenceFailure PersistResult)
