@@ -3,9 +3,9 @@ module Gsd.Events where
 
 
 import Gsd.Core
-import Cqrs.Events.Event
-import Cqrs.Events.EventId
-import qualified Cqrs.Events.Event as CoreEvent
+import Cqrs.Aggregate.Events.Event
+import Cqrs.Aggregate.Events.EventId
+import qualified Cqrs.Aggregate.Events.Event as CoreEvent
 import Data.Time
 
 data GsdEvent = WorkspaceCreated { workspaceId ::WorkspaceId , eventId :: EventId , createdOn :: UTCTime  } deriving (Eq,Show)

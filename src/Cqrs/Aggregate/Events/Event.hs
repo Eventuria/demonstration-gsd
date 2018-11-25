@@ -1,15 +1,15 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Cqrs.Events.Event where
+module Cqrs.Aggregate.Events.Event where
 
 import Cqrs.Aggregate.Ids.AggregateId
-import Cqrs.Events.EventId
-import Cqrs.Core
+import Cqrs.Aggregate.Events.EventId
 import Data.Aeson
 import Data.Text
 import Data.Time
 
 type Pair = (Text, Value)
+type EventName = String
 
 data Event = Event { eventHeader :: EventHeader,
                      payload :: EventPayload}

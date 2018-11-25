@@ -1,6 +1,6 @@
-module Cqrs.Commands.PersistedCommand where
+module Cqrs.Aggregate.Commands.PersistedCommand where
 
-import Cqrs.Commands.Command
+import Cqrs.Aggregate.Commands.Command
 import Cqrs.Streams
 import Cqrs.Aggregate.Ids.AggregateId
 

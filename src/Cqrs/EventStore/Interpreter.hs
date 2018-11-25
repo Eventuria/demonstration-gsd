@@ -1,32 +1,30 @@
 module Cqrs.EventStore.Interpreter where
 
-import Cqrs.Logger
-import qualified Database.EventStore as EventStore
-import qualified Cqrs.Commands.Responses.CommandResponseStream as CommandResponseStream
-import qualified Cqrs.Aggregate.Snapshots.AggregateSnapshotStream as SnapshotStream
-import qualified Cqrs.Events.EventStream as EventStream
+import qualified Cqrs.Aggregate.Commands.Responses.CommandResponseStream as CommandResponseStream
+import qualified Cqrs.Aggregate.Commands.ValidationStates.ValidationStateStream as ValidationStateStream
+import qualified Cqrs.Aggregate.Events.EventStream as EventStream
 import Control.Monad.Free
 import qualified Data.Time as Time
 import qualified Data.UUID.V4 as Uuid
 import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.EDsl
+import Cqrs.EventStore.Context
 
+interpret :: EventStoreLanguage a -> EventStoreContext -> IO a
 
-interpret :: EventStoreLanguage a -> Logger -> EventStore.Credentials -> EventStore.Connection -> IO a
-
-interpret (Pure a) logger credentials connection = return a
-interpret (Free (PersistEvent event next)) logger credentials connection = do
-    EventStream.persist logger credentials connection event
-    interpret next logger credentials connection
-interpret (Free (PersistAggregate aggregateSnapshot next)) logger credentials connection = do
-    SnapshotStream.persist logger credentials connection aggregateSnapshot
-    interpret next logger credentials connection
-interpret (Free (PersistCommandResponse commandResponse next)) logger credentials connection = do
-    CommandResponseStream.persist logger credentials connection commandResponse
-    interpret next logger credentials connection
-interpret (Free (GetCurrentTime fct)) logger credentials connection = do
+interpret (Pure a) evenStoreContext = return a
+interpret (Free (PersistEvent event next)) eventStoreContext = do
+    EventStream.persist eventStoreContext event
+    interpret next eventStoreContext
+interpret (Free (PersistValidationState validationState next)) eventStoreContext = do
+    ValidationStateStream.persist eventStoreContext validationState
+    interpret next eventStoreContext
+interpret (Free (PersistCommandResponse commandResponse next)) eventStoreContext = do
+    CommandResponseStream.persist eventStoreContext commandResponse
+    interpret next eventStoreContext
+interpret (Free (GetCurrentTime fct)) eventStoreContext = do
     now <- Time.getCurrentTime
-    interpret (fct now) logger credentials connection
-interpret (Free (GetNewEventId fct)) logger credentials connection = do
+    interpret (fct now) eventStoreContext
+interpret (Free (GetNewEventId fct)) eventStoreContext = do
     eventId <- liftIO $ Uuid.nextRandom
-    interpret (fct eventId) logger credentials connection
+    interpret (fct eventId) eventStoreContext

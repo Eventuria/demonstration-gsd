@@ -5,19 +5,16 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies   #-}
 
-module Cqrs.Commands.CommandStream  where
+module Cqrs.Aggregate.Commands.CommandStream  where
 
-import Cqrs.Logger
-import Cqrs.Commands.Command
+import Cqrs.Aggregate.Commands.Command
 import Control.Concurrent.Async (wait)
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
 import Data.UUID
 import Cqrs.Aggregate.Ids.AggregateId
-import qualified Data.UUID.V4 as Uuid
 import Data.Maybe
-import Cqrs.Commands.PersistedCommand
-import Data.Aeson
+import Cqrs.Aggregate.Commands.PersistedCommand
 import Streamly
 import qualified Streamly.Prelude as S
 
@@ -27,13 +24,14 @@ import Cqrs.Streams
 
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Context
+import qualified Cqrs.EventStore.Writing as EventStore.Writing
 
 type CommandStream = EventStoreStream PersistedCommand
 
 getCommandStream :: EventStoreContext -> AggregateId -> CommandStream
 getCommandStream context aggregateId = EventStoreStream {
                                                         context = context,
-                                                        streamName = (getWorkspaceCommandStreamName aggregateId),
+                                                        streamName = (getStreamName aggregateId),
                                                         recordedEventToPersistedItem = recordedEventToPersistedCommand }
 
 
@@ -43,28 +41,10 @@ recordedEventToPersistedCommand recordedEvent =
                      command = fromJust $ EventStore.recordedEventDataAsJson recordedEvent }
 
 
-persist :: (IsStream stream, MonadIO (stream IO)) => Logger -> EventStore.Credentials -> EventStore.Connection -> Command -> stream IO (Either PersistenceFailure PersistResult)
-persist logger credentials eventStoreConnection Command { commandHeader = CommandHeader {commandId = commandId , aggregateId = aggregateId , commandName = commandName} , payload = payload } =  do
+persist :: EventStoreContext -> Command -> IO (Either PersistenceFailure PersistResult)
+persist context command @ Command { commandHeader = CommandHeader {commandId = commandId , aggregateId = aggregateId , commandName = commandName} , payload = payload } =
+  EventStore.Writing.persist context (getStreamName aggregateId) command
 
-    eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
-
-    let eventType  = EventStore.UserDefined $ Text.pack $ commandName
-        eventId = Just eventIdInEventStoreDomain
-        eventData = EventStore.withJson $ object [
-              "commandName" .= commandName,
-              "commandId" .= commandId,
-              "aggregateId" .= aggregateId,
-              "payload" .= payload ]
-        eventInEventStoreDomain = EventStore.createEvent eventType eventId eventData
-    writeResult <- liftIO $ EventStore.sendEvent
-            eventStoreConnection
-            (getWorkspaceCommandStreamName $ aggregateId )
-            EventStore.anyVersion
-            eventInEventStoreDomain
-            (Just credentials) >>= wait
-
-    liftIO $ logInfo logger $ "Command " ++ commandName ++ " : command id " ++ (toString $ commandId) ++ " persisted"
-    S.yield $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 readForward :: (IsStream stream, MonadIO (stream IO),Semigroup (stream IO PersistedCommand)) => EventStore.Credentials -> EventStore.Connection -> AggregateId -> Maybe Offset -> stream IO PersistedCommand
 readForward credentials eventStoreConnection workspaceId fromOffset =  do
@@ -73,7 +53,7 @@ readForward credentials eventStoreConnection workspaceId fromOffset =  do
 
                asyncRead <- liftIO $ EventStore.readStreamEventsForward
                                 eventStoreConnection
-                                (getWorkspaceCommandStreamName workspaceId)
+                                (getStreamName workspaceId)
                                 (fromInteger $ fromMaybe 0 fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
@@ -93,6 +73,8 @@ getPersistedCommandRequestFrom :: EventStore.StreamSlice -> [PersistedCommand]
 getPersistedCommandRequestFrom eventSlice = (\event -> recordedEventToPersistedCommand $ EventStore.resolvedEventOriginal $ event)
                                                         <$> EventStore.sliceEvents eventSlice
 
-getWorkspaceCommandStreamName :: AggregateId -> EventStore.StreamName
-getWorkspaceCommandStreamName workspaceId = EventStore.StreamName $ Text.pack $ "workspace_command-" ++ toString workspaceId
+getStreamName :: AggregateId -> EventStore.StreamName
+getStreamName aggregateId = EventStore.StreamName $ Text.pack $ "aggregate_command-" ++ toString aggregateId
 
+instance EventStore.Writing.Persistable Command where
+  getItemName Command { commandHeader = CommandHeader {commandName = commandName} }  = commandName

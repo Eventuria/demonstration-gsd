@@ -5,7 +5,7 @@ module Api where
 import Web.Scotty
 
 import Cqrs.Logger
-import qualified Cqrs.Commands.CommandStream as CommandStream
+import qualified Cqrs.Aggregate.Commands.CommandStream as CommandStream
 import Cqrs.Aggregate.Ids.AggregateIdStream
 import Cqrs.EventStore.Streaming
 
@@ -25,7 +25,7 @@ main = do
   initLogger logger
   logInfo logger "[api] - Starting"
 
-  bracket (EventStore.connect EventStore.defaultSettings (EventStore.Static "127.0.0.1" 1113))
+  bracket (EventStore.connect getEventStoreSettings getConnectionType)
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
          (\connection -> routing Context {logger = logger, connection = connection , credentials = getCredentials})
@@ -46,5 +46,4 @@ routing eventStoreContext @ Context {logger = logger , connection = connection ,
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
-     (liftIO $ runStream
-             $ CommandStream.persist logger credentials connection command) >>= json
+     (liftIO $ CommandStream.persist eventStoreContext command) >>= json

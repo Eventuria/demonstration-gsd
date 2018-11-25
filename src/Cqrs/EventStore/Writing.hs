@@ -15,9 +15,6 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.Context
 import Data.Aeson
 
-data EventStorePersisting itemToPersist = EventStoreWriting {
-                                           context :: EventStoreContext,
-                                           streamName :: EventStore.StreamName}
 
 class ToJSON item => Persistable item where
   getItemName :: item -> String

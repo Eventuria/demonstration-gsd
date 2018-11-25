@@ -3,7 +3,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Cqrs.Aggregate.Ids.AggregateIdStream  where
 
-import Cqrs.Commands.CommandStream
+import Cqrs.Aggregate.Commands.CommandStream
 import Prelude hiding (catch)
 
 
@@ -20,7 +20,7 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.Function ((&))
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Subscribing
-import Cqrs.Commands.PersistedCommand
+import Cqrs.Aggregate.Commands.PersistedCommand
 import Cqrs.EventStore.Context
 
 type AggregateStream = EventStoreStream PersistedAggregateId

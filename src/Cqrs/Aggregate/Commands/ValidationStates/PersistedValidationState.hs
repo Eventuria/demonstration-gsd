@@ -1,25 +1,25 @@
 {-# LANGUAGE OverloadedStrings         #-}
-module Cqrs.Aggregate.Snapshots.PersistedAggregateSnapshot where
+module Cqrs.Aggregate.Commands.ValidationStates.PersistedValidationState where
 
-import Cqrs.Aggregate.Snapshots.AggregateSnapshot
+import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Streams
 import Data.Aeson
 
-data PersistedAggregateSnapshot = PersistedAggregateSnapshot { offset :: Offset, aggregateSnapshot :: AggregateSnapshot } deriving (Show,Eq)
+data PersistedValidationState = PersistedValidationState { offset :: Offset, validationState :: ValidationState } deriving (Show,Eq)
 
 instance ToJSON AggregateState where
    toJSON (AggregateState aggregateId) = object ["aggregateId" .= aggregateId]
 
-instance ToJSON AggregateSnapshot where
-   toJSON (AggregateSnapshot lastOffsetConsumed commandsProcessed state) = object [
+instance ToJSON ValidationState where
+   toJSON (ValidationState lastOffsetConsumed commandsProcessed state) = object [
       "lastOffsetConsumed" .= lastOffsetConsumed,
       "commandsProcessed" .= commandsProcessed,
       "state" .= state
       ]
 
-instance FromJSON AggregateSnapshot  where
+instance FromJSON ValidationState  where
 
-    parseJSON (Object jsonObject) = AggregateSnapshot <$> jsonObject .: "lastOffsetConsumed"
+    parseJSON (Object jsonObject) = ValidationState <$> jsonObject .: "lastOffsetConsumed"
                                              <*> jsonObject .: "commandsProcessed"
                                              <*> jsonObject .: "state"
     parseJSON _ =  error $ "Json format not expected"

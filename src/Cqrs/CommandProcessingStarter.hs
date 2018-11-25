@@ -4,11 +4,11 @@
 {-# LANGUAGE Rank2Types #-}
 module Cqrs.CommandProcessingStarter  where
 
-import Cqrs.Commands.Command
-import qualified Cqrs.Commands.CommandStream as CommandStream
+import Cqrs.Aggregate.Commands.Command
+import qualified Cqrs.Aggregate.Commands.CommandStream as CommandStream
 
-import Cqrs.Aggregate.Snapshots.AggregateSnapshotStream
-import Cqrs.Aggregate.Snapshots.PersistedAggregateSnapshot
+import Cqrs.Aggregate.Commands.ValidationStates.ValidationStateStream
+import Cqrs.Aggregate.Commands.ValidationStates.PersistedValidationState
 import Streamly
 import qualified Streamly.Prelude as S
 import Control.Monad.IO.Class (MonadIO(..))
@@ -17,7 +17,7 @@ import Data.Function ((&))
 import Cqrs.Logger
 
 
-import Cqrs.Commands.PersistedCommand
+import Cqrs.Aggregate.Commands.PersistedCommand
 import Cqrs.Aggregate.Ids.AggregateIdStream
 import Cqrs.CommandHandler
 import Cqrs.EventStore.Interpreter
@@ -43,14 +43,14 @@ startProcessingCommands logger eventStoreContext @ Context { credentials = crede
         $ yieldAndSubscribeToAggregateUpdates eventStoreContext persistedAggregate
         & S.mapM (\PersistedAggregateId {persistedAggregateId = aggregateId}  -> do
             liftIO $ logInfo logger $ "processing commands workspace for " ++ (show aggregateId)
-            let aggregateSnapshotStream = getAggregateSnapshotStream eventStoreContext aggregateId
-            lastOffsetConsumed <- liftIO $ retrieveLastOffsetConsumed aggregateSnapshotStream
+            let validationStateStream = getValidateStateStream eventStoreContext aggregateId
+            lastOffsetConsumed <- liftIO $ retrieveLastOffsetConsumed validationStateStream
             runStream
               $ (CommandStream.readForward credentials connection aggregateId lastOffsetConsumed)
               & S.mapM (\persistedCommand @PersistedCommand { command = Command { commandHeader = CommandHeader {commandId = commandId} }}  -> do
-                lastSnapshot <- liftIO $ (fmap.fmap) aggregateSnapshot $ retrieveLast aggregateSnapshotStream
-                let transaction = case (commandHandler persistedCommand lastSnapshot) of
-                                    Reject reason -> rejectCommandTransaction lastSnapshot aggregateId commandId reason
+                lastValidationState <- liftIO $ (fmap.fmap) validationState $ retrieveLast validationStateStream
+                let transaction = case (commandHandler persistedCommand lastValidationState) of
+                                    Reject reason -> rejectCommandTransaction lastValidationState aggregateId commandId reason
                                     SkipBecauseAlreadyProcessed -> skipCommandTransaction aggregateId commandId
                                     Transact commandTransaction -> (translate $ commandTransaction)
-                interpret transaction logger credentials connection)))
+                interpret transaction eventStoreContext)))

@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Cqrs.Commands.Responses.CommandResponse where
+module Cqrs.Aggregate.Commands.Responses.CommandResponse where
 
-import Cqrs.Commands.CommandId
+import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import qualified Data.Text as Text
 import Cqrs.Aggregate.Ids.AggregateId
@@ -22,9 +22,10 @@ commandResponseNameForCommandSkippedBecauseAlreadyProcessed = "commandSkippedBec
 commandResponseNameForCommandFailed :: String
 commandResponseNameForCommandFailed = "commandFailed"
 
-class CommandResponseSerializable command where
-  getCommandResponseName :: command -> String
-  getCommandId :: command -> CommandId
+class CommandResponseSerializable response where
+  getCommandResponseName :: response -> String
+  getCommandId :: response -> CommandId
+  getAggregateId :: response -> AggregateId
 
 
 instance CommandResponseSerializable CommandResponse where
@@ -35,6 +36,10 @@ instance CommandResponseSerializable CommandResponse where
   getCommandId CommandSuccessfullyProcessed { commandId = commandId} = commandId
   getCommandId CommandSkippedBecauseAlreadyProcessed { commandId = commandId} = commandId
   getCommandId CommandFailed { commandId = commandId} = commandId
+
+  getAggregateId CommandSuccessfullyProcessed { aggregateId = aggregateId} = aggregateId
+  getAggregateId CommandSkippedBecauseAlreadyProcessed { aggregateId = aggregateId} = aggregateId
+  getAggregateId CommandFailed { aggregateId = aggregateId} = aggregateId
 
 instance ToJSON CommandResponse where
    toJSON (commandResponse @ (CommandSuccessfullyProcessed commandId aggregateId)) = object [

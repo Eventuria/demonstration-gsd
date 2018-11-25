@@ -5,7 +5,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies   #-}
 
-module Cqrs.Commands.Responses.CommandResponseStream (
+module Cqrs.Aggregate.Commands.Responses.CommandResponseStream (
 readForward,
 persist) where
 
@@ -16,38 +16,22 @@ import Control.Monad.IO.Class (MonadIO(..))
 
 
 import qualified Database.EventStore as EventStore
-
+import qualified Cqrs.EventStore.Writing as EventStore.Writing
 import Cqrs.Aggregate.Ids.AggregateId
-import Cqrs.Commands.Responses.CommandResponse
-import Cqrs.Logger
+import Cqrs.Aggregate.Commands.Responses.CommandResponse
+
 import Control.Concurrent.Async (wait)
 import qualified Data.Text as Text
 import Data.UUID
-
-
-import qualified Data.UUID.V4 as Uuid
+import Cqrs.EventStore.Context
 import Data.Maybe
 
 import Cqrs.Streams
 
-persist :: Logger -> EventStore.Credentials -> EventStore.Connection -> CommandResponse -> IO (Either PersistenceFailure PersistResult)
-persist logger credentials eventStoreConnection commandResponse =  do
 
-    eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
+persist :: EventStoreContext -> CommandResponse -> IO (Either PersistenceFailure PersistResult)
+persist context commandResponse = EventStore.Writing.persist context (getStreamName $ getAggregateId commandResponse) commandResponse
 
-    let eventType  = EventStore.UserDefined $ Text.pack $ getCommandResponseName commandResponse
-        eventId = Just eventIdInEventStoreDomain
-        eventData = EventStore.withJson commandResponse
-        eventInEventStoreDomain = EventStore.createEvent eventType eventId eventData
-    writeResult <- liftIO $ EventStore.sendEvent
-            eventStoreConnection
-            (getWorkspaceCommandResponseStreamName $ aggregateId commandResponse)
-            EventStore.anyVersion
-            eventInEventStoreDomain
-            (Just credentials) >>= wait
-
-    liftIO $ logInfo logger $ "Command Response " ++ (getCommandResponseName commandResponse) ++ " : command id " ++ (toString $ getCommandId commandResponse) ++ " persisted"
-    return $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
 
 readForward :: (IsStream stream, MonadIO (stream IO), Semigroup (stream IO CommandResponse)) => EventStore.Credentials -> EventStore.Connection -> AggregateId -> Offset -> stream IO CommandResponse
 readForward credentials eventStoreConnection  workspaceId fromOffset =  do
@@ -55,7 +39,7 @@ readForward credentials eventStoreConnection  workspaceId fromOffset =  do
                    resolveLinkTos = False
                asyncRead <- liftIO $ EventStore.readStreamEventsForward
                                 eventStoreConnection
-                                (getWorkspaceCommandResponseStreamName workspaceId)
+                                (getStreamName workspaceId)
                                 (fromInteger fromOffset)
                                 (fromInteger batchSize)
                                 resolveLinkTos
@@ -73,5 +57,8 @@ readForward credentials eventStoreConnection  workspaceId fromOffset =  do
 getCommandResponseRequestFromReadResult :: EventStore.StreamSlice -> [CommandResponse]
 getCommandResponseRequestFromReadResult sl = catMaybes $ EventStore.resolvedEventDataAsJson <$> EventStore.sliceEvents sl
 
-getWorkspaceCommandResponseStreamName :: AggregateId -> EventStore.StreamName
-getWorkspaceCommandResponseStreamName workspaceId = EventStore.StreamName $ Text.pack $ "workspace_response_command-" ++ toString workspaceId
+getStreamName :: AggregateId -> EventStore.StreamName
+getStreamName workspaceId = EventStore.StreamName $ Text.pack $ "aggregate_response_command-" ++ toString workspaceId
+
+instance EventStore.Writing.Persistable CommandResponse where
+  getItemName commandResponse  = getCommandResponseName commandResponse

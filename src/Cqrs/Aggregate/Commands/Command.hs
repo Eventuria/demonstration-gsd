@@ -1,14 +1,15 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Cqrs.Commands.Command where
+module Cqrs.Aggregate.Commands.Command where
 
 import Cqrs.Aggregate.Ids.AggregateId
-import Cqrs.Commands.CommandId
+import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import Data.Text
-import Cqrs.Core
+
 
 type Pair = (Text, Value)
+type CommandName = String
 
 data Command = Command { commandHeader :: CommandHeader,
                          payload :: CommandPayload}

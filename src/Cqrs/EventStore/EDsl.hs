@@ -2,11 +2,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Cqrs.EventStore.EDsl where
 
-import Cqrs.Commands.CommandId
-import Cqrs.Commands.Responses.CommandResponse
-import Cqrs.Aggregate.Snapshots.AggregateSnapshot
-import Cqrs.Events.Event
-import Cqrs.Events.EventId
+import Cqrs.Aggregate.Commands.CommandId
+import Cqrs.Aggregate.Commands.Responses.CommandResponse
+import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
+import Cqrs.Aggregate.Events.Event
+import Cqrs.Aggregate.Events.EventId
 
 import Data.Time
 import Control.Monad.Free
@@ -14,7 +14,7 @@ import qualified Data.Set as Set
 import Cqrs.Aggregate.Ids.AggregateId
 
 data Directive a = PersistEvent Event a
-                | PersistAggregate AggregateSnapshot a
+                | PersistValidationState ValidationState a
                 | PersistCommandResponse CommandResponse a
                 | GetCurrentTime (UTCTime -> a )
                 | GetNewEventId (EventId -> a) deriving (Functor)
@@ -24,8 +24,8 @@ type EventStoreLanguage a = Free Directive a
 persistEvent :: Event -> EventStoreLanguage ()
 persistEvent event = Free (PersistEvent event (Pure ()))
 
-persistAggregate :: AggregateSnapshot -> EventStoreLanguage ()
-persistAggregate aggregateSnapshot = Free (PersistAggregate aggregateSnapshot (Pure ()))
+persistAggregate :: ValidationState -> EventStoreLanguage ()
+persistAggregate validationState = Free (PersistValidationState validationState (Pure ()))
 
 persistCommandResponse :: CommandResponse -> EventStoreLanguage ()
 persistCommandResponse commandResponse = Free (PersistCommandResponse commandResponse (Pure ()))
@@ -43,9 +43,9 @@ skipCommandTransaction  aggregateId commandId  = do
                                    aggregateId = aggregateId }
 
 
-rejectCommandTransaction :: Maybe AggregateSnapshot -> AggregateId -> CommandId -> RejectionReason -> EventStoreLanguage ()
+rejectCommandTransaction :: Maybe ValidationState -> AggregateId -> CommandId -> RejectionReason -> EventStoreLanguage ()
 rejectCommandTransaction (Just snapshot) aggregateId commandId rejectionReason = do
-    persistAggregate AggregateSnapshot { lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
+    persistAggregate ValidationState { lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
                                          commandsProcessed = Set.insert commandId (commandsProcessed snapshot),
                                          state = state snapshot}
     persistCommandResponse CommandFailed {
@@ -53,7 +53,7 @@ rejectCommandTransaction (Just snapshot) aggregateId commandId rejectionReason =
                                    aggregateId = aggregateId,
                                    reason = rejectionReason }
 rejectCommandTransaction Nothing aggregateId commandId rejectionReason = do
-    persistAggregate AggregateSnapshot { lastOffsetConsumed = 0 ,
+    persistAggregate ValidationState { lastOffsetConsumed = 0 ,
                                          commandsProcessed = Set.fromList [commandId],
                                          state = AggregateState { aggregateId = aggregateId}}
     persistCommandResponse CommandFailed {

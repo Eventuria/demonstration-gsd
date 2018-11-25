@@ -1,9 +1,9 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Gsd.Commands where
 
-import Cqrs.Commands.CommandId
-import Cqrs.Commands.Command
-import qualified Cqrs.Commands.Command as CommandModule
+import Cqrs.Aggregate.Commands.CommandId
+import Cqrs.Aggregate.Commands.Command
+import qualified Cqrs.Aggregate.Commands.Command as CommandModule
 import Gsd.Core
 
 

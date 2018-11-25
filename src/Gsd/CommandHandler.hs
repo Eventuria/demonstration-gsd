@@ -9,9 +9,9 @@ import Data.Maybe
 
 import Data.Function ((&))
 
-import Cqrs.Aggregate.Snapshots.AggregateSnapshot
-import Cqrs.Commands.PersistedCommand
-import Cqrs.Commands.Command
+import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
+import Cqrs.Aggregate.Commands.PersistedCommand
+import Cqrs.Aggregate.Commands.Command
 import Gsd.Commands
 import Gsd.Events
 import Cqrs.CommandHandler
@@ -25,7 +25,7 @@ gsdCommandHandler persistedCommand@PersistedCommand {offset = offset , command =
         now <- getCurrentTime
         eventId <- getNewEventID
         persistEvent $ toEvent $ WorkspaceCreated {  eventId = eventId , createdOn = now, workspaceId = workspaceId}
-        updateSnapshot AggregateSnapshot {lastOffsetConsumed = 0 ,
+        updateValidationState ValidationState {lastOffsetConsumed = 0 ,
                                                             commandsProcessed = fromList [commandId] ,
                                                             state = AggregateState { aggregateId = workspaceId }})
    | (not $ isFirstCommand snapshotMaybe ) && (isCreateWorkspaceCommand command) = Reject "first command muste be CreateWorkspace "

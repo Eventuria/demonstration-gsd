@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Cqrs.CommandHandler  where
 
-import Cqrs.Commands.PersistedCommand
+import Cqrs.Aggregate.Commands.PersistedCommand
 import Cqrs.EDsl
-import Cqrs.Aggregate.Snapshots.AggregateSnapshot
+import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 
 
 
-type CommandHandler = PersistedCommand -> Maybe AggregateSnapshot -> CommandDirective
+type CommandHandler = PersistedCommand -> Maybe ValidationState -> CommandDirective
 
 
 
