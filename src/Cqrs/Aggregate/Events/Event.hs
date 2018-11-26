@@ -7,6 +7,7 @@ import Cqrs.Aggregate.Events.EventId
 import Data.Aeson
 import Data.Text
 import Data.Time
+import Cqrs.Aggregate.Core
 
 type Pair = (Text, Value)
 type EventName = String
@@ -19,6 +20,9 @@ data EventHeader =  EventHeader { aggregateId :: AggregateId,
                              createdOn :: UTCTime ,
                              eventName :: EventName}
 type EventPayload = [Pair]
+
+instance AggregateJoinable Event where
+  getAggregateId Event { eventHeader = EventHeader {aggregateId = aggregateId} } = aggregateId
 
 
 instance ToJSON Event where

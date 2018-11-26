@@ -11,7 +11,7 @@ import Control.Concurrent.Async (wait)
 
 import qualified Database.EventStore as EventStore
 import qualified Cqrs.EventStore.Subscribing as EventStore.Subscribing
-
+import Cqrs.EventStore.PersistedItem
 import Cqrs.Logger
 import Cqrs.Streams (Offset)
 import Cqrs.EventStore.Stream
@@ -19,26 +19,28 @@ import Cqrs.EventStore.Context
 
 streamAllInfinitely ::  (IsStream stream,
                          MonadIO (stream IO),
-                         Semigroup (stream IO persistedItem)) =>
-                          EventStoreStream persistedItem ->
-                          stream IO persistedItem
+                         Semigroup (stream IO (Persisted item))) =>
+                          EventStoreStream item ->
+                          stream IO (Persisted item)
 streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)
 
 streamAll :: (IsStream stream,
               MonadIO (stream IO),
-              Semigroup (stream IO persistedItem)) =>
-                EventStoreStream persistedItem ->
-                stream IO persistedItem
+              Semigroup (stream IO (Persisted item))) =>
+                EventStoreStream item ->
+                stream IO (Persisted item)
 streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
 streamFromOffset :: (IsStream stream,
                      MonadIO (stream IO),
-                     Semigroup (stream IO persistedItem)) =>
-                      EventStoreStream persistedItem ->
+                     Semigroup (stream IO (Persisted item))) =>
+                      EventStoreStream item ->
                       Offset ->
-                      stream IO persistedItem
+                      stream IO (Persisted item)
+
+
 streamFromOffset eventStoreStream @ EventStoreStream {
                                        context = Context { logger = logger,
                                                            credentials = credentials,

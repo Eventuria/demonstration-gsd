@@ -5,11 +5,11 @@ import Data.Maybe
 import Cqrs.EventStore.Stream
 import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
-
+import Cqrs.EventStore.PersistedItem
 import Cqrs.EventStore.Context
 
 
-retrieveLast :: EventStoreStream persistedItem -> IO( Maybe persistedItem)
+retrieveLast :: EventStoreStream item -> IO( Maybe (Persisted item))
 retrieveLast EventStoreStream { context = Context { logger = logger,
                                                     credentials = credentials,
                                                     connection = connection },

@@ -6,6 +6,9 @@ import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import qualified Data.Text as Text
 import Cqrs.Aggregate.Ids.AggregateId
+import Cqrs.EventStore.Writing
+import Cqrs.Aggregate.Core
+import Cqrs.Aggregate.Commands.Command
 
 type RejectionReason = String
 
@@ -22,38 +25,38 @@ commandResponseNameForCommandSkippedBecauseAlreadyProcessed = "commandSkippedBec
 commandResponseNameForCommandFailed :: String
 commandResponseNameForCommandFailed = "commandFailed"
 
-class CommandResponseSerializable response where
-  getCommandResponseName :: response -> String
-  getCommandId :: response -> CommandId
-  getAggregateId :: response -> AggregateId
 
+instance AggregateJoinable CommandResponse where
+  getAggregateId CommandSuccessfullyProcessed { aggregateId = aggregateId} = aggregateId
+  getAggregateId CommandSkippedBecauseAlreadyProcessed { aggregateId = aggregateId} = aggregateId
+  getAggregateId CommandFailed { aggregateId = aggregateId} = aggregateId
 
-instance CommandResponseSerializable CommandResponse where
-  getCommandResponseName CommandSuccessfullyProcessed {} = commandResponseNameForCommandSuccessfullyProcessed
-  getCommandResponseName CommandSkippedBecauseAlreadyProcessed {} = commandResponseNameForCommandSkippedBecauseAlreadyProcessed
-  getCommandResponseName CommandFailed {} = commandResponseNameForCommandFailed
+instance Writable CommandResponse where
+  getItemName CommandSuccessfullyProcessed {} = commandResponseNameForCommandSuccessfullyProcessed
+  getItemName CommandSkippedBecauseAlreadyProcessed {} = commandResponseNameForCommandSkippedBecauseAlreadyProcessed
+  getItemName CommandFailed {} = commandResponseNameForCommandFailed
+
+instance CommandJoinable CommandResponse where
 
   getCommandId CommandSuccessfullyProcessed { commandId = commandId} = commandId
   getCommandId CommandSkippedBecauseAlreadyProcessed { commandId = commandId} = commandId
   getCommandId CommandFailed { commandId = commandId} = commandId
 
-  getAggregateId CommandSuccessfullyProcessed { aggregateId = aggregateId} = aggregateId
-  getAggregateId CommandSkippedBecauseAlreadyProcessed { aggregateId = aggregateId} = aggregateId
-  getAggregateId CommandFailed { aggregateId = aggregateId} = aggregateId
+
 
 instance ToJSON CommandResponse where
    toJSON (commandResponse @ (CommandSuccessfullyProcessed commandId aggregateId)) = object [
           "commandId" .= commandId,
           "aggregateId" .= aggregateId,
-          "commandResponseName" .= getCommandResponseName commandResponse]
+          "commandResponseName" .= getItemName commandResponse]
    toJSON (commandResponse @ (CommandSkippedBecauseAlreadyProcessed commandId aggregateId)) = object [
              "commandId" .= commandId,
              "aggregateId" .= aggregateId,
-             "commandResponseName" .= getCommandResponseName commandResponse]
+             "commandResponseName" .= getItemName commandResponse]
    toJSON (commandResponse @ (CommandFailed commandId aggregateId reason)) = object [
              "commandId" .= commandId,
              "aggregateId" .= aggregateId,
-             "commandResponseName" .= getCommandResponseName commandResponse,
+             "commandResponseName" .= getItemName commandResponse,
              "reason" .= reason]
 
 instance FromJSON CommandResponse  where

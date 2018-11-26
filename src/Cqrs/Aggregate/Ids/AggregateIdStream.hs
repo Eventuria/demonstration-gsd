@@ -8,11 +8,12 @@ import Prelude hiding (catch)
 
 
 import Cqrs.Aggregate.Ids.AggregateId
+import Cqrs.Aggregate.Commands.Command
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
 import Data.UUID
 import Data.ByteString.Char8 as Char8 (unpack)
-import Cqrs.Aggregate.Ids.PersistedAggregateId
+
 
 import Streamly
 import qualified Streamly.Prelude as S
@@ -20,14 +21,15 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.Function ((&))
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Subscribing
-import Cqrs.Aggregate.Commands.PersistedCommand
-import Cqrs.EventStore.Context
 
-type AggregateStream = EventStoreStream PersistedAggregateId
+import Cqrs.EventStore.Context
+import Cqrs.EventStore.PersistedItem
+
+type AggregateIdStream = EventStoreStream AggregateId
 
 type CorruptedStreamName = String
 
-getAggregateStream :: EventStoreContext -> AggregateStream
+getAggregateStream :: EventStoreContext -> AggregateIdStream
 getAggregateStream eventStoreContext = EventStoreStream { context = eventStoreContext,
                                                           streamName = getAggregateCreatedStreamName,
                                                           recordedEventToPersistedItem = recordedEventToPersistedAggregate }
@@ -38,19 +40,19 @@ getAggregateCreatedStreamName = EventStore.StreamName $ Text.pack $ "$et-createW
 
 yieldAndSubscribeToAggregateUpdates :: (IsStream stream,
                                         MonadIO (stream IO),
-                                        Semigroup (stream IO PersistedAggregateId),
-                                        Semigroup (stream IO (PersistedCommand)))  =>
+                                        Semigroup (stream IO (Persisted AggregateId)),
+                                        Semigroup (stream IO (Persisted Command)))  =>
                                        EventStoreContext ->
-                                       PersistedAggregateId ->
-                                       stream IO PersistedAggregateId
-yieldAndSubscribeToAggregateUpdates eventStoreContext persistedAggregate @ PersistedAggregateId { offset = offset , persistedAggregateId = aggregateId} =
+                                       Persisted AggregateId ->
+                                       stream IO (Persisted AggregateId)
+yieldAndSubscribeToAggregateUpdates eventStoreContext persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =
   (S.yield persistedAggregate) <>
-  ((subscribeToAggregateUpdates eventStoreContext aggregateId  ) & S.map (\aggregateId -> PersistedAggregateId { offset = offset,persistedAggregateId = aggregateId }))
+  ((subscribeToAggregateUpdates eventStoreContext aggregateId  ) & S.map (\aggregateId -> PersistedItem { offset = offset,item = aggregateId }))
 
 
 subscribeToAggregateUpdates :: (IsStream stream,
                                 MonadIO (stream IO),
-                                Semigroup (stream IO (PersistedCommand)))  =>
+                                Semigroup (stream IO (Persisted Command)))  =>
                                   EventStoreContext ->
                                   AggregateId ->
                                   stream IO AggregateId
@@ -58,10 +60,10 @@ subscribeToAggregateUpdates eventStoreContext aggregateId =
   (subscribe $ getCommandStream eventStoreContext aggregateId) & S.map (\persistedCommand -> aggregateId)
 
 
-recordedEventToPersistedAggregate :: EventStore.RecordedEvent -> PersistedAggregateId
+recordedEventToPersistedAggregate :: EventStore.RecordedEvent -> Persisted AggregateId
 recordedEventToPersistedAggregate recordedEvent =
-  PersistedAggregateId { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
-                       persistedAggregateId = case (fromString $ drop (length  ("0@aggregate_command-" :: [Char])) $ unpack $ EventStore.recordedEventData recordedEvent) of
+  PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
+                  item = case (fromString $ drop (length  ("0@aggregate_command-" :: [Char])) $ unpack $ EventStore.recordedEventData recordedEvent) of
                                           Just aggregateId -> aggregateId
                                           Nothing -> error $ "Aggregate stream corrupted :" ++ (unpack $ EventStore.recordedEventData recordedEvent) }
 

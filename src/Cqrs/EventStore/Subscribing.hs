@@ -6,19 +6,19 @@ import qualified Streamly.Prelude as S
 import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
-
 import qualified Database.EventStore as EventStore
 
 import Cqrs.Logger
 import Control.Exception
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Context
+import Cqrs.EventStore.PersistedItem
 
 subscribe :: (IsStream stream,
              MonadIO (stream IO),
-             Semigroup (stream IO persistedItem))  =>
-              EventStoreStream persistedItem ->
-              stream IO persistedItem
+             Semigroup (stream IO (Persisted item)))  =>
+              EventStoreStream item ->
+              stream IO (Persisted item)
 subscribe eventStoreStream @ EventStoreStream {
                                              context = Context { logger = logger,
                                                                  credentials = credentials,

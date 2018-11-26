@@ -5,19 +5,18 @@ module Api where
 import Web.Scotty
 
 import Cqrs.Logger
-import qualified Cqrs.Aggregate.Commands.CommandStream as CommandStream
+import Cqrs.EventStore.Writing
 import Cqrs.Aggregate.Ids.AggregateIdStream
 import Cqrs.EventStore.Streaming
-
 import qualified Database.EventStore as EventStore
 import Control.Exception
 import Data.UUID
-
+import Cqrs.Aggregate.Commands.CommandStream
 import Cqrs.Settings
-
 import Streamly
 import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.Context
+import Cqrs.Aggregate.Core
 
 main :: IO ()
 main = do
@@ -40,10 +39,12 @@ routing eventStoreContext @ Context {logger = logger , connection = connection ,
     workspaceIdString <- param "workspaceIdGiven"
     let workspaceIdOpt = fromString workspaceIdString
     case workspaceIdOpt of
-                   Just (workspaceId) ->
-                      (liftIO $ runStream $ CommandStream.readForward credentials connection workspaceId Nothing) >>= json
+                   Just (workspaceId) -> do
+                      let commandStream =  (getCommandStream eventStoreContext workspaceId)
+                      (liftIO $ runStream $ streamAll commandStream) >>= json
                    Nothing -> html "you've passed an invalid workspace id format"
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
-     (liftIO $ CommandStream.persist eventStoreContext command) >>= json
+     let commandStream =  (getCommandStream eventStoreContext $ getAggregateId command)
+     (liftIO $ persist commandStream command) >>= json

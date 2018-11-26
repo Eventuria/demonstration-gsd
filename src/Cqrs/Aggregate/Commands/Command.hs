@@ -6,7 +6,7 @@ import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import Data.Text
-
+import Cqrs.Aggregate.Core
 
 type Pair = (Text, Value)
 type CommandName = String
@@ -18,6 +18,12 @@ data CommandHeader =  CommandHeader { aggregateId :: AggregateId,
                                commandId :: CommandId ,
                                commandName :: CommandName}
 type CommandPayload = [Pair]
+
+class CommandJoinable a where
+ getCommandId :: a -> CommandId
+
+instance AggregateJoinable Command where
+  getAggregateId Command { commandHeader = CommandHeader {aggregateId = aggregateId} } = aggregateId
 
 
 instance ToJSON Command where

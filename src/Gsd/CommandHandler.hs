@@ -8,9 +8,8 @@ import Data.Maybe
 
 
 import Data.Function ((&))
-
+import Cqrs.EventStore.PersistedItem
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.Aggregate.Commands.PersistedCommand
 import Cqrs.Aggregate.Commands.Command
 import Gsd.Commands
 import Gsd.Events
@@ -19,7 +18,7 @@ import Cqrs.EDsl
 import Gsd.CommandPredicates
 
 gsdCommandHandler :: CommandHandler
-gsdCommandHandler persistedCommand@PersistedCommand {offset = offset , command = command } snapshotMaybe
+gsdCommandHandler persistedCommand@PersistedItem {offset = offset , item = command } snapshotMaybe
    | isAlreadyProcessed offset snapshotMaybe = SkipBecauseAlreadyProcessed
    | (isFirstCommand snapshotMaybe) && (isCreateWorkspaceCommand command) = Transact $ (fromJust $ fromCommand (command::Command)) & (\CreateWorkspace {commandId = commandId, workspaceId = workspaceId} -> do
         now <- getCurrentTime

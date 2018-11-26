@@ -10,20 +10,21 @@ import Control.Concurrent.Async (wait)
 
 import Cqrs.Streams
 import Control.Monad.IO.Class (MonadIO(..))
-
+import Cqrs.EventStore.Stream
 
 import Cqrs.EventStore.Context
 import Data.Aeson
 
 
-class ToJSON item => Persistable item where
+class ToJSON item => Writable item where
   getItemName :: item -> String
 
 
-persist :: Persistable item =>  EventStoreContext -> EventStore.StreamName ->  item -> IO (Either PersistenceFailure PersistResult)
-persist Context { logger = logger,
-                  credentials = credentials,
-                  connection = connection } streamName itemToPersist =  do
+persist :: Writable item =>  EventStoreStream item -> item -> IO (Either PersistenceFailure PersistResult)
+persist eventStoreStream @ EventStoreStream {  context = Context { logger = logger,
+                                                                   credentials = credentials,
+                                                                   connection = connection },
+                                               streamName = streamName } itemToPersist =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom
     let eventType  = EventStore.UserDefined $ Text.pack $ getItemName itemToPersist
