@@ -68,11 +68,11 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  gsd-command-manager:
-    main:                CommandProcessingManager.hs
+  command-consumers:
+    main:                CommandConsumerRunner.hs
     source-dirs:         app
     ghc-options:
-    - -main-is CommandProcessingManager
+    - -main-is CommandConsumerRunner
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

@@ -13,18 +13,20 @@ import Control.Exception
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Context
 import Cqrs.EventStore.PersistedItem
+import Data.Maybe
+import Data.Aeson
 
-subscribe :: (IsStream stream,
-             MonadIO (stream IO),
-             Semigroup (stream IO (Persisted item)))  =>
-              EventStoreStream item ->
-              stream IO (Persisted item)
+subscribe :: (FromJSON item,
+              IsStream stream,
+              MonadIO (stream IO),
+              Semigroup (stream IO (Persisted item)))  =>
+                EventStoreStream item ->
+                stream IO (Persisted item)
 subscribe eventStoreStream @ EventStoreStream {
                                              context = Context { logger = logger,
                                                                  credentials = credentials,
                                                                  connection = connection },
-                                             streamName = streamName,
-                                             recordedEventToPersistedItem = recordedEventToPersistedItem } = do
+                                             streamName = streamName} = do
               liftIO $ logInfo logger "subscribing to new aggregate created notifier"
               subscription <- liftIO $ EventStore.subscribe connection streamName True Nothing
               result <- liftIO $ (try $ EventStore.waitConfirmation subscription )
@@ -40,3 +42,8 @@ subscribe eventStoreStream @ EventStoreStream {
                               resolvedEvent <- liftIO $ EventStore.nextEvent subscription
                               liftIO $ logInfo logger $ "new aggregate created stream event triggered : " ++ (show resolvedEvent)
                               (S.yield $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)) <> loopNextEvent subscription
+
+recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
+recordedEventToPersistedItem recordedEvent =
+  PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
+                  item = fromJust $ EventStore.recordedEventDataAsJson recordedEvent }

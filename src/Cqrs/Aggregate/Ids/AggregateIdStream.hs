@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Cqrs.Aggregate.Ids.AggregateIdStream  where
 
 import Cqrs.Aggregate.Commands.CommandStream
@@ -8,12 +9,8 @@ import Prelude hiding (catch)
 
 
 import Cqrs.Aggregate.Ids.AggregateId
-import Cqrs.Aggregate.Commands.Command
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
-import Data.UUID
-import Data.ByteString.Char8 as Char8 (unpack)
-
 
 import Streamly
 import qualified Streamly.Prelude as S
@@ -21,21 +18,39 @@ import Control.Monad.IO.Class (MonadIO)
 import Data.Function ((&))
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Subscribing
-
+import Cqrs.Aggregate.Commands.Command
+import Cqrs.Aggregate.Core
 import Cqrs.EventStore.Context
 import Cqrs.EventStore.PersistedItem
+import Cqrs.EventStore.Writing
+import Cqrs.Streams
+import Cqrs.EventStore.Streaming
 
 type AggregateIdStream = EventStoreStream AggregateId
 
 type CorruptedStreamName = String
 
-getAggregateStream :: EventStoreContext -> AggregateIdStream
-getAggregateStream eventStoreContext = EventStoreStream { context = eventStoreContext,
-                                                          streamName = getAggregateCreatedStreamName,
-                                                          recordedEventToPersistedItem = recordedEventToPersistedAggregate }
+getAggregateIdStream :: EventStoreContext -> AggregateIdStream
+getAggregateIdStream eventStoreContext = EventStoreStream { context = eventStoreContext,
+                                                          streamName = getAggregateIdStreamName}
 
-getAggregateCreatedStreamName :: EventStore.StreamName
-getAggregateCreatedStreamName = EventStore.StreamName $ Text.pack $ "$et-createWorkspace"
+getAggregateIdStreamName :: EventStore.StreamName
+getAggregateIdStreamName = EventStore.StreamName $ Text.pack $ "aggregate_id"
+
+
+persistCommands :: EventStoreContext -> Command -> IO (Either PersistenceFailure PersistResult)
+persistCommands context command = do
+  let commandStream = getCommandStream context $ getAggregateId command
+  isStreamExist <- isStreamExistRequest commandStream
+  if(isStreamExist) then
+    persist commandStream command
+  else do -- TODO : transaction !
+    persist (getAggregateIdStream context) $ getAggregateId command
+    persist commandStream command
+
+
+instance Writable AggregateId where
+  getItemName aggregateId  = "aggregateId"
 
 
 yieldAndSubscribeToAggregateUpdates :: (IsStream stream,
@@ -60,10 +75,4 @@ subscribeToAggregateUpdates eventStoreContext aggregateId =
   (subscribe $ getCommandStream eventStoreContext aggregateId) & S.map (\persistedCommand -> aggregateId)
 
 
-recordedEventToPersistedAggregate :: EventStore.RecordedEvent -> Persisted AggregateId
-recordedEventToPersistedAggregate recordedEvent =
-  PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
-                  item = case (fromString $ drop (length  ("0@aggregate_command-" :: [Char])) $ unpack $ EventStore.recordedEventData recordedEvent) of
-                                          Just aggregateId -> aggregateId
-                                          Nothing -> error $ "Aggregate stream corrupted :" ++ (unpack $ EventStore.recordedEventData recordedEvent) }
 

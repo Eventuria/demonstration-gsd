@@ -16,8 +16,29 @@ import Cqrs.Logger
 import Cqrs.Streams (Offset)
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Context
+import Data.Aeson
+import Data.Maybe
 
-streamAllInfinitely ::  (IsStream stream,
+isStreamExistRequest :: EventStoreStream item -> IO Bool
+isStreamExistRequest EventStoreStream { context = Context { logger = logger,
+                                                     credentials = credentials,
+                                                     connection = connection },
+                                 streamName = streamName} = do
+   let resolveLinkTos = False
+   asyncRead <- EventStore.readStreamEventsForward
+                    connection
+                    streamName
+                    (fromInteger 0)
+                    (fromInteger 1)
+                    resolveLinkTos
+                    (Just credentials)
+   commandFetched <- liftIO $ wait asyncRead
+   return $ case commandFetched of
+        EventStore.ReadNoStream -> True
+        _ -> False
+
+streamAllInfinitely ::  (FromJSON item,
+                         IsStream stream,
                          MonadIO (stream IO),
                          Semigroup (stream IO (Persisted item))) =>
                           EventStoreStream item ->
@@ -26,14 +47,16 @@ streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)
 
-streamAll :: (IsStream stream,
+streamAll :: (FromJSON item,
+              IsStream stream,
               MonadIO (stream IO),
               Semigroup (stream IO (Persisted item))) =>
                 EventStoreStream item ->
                 stream IO (Persisted item)
 streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
-streamFromOffset :: (IsStream stream,
+streamFromOffset :: (FromJSON item,
+                     IsStream stream,
                      MonadIO (stream IO),
                      Semigroup (stream IO (Persisted item))) =>
                       EventStoreStream item ->
@@ -45,8 +68,7 @@ streamFromOffset eventStoreStream @ EventStoreStream {
                                        context = Context { logger = logger,
                                                            credentials = credentials,
                                                            connection = connection },
-                                       streamName = streamName,
-                                       recordedEventToPersistedItem = recordedEventToPersistedItem } fromOffset = do
+                                       streamName = streamName } fromOffset = do
      liftIO $ logInfo logger $ "starting streaming from offset " ++ (show fromOffset)
      let batchSize = 100 :: Integer
          resolveLinkTos = False
@@ -71,3 +93,7 @@ streamFromOffset eventStoreStream @ EventStoreStream {
           e -> error $ "Read failure: " <> show e
 
 
+recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
+recordedEventToPersistedItem recordedEvent =
+  PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
+                  item = fromJust $ EventStore.recordedEventDataAsJson recordedEvent }

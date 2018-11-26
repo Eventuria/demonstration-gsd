@@ -7,14 +7,13 @@ import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
 import Cqrs.EventStore.PersistedItem
 import Cqrs.EventStore.Context
+import Data.Aeson
 
-
-retrieveLast :: EventStoreStream item -> IO( Maybe (Persisted item))
+retrieveLast :: FromJSON item => EventStoreStream item -> IO( Maybe (Persisted item))
 retrieveLast EventStoreStream { context = Context { logger = logger,
                                                     credentials = credentials,
                                                     connection = connection },
-                                streamName = streamName,
-                                recordedEventToPersistedItem = recordedEventToPersistedItem } =  do
+                                streamName = streamName} =  do
         let resolveLinkTos = False
         readResult <- EventStore.readStreamEventsBackward
                     connection
@@ -29,6 +28,12 @@ retrieveLast EventStoreStream { context = Context { logger = logger,
               return $ listToMaybe snapshots
           EventStore.ReadNoStream -> return Nothing
           e -> error $ "Read failure: " <> show e
+
+
+recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
+recordedEventToPersistedItem recordedEvent =
+  PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
+                  item = fromJust $ EventStore.recordedEventDataAsJson recordedEvent }
 
 recordedEventToPersistedItems :: (EventStore.RecordedEvent -> persistedItem) -> EventStore.StreamSlice -> [persistedItem]
 recordedEventToPersistedItems recordedEventToPersistedItem eventSlice = (\event -> recordedEventToPersistedItem $ EventStore.resolvedEventOriginal $ event)

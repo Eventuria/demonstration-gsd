@@ -1,6 +1,6 @@
-module CommandProcessingManager where
+module CommandConsumerRunner where
 
-import Cqrs.CommandProcessingStarter
+import Cqrs.CommandConsumerFlow
 import Cqrs.Logger
 import qualified Database.EventStore as EventStore
 import Control.Exception
@@ -19,7 +19,7 @@ main = do
                                       EventStore.waitTillClosed connection)
                    (\connection -> do
                       let eventStoreContext = Context {logger = logger, connection = connection , credentials = getCredentials}
-                      startProcessingCommands logger eventStoreContext (getAggregateStream eventStoreContext)  gsdCommandHandler)
+                      runCommandConsumers logger eventStoreContext (getAggregateIdStream eventStoreContext)  gsdCommandHandler)
 
 
 

@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE Rank2Types #-}
-module Cqrs.CommandProcessingStarter  where
+module Cqrs.CommandConsumerFlow  where
 
 import Cqrs.Aggregate.Commands.Command
 
@@ -28,8 +28,8 @@ import Cqrs.EventStore.Querying
 import Cqrs.EventStore.Context
 import Cqrs.EventStore.PersistedItem
 
-startProcessingCommands :: Logger -> EventStoreContext -> AggregateIdStream  -> CommandHandler -> IO ()
-startProcessingCommands logger eventStoreContext @ Context { credentials = credentials, connection = connection } aggregateStream commandHandler = do
+runCommandConsumers :: Logger -> EventStoreContext -> AggregateIdStream  -> CommandHandler -> IO ()
+runCommandConsumers logger eventStoreContext @ Context { credentials = credentials, connection = connection } aggregateStream commandHandler = do
   logInfo logger "starting streams"
   runStream
     $ parallely

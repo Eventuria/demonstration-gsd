@@ -5,7 +5,6 @@ module Api where
 import Web.Scotty
 
 import Cqrs.Logger
-import Cqrs.EventStore.Writing
 import Cqrs.Aggregate.Ids.AggregateIdStream
 import Cqrs.EventStore.Streaming
 import qualified Database.EventStore as EventStore
@@ -16,7 +15,6 @@ import Cqrs.Settings
 import Streamly
 import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.Context
-import Cqrs.Aggregate.Core
 
 main :: IO ()
 main = do
@@ -34,7 +32,7 @@ routing :: EventStoreContext -> IO()
 routing eventStoreContext @ Context {logger = logger , connection = connection , credentials = credentials } = scotty 3000 $ do
   get  "/health/liveness" $ do html "OK"
   get  "/workspaceIds" $ do
-     (liftIO $ runStream $ streamAll (getAggregateStream eventStoreContext) ) >>= json
+     (liftIO $ runStream $ streamAll (getAggregateIdStream eventStoreContext) ) >>= json
   get  "/:workspaceIdGiven/commands/read" $ do
     workspaceIdString <- param "workspaceIdGiven"
     let workspaceIdOpt = fromString workspaceIdString
@@ -46,5 +44,4 @@ routing eventStoreContext @ Context {logger = logger , connection = connection ,
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
-     let commandStream =  (getCommandStream eventStoreContext $ getAggregateId command)
-     (liftIO $ persist commandStream command) >>= json
+     (liftIO $ persistCommands eventStoreContext command) >>= json

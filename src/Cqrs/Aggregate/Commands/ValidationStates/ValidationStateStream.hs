@@ -7,7 +7,6 @@ import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
 import Data.UUID
-import Data.Maybe
 
 import Cqrs.EventStore.Querying
 import Cqrs.Streams
@@ -27,14 +26,7 @@ retrieveLastOffsetConsumed validationStateStream = (fmap.fmap) ( \persistedValid
 getValidateStateStream :: EventStoreContext -> AggregateId -> ValidateStateStream
 getValidateStateStream context aggregateId = EventStoreStream {
                                                         context = context,
-                                                        streamName = (getStreamName aggregateId),
-                                                        recordedEventToPersistedItem = recordedEventToPersistedValidationState }
-
-recordedEventToPersistedValidationState :: EventStore.RecordedEvent -> Persisted ValidationState
-recordedEventToPersistedValidationState recordedEvent =
-  PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
-                  item = fromJust $ EventStore.recordedEventDataAsJson recordedEvent }
-
+                                                        streamName = (getStreamName aggregateId) }
 
 getStreamName :: AggregateId -> EventStore.StreamName
 getStreamName aggregateId = EventStore.StreamName $ Text.pack $ "aggregate_validation_state-" ++ (toString aggregateId)
