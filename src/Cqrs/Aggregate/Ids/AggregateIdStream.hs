@@ -41,12 +41,11 @@ getAggregateIdStreamName = EventStore.StreamName $ Text.pack $ "aggregate_id"
 persistCommands :: EventStoreContext -> Command -> IO (Either PersistenceFailure PersistResult)
 persistCommands context command = do
   let commandStream = getCommandStream context $ getAggregateId command
-  isStreamExist <- isStreamExistRequest commandStream
-  if(isStreamExist) then
-    persist commandStream command
-  else do -- TODO : transaction !
+  isStreamNotExist <- isStreamNotExistRequest commandStream
+  if(isStreamNotExist) then do
     persist (getAggregateIdStream context) $ getAggregateId command
     persist commandStream command
+  else persist commandStream command
 
 
 instance Writable AggregateId where

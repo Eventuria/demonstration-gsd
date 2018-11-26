@@ -12,11 +12,11 @@ type Pair = (Text, Value)
 type CommandName = String
 
 data Command = Command { commandHeader :: CommandHeader,
-                         payload :: CommandPayload}
+                         payload :: CommandPayload} deriving Show
 
 data CommandHeader =  CommandHeader { aggregateId :: AggregateId,
                                commandId :: CommandId ,
-                               commandName :: CommandName}
+                               commandName :: CommandName} deriving Show
 type CommandPayload = [Pair]
 
 class CommandJoinable a where

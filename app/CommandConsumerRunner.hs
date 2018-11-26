@@ -13,7 +13,7 @@ main :: IO ()
 main = do
          let logger = Logger { loggerId = "[gsd.command.processing.manager]" , executableName = "command.processing.manager" }
          initLogger logger
-         logInfo logger "Starting"
+         logInfo logger "Starting CommandConsumerRunner"
          bracket (EventStore.connect getEventStoreSettings getConnectionType)
                    (\connection -> do EventStore.shutdown connection
                                       EventStore.waitTillClosed connection)

@@ -6,7 +6,6 @@ module Cqrs.EventStore.Streaming where
 import Streamly
 import qualified Streamly.Prelude as S
 import Control.Monad.IO.Class (MonadIO(liftIO))
-
 import Control.Concurrent.Async (wait)
 
 import qualified Database.EventStore as EventStore
@@ -19,8 +18,8 @@ import Cqrs.EventStore.Context
 import Data.Aeson
 import Data.Maybe
 
-isStreamExistRequest :: EventStoreStream item -> IO Bool
-isStreamExistRequest EventStoreStream { context = Context { logger = logger,
+isStreamNotExistRequest :: EventStoreStream item -> IO Bool
+isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
                                                      credentials = credentials,
                                                      connection = connection },
                                  streamName = streamName} = do
@@ -89,7 +88,7 @@ streamFromOffset eventStoreStream @ EventStoreStream {
                   (S.fromList commandStreamNamesByAggregateId) <>
                     (streamFromOffset eventStoreStream $ fromOffset + batchSize)
               else S.fromList commandStreamNamesByAggregateId
-          EventStore.ReadNoStream -> error $ "ReadNoStream "
+          EventStore.ReadNoStream -> S.fromList []
           e -> error $ "Read failure: " <> show e
 
 

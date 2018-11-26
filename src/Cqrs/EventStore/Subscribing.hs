@@ -27,16 +27,16 @@ subscribe eventStoreStream @ EventStoreStream {
                                                                  credentials = credentials,
                                                                  connection = connection },
                                              streamName = streamName} = do
-              liftIO $ logInfo logger "subscribing to new aggregate created notifier"
+              liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
               subscription <- liftIO $ EventStore.subscribe connection streamName True Nothing
               result <- liftIO $ (try $ EventStore.waitConfirmation subscription )
               case result of
                 Left e @ SomeException {} -> do
-                           liftIO $ logInfo logger "subscription to new aggregate created stream failed!"
+                           liftIO $ logInfo logger "subscription to stream failed - retrying..."
                            liftIO $ threadDelay (5 * 1000000) -- 5 seconds
                            subscribe eventStoreStream
                 Right _ -> do
-                           liftIO $ logInfo logger "subscription started for commands handlers"
+                           liftIO $ logInfo logger $ "subscription started for stream " ++ show streamName
                            loopNextEvent subscription where
                            loopNextEvent subscription = do
                               resolvedEvent <- liftIO $ EventStore.nextEvent subscription

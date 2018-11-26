@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Cqrs.EventStore.Querying where
 
 import Data.Maybe
@@ -8,6 +9,7 @@ import Control.Concurrent.Async (wait)
 import Cqrs.EventStore.PersistedItem
 import Cqrs.EventStore.Context
 import Data.Aeson
+import Cqrs.Streams
 
 retrieveLast :: FromJSON item => EventStoreStream item -> IO( Maybe (Persisted item))
 retrieveLast EventStoreStream { context = Context { logger = logger,
@@ -15,26 +17,22 @@ retrieveLast EventStoreStream { context = Context { logger = logger,
                                                     connection = connection },
                                 streamName = streamName} =  do
         let resolveLinkTos = False
-        readResult <- EventStore.readStreamEventsBackward
+        readResult <- EventStore.readEvent
                     connection
                     streamName
-                    (fromInteger 0)
-                    (fromInteger 1)
+                    (fromInteger (-1)) -- constant for StreamPositionEnd
                     resolveLinkTos
                     (Just credentials) >>= wait
-        case readResult of
-          EventStore.ReadSuccess responseContent -> do
-              let snapshots = recordedEventToPersistedItems recordedEventToPersistedItem responseContent
-              return $ listToMaybe snapshots
-          EventStore.ReadNoStream -> return Nothing
-          e -> error $ "Read failure: " <> show e
+        return $ case readResult of
+          EventStore.ReadSuccess EventStore.ReadEvent {readEventResolved = readEventResolved , readEventNumber = readEventNumber} -> do
+             Just $ recordedEventToPersistedItem (toInteger $ readEventNumber) readEventResolved
+          EventStore.ReadNoStream ->
+             Nothing
+          e -> error $ "retrieveLast failure: " <> show e
 
 
-recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
-recordedEventToPersistedItem recordedEvent =
-  PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
-                  item = fromJust $ EventStore.recordedEventDataAsJson recordedEvent }
+recordedEventToPersistedItem :: FromJSON item => Offset -> EventStore.ResolvedEvent -> Persisted item
+recordedEventToPersistedItem offset readEventResolved =
+  PersistedItem { offset = offset,
+                  item = fromJust $ EventStore.resolvedEventDataAsJson readEventResolved }
 
-recordedEventToPersistedItems :: (EventStore.RecordedEvent -> persistedItem) -> EventStore.StreamSlice -> [persistedItem]
-recordedEventToPersistedItems recordedEventToPersistedItem eventSlice = (\event -> recordedEventToPersistedItem $ EventStore.resolvedEventOriginal $ event)
-                                                        <$> EventStore.sliceEvents eventSlice

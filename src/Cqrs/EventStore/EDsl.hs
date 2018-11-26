@@ -36,11 +36,21 @@ getNewEventID = Free (GetNewEventId Pure)
 getCurrentTime :: EventStoreLanguage UTCTime
 getCurrentTime = Free (GetCurrentTime Pure)
 
+validateCommandTransaction :: AggregateId -> CommandId -> EventStoreLanguage () -> EventStoreLanguage ()
+validateCommandTransaction  aggregateId commandId transaction  = do
+    transaction
+    persistCommandResponse CommandSuccessfullyProcessed {
+                                   commandId = commandId  ,
+                                   aggregateId = aggregateId }
+
+
+
 skipCommandTransaction :: AggregateId -> CommandId -> EventStoreLanguage ()
 skipCommandTransaction  aggregateId commandId  = do
     persistCommandResponse CommandSkippedBecauseAlreadyProcessed {
                                    commandId = commandId  ,
                                    aggregateId = aggregateId }
+
 
 
 rejectCommandTransaction :: Maybe ValidationState -> AggregateId -> CommandId -> RejectionReason -> EventStoreLanguage ()

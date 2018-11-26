@@ -13,12 +13,12 @@ type Pair = (Text, Value)
 type EventName = String
 
 data Event = Event { eventHeader :: EventHeader,
-                     payload :: EventPayload}
+                     payload :: EventPayload} deriving Show
 
 data EventHeader =  EventHeader { aggregateId :: AggregateId,
                              eventId :: EventId ,
                              createdOn :: UTCTime ,
-                             eventName :: EventName}
+                             eventName :: EventName} deriving Show
 type EventPayload = [Pair]
 
 instance AggregateJoinable Event where

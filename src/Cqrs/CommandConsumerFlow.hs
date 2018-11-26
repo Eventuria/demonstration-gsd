@@ -27,28 +27,34 @@ import Cqrs.EventStore.Streaming
 import Cqrs.EventStore.Querying
 import Cqrs.EventStore.Context
 import Cqrs.EventStore.PersistedItem
+import Control.Concurrent
 
 runCommandConsumers :: Logger -> EventStoreContext -> AggregateIdStream  -> CommandHandler -> IO ()
 runCommandConsumers logger eventStoreContext @ Context { credentials = credentials, connection = connection } aggregateStream commandHandler = do
-  logInfo logger "starting streams"
+  logInfo logger "runnning command consummers"
   runStream
     $ parallely
     $ streamAllInfinitely aggregateStream
     & S.mapM (\persistedAggregate -> do
+      threadId <- myThreadId
+      liftIO $ logInfo logger $ "detected aggregrate " ++ (show $ item persistedAggregate) ++ " > Thread " ++ show threadId ++ " is locked for this aggregate"
       runStream
         $ serially
         $ yieldAndSubscribeToAggregateUpdates eventStoreContext persistedAggregate
         & S.mapM (\PersistedItem {item = aggregateId}  -> do
-            liftIO $ logInfo logger $ "processing commands workspace for " ++ (show aggregateId)
+            liftIO $ logInfo logger $ "processing commands for aggregate " ++ (show aggregateId)
             let validationStateStream = getValidateStateStream eventStoreContext aggregateId
             let commandStream = getCommandStream eventStoreContext aggregateId
             lastOffsetConsumed <- liftIO $ retrieveLastOffsetConsumed validationStateStream
+            liftIO $ logInfo logger $ "last offset command consummed is   " ++ (show lastOffsetConsumed)
             runStream
-              $ (streamFromOffset commandStream $ fromMaybe 0 lastOffsetConsumed)
+              $ serially
+              $ (streamFromOffset commandStream $ fromMaybe 0 (fmap (+1) lastOffsetConsumed))
               & S.mapM (\persistedCommand @PersistedItem { item = Command { commandHeader = CommandHeader {commandId = commandId} }}  -> do
                 lastValidationState <- liftIO $ (fmap.fmap) item $ retrieveLast validationStateStream
+                liftIO $ logInfo logger $ "feeding command handler > " ++ (show persistedCommand) ++ " > validationState : " ++ show lastValidationState
                 let transaction = case (commandHandler persistedCommand lastValidationState) of
                                     Reject reason -> rejectCommandTransaction lastValidationState aggregateId commandId reason
                                     SkipBecauseAlreadyProcessed -> skipCommandTransaction aggregateId commandId
-                                    Transact commandTransaction -> (translate $ commandTransaction)
+                                    Validate commandTransaction -> validateCommandTransaction aggregateId commandId (translate $ commandTransaction)
                 interpret transaction eventStoreContext)))

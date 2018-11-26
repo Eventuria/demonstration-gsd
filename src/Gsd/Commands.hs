@@ -1,11 +1,14 @@
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE OverloadedStrings     #-}
 module Gsd.Commands where
 
 import Cqrs.Aggregate.Commands.CommandId
 import Cqrs.Aggregate.Commands.Command
 import qualified Cqrs.Aggregate.Commands.Command as CommandModule
 import Gsd.Core
+import Data.Aeson
 
+import qualified Data.Text as Text
 
 data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId }
                  | SetGoal  { commandId :: CommandId ,
@@ -30,13 +33,15 @@ data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::Work
                                        actionId :: ActionId ,
                                        actionDetails :: String}
 
+createWorkspaceCommandName :: String
+createWorkspaceCommandName = "createWorkspace"
 
 isCreateWorkspaceCommand :: Command -> Bool
-isCreateWorkspaceCommand command = (commandName $ commandHeader command) == "createWorkspace"
+isCreateWorkspaceCommand command = (commandName $ commandHeader command) == createWorkspaceCommandName
 
 toCommand :: GsdCommand -> Command
 toCommand  CreateWorkspace {commandId = commandId, workspaceId = workspaceId} =
-  Command { commandHeader = CommandHeader { commandId = commandId, aggregateId = workspaceId , commandName = "createWorkspace" } ,
+  Command { commandHeader = CommandHeader { commandId = commandId, aggregateId = workspaceId , commandName = createWorkspaceCommandName } ,
             payload = []}
 toCommand _ = error "to handle..."
 
@@ -45,3 +50,24 @@ fromCommand command =
   case (commandName $ commandHeader command) of
     "createWorkspace" -> Just CreateWorkspace {commandId = CommandModule.commandId $ commandHeader command, workspaceId = aggregateId $ commandHeader command}
     _ -> Nothing
+
+
+instance ToJSON GsdCommand where
+  toJSON (CreateWorkspace {commandId = commandId , workspaceId = workspaceId  } ) = object [
+            "commandId" .= commandId,
+            "workspaceId" .= workspaceId,
+            "commandName" .= createWorkspaceCommandName]
+  toJSON _  = error "to handle..."
+
+instance FromJSON GsdCommand where
+
+  parseJSON (Object jsonObject) = do
+               commandNameMaybe <- jsonObject .: "commandName"
+               case commandNameMaybe of
+                    Just (String commandName) | (Text.unpack commandName) == createWorkspaceCommandName ->
+                      CreateWorkspace
+                          <$> jsonObject .: "commandId"
+                          <*> jsonObject .: "workspaceId"
+                    Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
+                    _ -> error $ "Command name not provided"
+  parseJSON _ =  error $ "Json format not expected"

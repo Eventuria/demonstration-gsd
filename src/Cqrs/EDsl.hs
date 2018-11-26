@@ -14,8 +14,7 @@ import Control.Monad.Free
 import Cqrs.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Aggregate.Events.EventId
 
-data CommandDirective = Reject RejectionReason | SkipBecauseAlreadyProcessed | Transact (CommandTransaction ())
-
+data CommandDirective = Reject RejectionReason | SkipBecauseAlreadyProcessed | Validate (CommandTransaction ())
 
 
 data Action a = PersistEvent Event a

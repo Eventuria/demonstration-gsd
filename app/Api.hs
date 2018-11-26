@@ -5,7 +5,7 @@ module Api where
 import Web.Scotty
 
 import Cqrs.Logger
-import Cqrs.Aggregate.Ids.AggregateIdStream
+
 import Cqrs.EventStore.Streaming
 import qualified Database.EventStore as EventStore
 import Control.Exception
@@ -15,6 +15,8 @@ import Cqrs.Settings
 import Streamly
 import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.Context
+import Gsd.Gsd
+import Cqrs.Aggregate.Ids.AggregateIdStream
 
 main :: IO ()
 main = do
@@ -44,4 +46,4 @@ routing eventStoreContext @ Context {logger = logger , connection = connection ,
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
-     (liftIO $ persistCommands eventStoreContext command) >>= json
+     (liftIO $ requestCommand eventStoreContext command ) >>= json

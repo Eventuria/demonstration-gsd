@@ -20,14 +20,14 @@ import Gsd.CommandPredicates
 gsdCommandHandler :: CommandHandler
 gsdCommandHandler persistedCommand@PersistedItem {offset = offset , item = command } snapshotMaybe
    | isAlreadyProcessed offset snapshotMaybe = SkipBecauseAlreadyProcessed
-   | (isFirstCommand snapshotMaybe) && (isCreateWorkspaceCommand command) = Transact $ (fromJust $ fromCommand (command::Command)) & (\CreateWorkspace {commandId = commandId, workspaceId = workspaceId} -> do
+   | (isFirstCommand snapshotMaybe) && (isCreateWorkspaceCommand command) = Validate $ (fromJust $ fromCommand (command::Command)) & (\CreateWorkspace {commandId = commandId, workspaceId = workspaceId} -> do
         now <- getCurrentTime
         eventId <- getNewEventID
         persistEvent $ toEvent $ WorkspaceCreated {  eventId = eventId , createdOn = now, workspaceId = workspaceId}
         updateValidationState ValidationState {lastOffsetConsumed = 0 ,
                                                             commandsProcessed = fromList [commandId] ,
                                                             state = AggregateState { aggregateId = workspaceId }})
-   | (not $ isFirstCommand snapshotMaybe ) && (isCreateWorkspaceCommand command) = Reject "first command muste be CreateWorkspace "
+   | (not $ isFirstCommand snapshotMaybe ) && (isCreateWorkspaceCommand command) = Reject "CreateWorkspace can only be a the first command "
    | otherwise = Reject "scenario not handle yet"
 
 
