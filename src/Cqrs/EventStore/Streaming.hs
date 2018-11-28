@@ -36,7 +36,7 @@ isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
         EventStore.ReadNoStream -> True
         _ -> False
 
-streamAllInfinitely ::  (FromJSON item,
+streamAllInfinitely ::  (FromJSON item, Show item,
                          IsStream stream,
                          MonadIO (stream IO),
                          Semigroup (stream IO (Persisted item))) =>
@@ -46,7 +46,7 @@ streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)
 
-streamAll :: (FromJSON item,
+streamAll :: (FromJSON item, Show item,
               IsStream stream,
               MonadIO (stream IO),
               Semigroup (stream IO (Persisted item))) =>
@@ -54,7 +54,7 @@ streamAll :: (FromJSON item,
                 stream IO (Persisted item)
 streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
-streamFromOffset :: (FromJSON item,
+streamFromOffset :: (FromJSON item, Show item,
                      IsStream stream,
                      MonadIO (stream IO),
                      Semigroup (stream IO (Persisted item))) =>
@@ -68,8 +68,8 @@ streamFromOffset eventStoreStream @ EventStoreStream {
                                                            credentials = credentials,
                                                            connection = connection },
                                        streamName = streamName } fromOffset = do
-     liftIO $ logInfo logger $ "starting streaming from offset " ++ (show fromOffset)
-     let batchSize = 100 :: Integer
+     liftIO $ logInfo logger $ "streaming [" ++ (show fromOffset) ++ "..] > " ++ show streamName
+     let batchSize = 100
          resolveLinkTos = False
      asyncRead <- liftIO $ EventStore.readStreamEventsForward
                       connection
@@ -81,14 +81,17 @@ streamFromOffset eventStoreStream @ EventStoreStream {
      commandFetched <- liftIO $ wait asyncRead
      case commandFetched of
           EventStore.ReadSuccess readResult -> do
-              let commandStreamNamesByAggregateId = recordedEventToPersistedItem
+              let persistedItems = recordedEventToPersistedItem
                                                     <$> EventStore.resolvedEventOriginal
                                                     <$> EventStore.sliceEvents readResult
-              if (length commandStreamNamesByAggregateId) /= 0 then do
-                  (S.fromList commandStreamNamesByAggregateId) <>
+              liftIO $ logInfo logger $ "streaming result : " ++ show persistedItems
+              if (length persistedItems) == (fromInteger batchSize) then do
+                  (S.fromList persistedItems) <>
                     (streamFromOffset eventStoreStream $ fromOffset + batchSize)
-              else S.fromList commandStreamNamesByAggregateId
-          EventStore.ReadNoStream -> S.fromList []
+              else S.fromList persistedItems
+          EventStore.ReadNoStream -> do
+            liftIO $ logInfo logger $ "> " ++ show streamName ++ " is not found."
+            S.fromList []
           e -> error $ "Read failure: " <> show e
 
 

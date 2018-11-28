@@ -3,20 +3,18 @@
 module Api where
 
 import Web.Scotty
-
+import Prelude hiding (foldr)
 import Cqrs.Logger
 
-import Cqrs.EventStore.Streaming
 import qualified Database.EventStore as EventStore
 import Control.Exception
 import Data.UUID
-import Cqrs.Aggregate.Commands.CommandStream
 import Cqrs.Settings
-import Streamly
+import Streamly.Prelude
 import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.EventStore.Context
-import Gsd.Gsd
-import Cqrs.Aggregate.Ids.AggregateIdStream
+import qualified Gsd.Gsd as Gsd
+
 
 main :: IO ()
 main = do
@@ -33,17 +31,20 @@ main = do
 routing :: EventStoreContext -> IO()
 routing eventStoreContext @ Context {logger = logger , connection = connection , credentials = credentials } = scotty 3000 $ do
   get  "/health/liveness" $ do html "OK"
-  get  "/workspaceIds" $ do
-     (liftIO $ runStream $ streamAll (getAggregateIdStream eventStoreContext) ) >>= json
-  get  "/:workspaceIdGiven/commands/read" $ do
+  get  "/readWorkspaceIds" $ do
+    workspaceIds <- (liftIO $ foldr (:) [] $ Gsd.streamWorkspaceIds eventStoreContext )
+    liftIO $ logInfo logger $ "[api] - result > " ++ show workspaceIds
+    json workspaceIds
+  get  "/readCommands/:workspaceIdGiven" $ do
     workspaceIdString <- param "workspaceIdGiven"
     let workspaceIdOpt = fromString workspaceIdString
     case workspaceIdOpt of
-                   Just (workspaceId) -> do
-                      let commandStream =  (getCommandStream eventStoreContext workspaceId)
-                      (liftIO $ runStream $ streamAll commandStream) >>= json
+                   Just (workspaceId) -> (liftIO $ foldr (:) []  $ Gsd.streamCommands eventStoreContext workspaceId) >>= json
                    Nothing -> html "you've passed an invalid workspace id format"
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
-     (liftIO $ requestCommand eventStoreContext command ) >>= json
+     commands <- (liftIO $ Gsd.requestCommand eventStoreContext command )
+     json commands
+
+

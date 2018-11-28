@@ -19,12 +19,11 @@ import Data.Function ((&))
 import Cqrs.EventStore.Stream
 import Cqrs.EventStore.Subscribing
 import Cqrs.Aggregate.Commands.Command
-import Cqrs.Aggregate.Core
+
 import Cqrs.EventStore.Context
 import Cqrs.EventStore.PersistedItem
 import Cqrs.EventStore.Writing
-import Cqrs.Streams
-import Cqrs.EventStore.Streaming
+
 
 type AggregateIdStream = EventStoreStream AggregateId
 
@@ -36,16 +35,6 @@ getAggregateIdStream eventStoreContext = EventStoreStream { context = eventStore
 
 getAggregateIdStreamName :: EventStore.StreamName
 getAggregateIdStreamName = EventStore.StreamName $ Text.pack $ "aggregate_id"
-
-
-persistCommands :: EventStoreContext -> Command -> IO (Either PersistenceFailure PersistResult)
-persistCommands context command = do
-  let commandStream = getCommandStream context $ getAggregateId command
-  isStreamNotExist <- isStreamNotExistRequest commandStream
-  if(isStreamNotExist) then do
-    persist (getAggregateIdStream context) $ getAggregateId command
-    persist commandStream command
-  else persist commandStream command
 
 
 instance Writable AggregateId where
