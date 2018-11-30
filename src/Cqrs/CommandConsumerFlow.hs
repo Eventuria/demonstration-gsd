@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Cqrs.CommandConsumerFlow  where
 
 import Cqrs.Aggregate.Commands.Command
@@ -12,39 +13,39 @@ import qualified Streamly.Prelude as S
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Function ((&))
 
-import Cqrs.Logger
+import Logger.Core
 import Data.Maybe
 
-import Cqrs.Aggregate.Commands.ValidationStates.ValidationStateStream
-import Cqrs.Aggregate.Commands.CommandStream
 import Cqrs.Aggregate.Ids.AggregateIdStream
 import Cqrs.CommandHandler
-import Cqrs.EventStore.Interpreter
+import Plugins.EventStore.InterpreterEventStore
 import Cqrs.EventStore.Translation
 import Cqrs.EDsl
-import Cqrs.EventStore.EDsl
-import Cqrs.EventStore.Streaming
-import Cqrs.EventStore.Querying
-import Cqrs.EventStore.Context
-import Cqrs.EventStore.PersistedItem
+import Cqrs.EventStore.Write.WDsl
+import EventStore.Read.Streaming
+import EventStore.Read.Querying
+import EventStore.Read.PersistedItem
 import Control.Concurrent
+import Cqrs.Aggregate.StreamRepository
+import Cqrs.Streams
+import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 
-runCommandConsumers :: Logger -> EventStoreContext -> AggregateIdStream  -> CommandHandler -> IO ()
-runCommandConsumers logger eventStoreContext @ Context { credentials = credentials, connection = connection } aggregateStream commandHandler = do
+runCommandConsumers :: Logger -> EventStoreStreamRepository  -> CommandHandler -> IO ()
+runCommandConsumers logger streamRepository @ StreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream } commandHandler = do
   logInfo logger "runnning command consummers"
   runStream
     $ parallely
-    $ streamAllInfinitely aggregateStream
+    $ streamAllInfinitely aggregateIdStream
     & S.mapM (\persistedAggregate -> do
       threadId <- myThreadId
       liftIO $ logInfo logger $ "detected aggregrate " ++ (show $ item persistedAggregate) ++ " > Thread " ++ show threadId ++ " is locked for this aggregate"
       runStream
         $ serially
-        $ yieldAndSubscribeToAggregateUpdates eventStoreContext persistedAggregate
+        $ yieldAndSubscribeToAggregateUpdates getCommandStream persistedAggregate
         & S.mapM (\PersistedItem {item = aggregateId}  -> do
             liftIO $ logInfo logger $ "processing commands for aggregate " ++ (show aggregateId)
-            let validationStateStream = getValidateStateStream eventStoreContext aggregateId
-            let commandStream = getCommandStream eventStoreContext aggregateId
+            let validationStateStream = getValidationStateStream aggregateId
+            let commandStream = getCommandStream aggregateId
             lastOffsetConsumed <- liftIO $ retrieveLastOffsetConsumed validationStateStream
             liftIO $ logInfo logger $ "last offset command consummed is   " ++ (show lastOffsetConsumed)
             runStream
@@ -57,4 +58,8 @@ runCommandConsumers logger eventStoreContext @ Context { credentials = credentia
                                     Reject reason -> rejectCommandTransaction lastValidationState aggregateId commandId reason
                                     SkipBecauseAlreadyProcessed -> skipCommandTransaction aggregateId commandId
                                     Validate commandTransaction -> validateCommandTransaction aggregateId commandId (translate $ commandTransaction)
-                interpret transaction eventStoreContext)))
+                interpretWriteEventStoreLanguage transaction logger streamRepository)))
+
+
+retrieveLastOffsetConsumed :: ValidateStateStream -> IO (Maybe Offset)
+retrieveLastOffsetConsumed validationStateStream = (fmap.fmap) ( \persistedValidationState -> lastOffsetConsumed $ item $ persistedValidationState ) (retrieveLast validationStateStream)

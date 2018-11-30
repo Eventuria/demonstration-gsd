@@ -7,6 +7,9 @@ import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import Data.Text
 import Cqrs.Aggregate.Core
+import qualified EventStore.Write.Persisting as EventStore.Writing
+
+
 
 type Pair = (Text, Value)
 type CommandName = String
@@ -25,6 +28,9 @@ class CommandJoinable a where
 instance AggregateJoinable Command where
   getAggregateId Command { commandHeader = CommandHeader {aggregateId = aggregateId} } = aggregateId
 
+
+instance EventStore.Writing.Writable Command where
+  getItemName Command { commandHeader = CommandHeader {commandName = commandName} }  = commandName
 
 instance ToJSON Command where
   toJSON (Command {commandHeader = commandHeader , payload = payload  } ) = object [

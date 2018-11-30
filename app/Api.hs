@@ -1,10 +1,11 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Api where
 
 import Web.Scotty
 import Prelude hiding (foldr)
-import Cqrs.Logger
+import Logger.Core
 
 import qualified Database.EventStore as EventStore
 import Control.Exception
@@ -12,9 +13,9 @@ import Data.UUID
 import Cqrs.Settings
 import Streamly.Prelude
 import Control.Monad.IO.Class (MonadIO(..))
-import Cqrs.EventStore.Context
+import EventStore.Settings
 import qualified Gsd.Gsd as Gsd
-
+import Cqrs.Aggregate.StreamRepository
 
 main :: IO ()
 main = do
@@ -25,26 +26,26 @@ main = do
   bracket (EventStore.connect getEventStoreSettings getConnectionType)
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
-         (\connection -> routing Context {logger = logger, connection = connection , credentials = getCredentials})
+         (\connection -> routing logger $ Gsd.getEventStoreStreamRepository Context {logger = logger, connection = connection , credentials = getCredentials})
 
 
-routing :: EventStoreContext -> IO()
-routing eventStoreContext @ Context {logger = logger , connection = connection , credentials = credentials } = scotty 3000 $ do
+routing :: Logger -> EventStoreStreamRepository  -> IO()
+routing logger streamRepository @ StreamRepository { aggregateIdStream , getCommandStream }= scotty 3000 $ do
   get  "/health/liveness" $ do html "OK"
   get  "/readWorkspaceIds" $ do
-    workspaceIds <- (liftIO $ foldr (:) [] $ Gsd.streamWorkspaceIds eventStoreContext )
+    workspaceIds <- (liftIO $ foldr (:) [] $ Gsd.streamWorkspaceIds aggregateIdStream )
     liftIO $ logInfo logger $ "[api] - result > " ++ show workspaceIds
     json workspaceIds
   get  "/readCommands/:workspaceIdGiven" $ do
     workspaceIdString <- param "workspaceIdGiven"
     let workspaceIdOpt = fromString workspaceIdString
     case workspaceIdOpt of
-                   Just (workspaceId) -> (liftIO $ foldr (:) []  $ Gsd.streamCommands eventStoreContext workspaceId) >>= json
+                   Just (workspaceId) -> (liftIO $ foldr (:) []  $ Gsd.streamCommands getCommandStream workspaceId) >>= json
                    Nothing -> html "you've passed an invalid workspace id format"
   post "/requestCommand/" $ do
      liftIO $ logInfo logger "post /requestCommand/"
      command <- jsonData
-     commands <- (liftIO $ Gsd.requestCommand eventStoreContext command )
+     commands <- (liftIO $ Gsd.requestCommand getCommandStream aggregateIdStream command )
      json commands
 
 

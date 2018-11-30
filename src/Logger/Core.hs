@@ -1,4 +1,4 @@
-module Cqrs.Logger where
+module Logger.Core where
 import qualified System.Log.Logger as LoggerUsed
 import Control.Concurrent
 

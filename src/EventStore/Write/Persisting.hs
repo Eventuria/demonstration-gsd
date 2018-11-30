@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Cqrs.EventStore.Writing where
+module EventStore.Write.Persisting where
 
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
@@ -10,9 +10,9 @@ import Control.Concurrent.Async (wait)
 
 import Cqrs.Streams
 import Control.Monad.IO.Class (MonadIO(..))
-import Cqrs.EventStore.Stream
+import EventStore.Stream
 
-import Cqrs.EventStore.Context
+import EventStore.Settings
 import Data.Aeson
 
 

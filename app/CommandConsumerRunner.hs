@@ -1,13 +1,11 @@
 module CommandConsumerRunner where
 
-import Cqrs.CommandConsumerFlow
-import Cqrs.Logger
+import Logger.Core
 import qualified Database.EventStore as EventStore
 import Control.Exception
 import Cqrs.Settings
-import Gsd.CommandHandler
-import Cqrs.Aggregate.Ids.AggregateIdStream
-import Cqrs.EventStore.Context
+import EventStore.Settings
+import qualified Gsd.Gsd as Gsd
 
 main :: IO ()
 main = do
@@ -17,9 +15,8 @@ main = do
          bracket (EventStore.connect getEventStoreSettings getConnectionType)
                    (\connection -> do EventStore.shutdown connection
                                       EventStore.waitTillClosed connection)
-                   (\connection -> do
-                      let eventStoreContext = Context {logger = logger, connection = connection , credentials = getCredentials}
-                      runCommandConsumers logger eventStoreContext (getAggregateIdStream eventStoreContext)  gsdCommandHandler)
+                   (\connection ->
+                      Gsd.runCommandConsumers logger Context {logger = logger, connection = connection , credentials = getCredentials} )
 
 
 

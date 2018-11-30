@@ -1,13 +1,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Cqrs.EventStore.Querying where
+module EventStore.Read.Querying where
 
 import Data.Maybe
-import Cqrs.EventStore.Stream
+import EventStore.Stream
 import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
-import Cqrs.EventStore.PersistedItem
-import Cqrs.EventStore.Context
+import EventStore.Read.PersistedItem
+import EventStore.Settings
 import Data.Aeson
 import Cqrs.Streams
 

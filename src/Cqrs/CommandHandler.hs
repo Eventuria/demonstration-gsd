@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 module Cqrs.CommandHandler  where
 
-import Cqrs.EventStore.PersistedItem
+import EventStore.Read.PersistedItem
 import Cqrs.Aggregate.Commands.Command
 import Cqrs.EDsl
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState

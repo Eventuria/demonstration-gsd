@@ -1,27 +1,21 @@
-module Cqrs.EventStore.Subscribing where
+module EventStore.Read.Subscribing where
 
-
-import Streamly
 import qualified Streamly.Prelude as S
 import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
 import qualified Database.EventStore as EventStore
 
-import Cqrs.Logger
+import Logger.Core
 import Control.Exception
-import Cqrs.EventStore.Stream
-import Cqrs.EventStore.Context
-import Cqrs.EventStore.PersistedItem
+import EventStore.Stream
+import EventStore.Settings
+import EventStore.Read.PersistedItem
 import Data.Maybe
 import Data.Aeson
+import EventStore.Streamable
 
-subscribe :: (FromJSON item,
-              IsStream stream,
-              MonadIO (stream IO),
-              Semigroup (stream IO (Persisted item)))  =>
-                EventStoreStream item ->
-                stream IO (Persisted item)
+subscribe :: Streamable monad stream item => EventStoreStream item -> stream monad (Persisted item)
 subscribe eventStoreStream @ EventStoreStream {
                                              context = Context { logger = logger,
                                                                  credentials = credentials,

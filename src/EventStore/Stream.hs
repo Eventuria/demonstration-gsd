@@ -1,10 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Cqrs.EventStore.Stream where
+module EventStore.Stream where
 
 import qualified Database.EventStore as EventStore
-import Cqrs.EventStore.Context
+import EventStore.Settings
 
 data EventStoreStream item = EventStoreStream {
                                            context :: EventStoreContext,

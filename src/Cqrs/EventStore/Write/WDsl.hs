@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Cqrs.EventStore.EDsl where
+module Cqrs.EventStore.Write.WDsl where
 
 import Cqrs.Aggregate.Commands.CommandId
 import Cqrs.Aggregate.Commands.Responses.CommandResponse
@@ -19,24 +19,24 @@ data Directive a = PersistEvent Event a
                 | GetCurrentTime (UTCTime -> a )
                 | GetNewEventId (EventId -> a) deriving (Functor)
 
-type EventStoreLanguage a = Free Directive a
+type WriteEventStoreLanguage a = Free Directive a
 
-persistEvent :: Event -> EventStoreLanguage ()
+persistEvent :: Event -> WriteEventStoreLanguage ()
 persistEvent event = Free (PersistEvent event (Pure ()))
 
-persistAggregate :: ValidationState -> EventStoreLanguage ()
+persistAggregate :: ValidationState -> WriteEventStoreLanguage ()
 persistAggregate validationState = Free (PersistValidationState validationState (Pure ()))
 
-persistCommandResponse :: CommandResponse -> EventStoreLanguage ()
+persistCommandResponse :: CommandResponse -> WriteEventStoreLanguage ()
 persistCommandResponse commandResponse = Free (PersistCommandResponse commandResponse (Pure ()))
 
-getNewEventID :: EventStoreLanguage EventId
+getNewEventID :: WriteEventStoreLanguage EventId
 getNewEventID = Free (GetNewEventId Pure)
 
-getCurrentTime :: EventStoreLanguage UTCTime
+getCurrentTime :: WriteEventStoreLanguage UTCTime
 getCurrentTime = Free (GetCurrentTime Pure)
 
-validateCommandTransaction :: AggregateId -> CommandId -> EventStoreLanguage () -> EventStoreLanguage ()
+validateCommandTransaction :: AggregateId -> CommandId -> WriteEventStoreLanguage () -> WriteEventStoreLanguage ()
 validateCommandTransaction  aggregateId commandId transaction  = do
     transaction
     persistCommandResponse CommandSuccessfullyProcessed {
@@ -45,7 +45,7 @@ validateCommandTransaction  aggregateId commandId transaction  = do
 
 
 
-skipCommandTransaction :: AggregateId -> CommandId -> EventStoreLanguage ()
+skipCommandTransaction :: AggregateId -> CommandId -> WriteEventStoreLanguage ()
 skipCommandTransaction  aggregateId commandId  = do
     persistCommandResponse CommandSkippedBecauseAlreadyProcessed {
                                    commandId = commandId  ,
@@ -53,7 +53,7 @@ skipCommandTransaction  aggregateId commandId  = do
 
 
 
-rejectCommandTransaction :: Maybe ValidationState -> AggregateId -> CommandId -> RejectionReason -> EventStoreLanguage ()
+rejectCommandTransaction :: Maybe ValidationState -> AggregateId -> CommandId -> RejectionReason -> WriteEventStoreLanguage ()
 rejectCommandTransaction (Just snapshot) aggregateId commandId rejectionReason = do
     persistAggregate ValidationState { lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
                                          commandsProcessed = Set.insert commandId (commandsProcessed snapshot),

@@ -1,7 +1,10 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Cqrs.EventStore.Streaming where
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
+module EventStore.Read.Streaming where
 
 import Streamly
 import qualified Streamly.Prelude as S
@@ -9,14 +12,16 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Concurrent.Async (wait)
 
 import qualified Database.EventStore as EventStore
-import qualified Cqrs.EventStore.Subscribing as EventStore.Subscribing
-import Cqrs.EventStore.PersistedItem
-import Cqrs.Logger
+import qualified EventStore.Read.Subscribing as EventStore.Subscribing
+import EventStore.Read.PersistedItem
+import Logger.Core
 import Cqrs.Streams (Offset)
-import Cqrs.EventStore.Stream
-import Cqrs.EventStore.Context
+import EventStore.Stream
+import EventStore.Settings
 import Data.Aeson
 import Data.Maybe
+import EventStore.Streamable
+
 
 isStreamNotExistRequest :: EventStoreStream item -> IO Bool
 isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
@@ -36,31 +41,20 @@ isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
         EventStore.ReadNoStream -> True
         _ -> False
 
-streamAllInfinitely ::  (FromJSON item, Show item,
-                         IsStream stream,
-                         MonadIO (stream IO),
-                         Semigroup (stream IO (Persisted item))) =>
-                          EventStoreStream item ->
-                          stream IO (Persisted item)
+streamAllInfinitely :: Streamable monad stream item => EventStoreStream item -> stream monad (Persisted item)
 streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)
 
-streamAll :: (FromJSON item, Show item,
-              IsStream stream,
-              MonadIO (stream IO),
-              Semigroup (stream IO (Persisted item))) =>
+streamAll :: Streamable monad stream item =>
                 EventStoreStream item ->
-                stream IO (Persisted item)
+                stream monad (Persisted item)
 streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
-streamFromOffset :: (FromJSON item, Show item,
-                     IsStream stream,
-                     MonadIO (stream IO),
-                     Semigroup (stream IO (Persisted item))) =>
+streamFromOffset :: Streamable monad stream item =>
                       EventStoreStream item ->
                       Offset ->
-                      stream IO (Persisted item)
+                      stream monad (Persisted item)
 
 
 streamFromOffset eventStoreStream @ EventStoreStream {
@@ -84,7 +78,6 @@ streamFromOffset eventStoreStream @ EventStoreStream {
               let persistedItems = recordedEventToPersistedItem
                                                     <$> EventStore.resolvedEventOriginal
                                                     <$> EventStore.sliceEvents readResult
-              liftIO $ logInfo logger $ "streaming result : " ++ show persistedItems
               if (length persistedItems) == (fromInteger batchSize) then do
                   (S.fromList persistedItems) <>
                     (streamFromOffset eventStoreStream $ fromOffset + batchSize)

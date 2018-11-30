@@ -1,19 +1,18 @@
 module Cqrs.Cqrs where
 
+import Cqrs.Aggregate.StreamRepository
 import Cqrs.Aggregate.Commands.Command
 import Cqrs.Streams
-import Cqrs.EventStore.Streaming
+import EventStore.Read.Streaming
 import Cqrs.Aggregate.Core
-import Cqrs.EventStore.Context
-import Cqrs.EventStore.Writing
-import Cqrs.Aggregate.Commands.CommandStream
-import Cqrs.Aggregate.Ids.AggregateIdStream
+import EventStore.Write.Persisting
 
-persistCommands :: EventStoreContext -> Command -> IO (Either PersistenceFailure PersistResult)
-persistCommands context command = do
-  let commandStream = getCommandStream context $ getAggregateId command
-  isStreamNotExist <- isStreamNotExistRequest commandStream
-  if(isStreamNotExist) then do
-    persist (getAggregateIdStream context) $ getAggregateId command
-    persist commandStream command
-  else persist commandStream command
+
+persistCommands :: GetCommandStream -> AggregateIdStream -> Command -> IO (Either PersistenceFailure PersistResult)
+persistCommands getCommandStream  aggregateIdStream command = do
+ let commandStream = getCommandStream $ getAggregateId command
+ isStreamNotExist <- isStreamNotExistRequest commandStream
+ if(isStreamNotExist) then do
+   persist aggregateIdStream $ getAggregateId command
+   persist commandStream command
+ else persist commandStream command

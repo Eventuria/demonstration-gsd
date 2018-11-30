@@ -8,7 +8,7 @@ import Data.Maybe
 
 
 import Data.Function ((&))
-import Cqrs.EventStore.PersistedItem
+import EventStore.Read.PersistedItem
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Aggregate.Commands.Command
 import Gsd.Commands
