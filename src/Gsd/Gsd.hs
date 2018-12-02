@@ -27,15 +27,16 @@ import Database.EventStore hiding (Command)
 import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
 import Logger.Core
 import Gsd.CommandHandler
+import EventStore.EventStore
 
 requestCommand :: GetCommandStream -> AggregateIdStream -> GsdCommand -> IO (Either PersistenceFailure PersistResult)
 requestCommand getCommandStream aggregateIdStream gsdCommand = Cqrs.persistCommands getCommandStream aggregateIdStream $ toCommand gsdCommand
 
-runCommandConsumers :: Logger -> EventStoreContext -> IO ()
-runCommandConsumers logger eventStoreContext = CommandConsumerFlow.runCommandConsumers logger (getEventStoreStreamRepository eventStoreContext) gsdCommandHandler
+runCommandConsumers :: Logger -> EventStoreContext -> EventStoreReading -> IO ()
+runCommandConsumers logger eventStoreContext eventStoreReading = CommandConsumerFlow.runCommandConsumers logger (getEventStoreStreamRepository eventStoreContext) eventStoreReading gsdCommandHandler
 
 streamWorkspaceIds :: Streamable monad stream WorkspaceId => AggregateIdStream -> stream monad (Persisted WorkspaceId)
-streamWorkspaceIds aggregateIdStream = streamAll $ aggregateIdStream
+streamWorkspaceIds = streamAll
 
 
 streamCommands ::  Streamable monad stream Command => GetCommandStream -> WorkspaceId -> stream monad (Persisted GsdCommand)

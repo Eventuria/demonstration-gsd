@@ -22,7 +22,6 @@ import Data.Aeson
 import Data.Maybe
 import EventStore.Streamable
 
-
 isStreamNotExistRequest :: EventStoreStream item -> IO Bool
 isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
                                                      credentials = credentials,
