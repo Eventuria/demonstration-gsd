@@ -16,7 +16,6 @@ import Data.Function ((&))
 import Logger.Core
 import Data.Maybe
 
-import Cqrs.Aggregate.Ids.AggregateIdStream
 import Cqrs.CommandHandler
 import Plugins.EventStore.InterpreterEventStore
 import Cqrs.EventStore.Translation
@@ -29,6 +28,9 @@ import Control.Concurrent
 import Cqrs.Aggregate.StreamRepository
 import Cqrs.Streams
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
+import EventStore.Streamable
+import Cqrs.Aggregate.Ids.AggregateId
+import EventStore.Read.Subscribing
 
 runCommandConsumers :: Logger -> EventStoreStreamRepository  -> CommandHandler -> IO ()
 runCommandConsumers logger streamRepository @ StreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream } commandHandler = do
@@ -63,3 +65,18 @@ runCommandConsumers logger streamRepository @ StreamRepository { aggregateIdStre
 
 retrieveLastOffsetConsumed :: ValidateStateStream -> IO (Maybe Offset)
 retrieveLastOffsetConsumed validationStateStream = (fmap.fmap) ( \persistedValidationState -> lastOffsetConsumed $ item $ persistedValidationState ) (retrieveLast validationStateStream)
+
+yieldAndSubscribeToAggregateUpdates :: (Streamable monad stream Command, Streamable monad stream AggregateId) =>
+                                       GetCommandStream ->
+                                       Persisted AggregateId ->
+                                       stream monad (Persisted AggregateId)
+yieldAndSubscribeToAggregateUpdates getCommandStream persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =
+  (S.yield persistedAggregate) <>
+  ((subscribeToAggregateUpdates getCommandStream aggregateId  ) & S.map (\aggregateId -> PersistedItem { offset = offset,item = aggregateId }))
+
+
+subscribeToAggregateUpdates :: (Streamable monad stream Command, Streamable monad stream AggregateId)  =>
+                                  GetCommandStream -> AggregateId ->
+                                  stream monad AggregateId
+subscribeToAggregateUpdates getCommandStream aggregateId =
+  (subscribe $ getCommandStream aggregateId) & S.map (\persistedCommand -> aggregateId)
