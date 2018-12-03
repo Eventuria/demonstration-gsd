@@ -2,11 +2,13 @@
 {-# LANGUAGE OverloadedStrings     #-}
 module Gsd.Commands where
 
+import Data.Aeson
+
+import Gsd.Core
+
 import Cqrs.Aggregate.Commands.CommandId
 import Cqrs.Aggregate.Commands.Command
 import qualified Cqrs.Aggregate.Commands.Command as CommandModule
-import Gsd.Core
-import Data.Aeson
 
 import qualified Data.Text as Text
 

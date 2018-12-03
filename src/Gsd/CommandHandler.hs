@@ -3,19 +3,19 @@
 module Gsd.CommandHandler where
 
 import Data.Set (fromList)
-
 import Data.Maybe
-
-
 import Data.Function ((&))
-import EventStore.Read.PersistedItem
-import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.Aggregate.Commands.Command
+
 import Gsd.Commands
 import Gsd.Events
+import Gsd.CommandPredicates
+
 import Cqrs.CommandHandler
 import Cqrs.EDsl
-import Gsd.CommandPredicates
+import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
+import Cqrs.Aggregate.Commands.Command
+
+import EventStore.Read.PersistedItem
 
 gsdCommandHandler :: CommandHandler
 gsdCommandHandler persistedCommand@PersistedItem {offset = offset , item = command } snapshotMaybe
