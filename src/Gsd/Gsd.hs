@@ -28,18 +28,19 @@ import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
 import Logger.Core
 import Gsd.CommandHandler
 import EventStore.EventStore
+import Plugins.EventStore.InterpreterEventStore
 
 requestCommand :: GetCommandStream -> AggregateIdStream -> GsdCommand -> IO (Either PersistenceFailure PersistResult)
 requestCommand getCommandStream aggregateIdStream gsdCommand = Cqrs.persistCommands getCommandStream aggregateIdStream $ toCommand gsdCommand
 
 runCommandConsumers :: Logger -> EventStoreContext -> EventStoreReading -> IO ()
-runCommandConsumers logger eventStoreContext eventStoreReading = CommandConsumerFlow.runCommandConsumers logger (getEventStoreStreamRepository eventStoreContext) eventStoreReading gsdCommandHandler
+runCommandConsumers logger eventStoreContext eventStoreReading = CommandConsumerFlow.runCommandConsumers logger (getEventStoreStreamRepository eventStoreContext) eventStoreReading gsdCommandHandler interpretWriteEventStoreLanguage
 
-streamWorkspaceIds :: Streamable monad stream WorkspaceId => AggregateIdStream -> stream monad (Persisted WorkspaceId)
+streamWorkspaceIds :: Streamable stream monad WorkspaceId => AggregateIdStream -> stream monad (Persisted WorkspaceId)
 streamWorkspaceIds = streamAll
 
 
-streamCommands ::  Streamable monad stream Command => GetCommandStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
+streamCommands ::  Streamable stream monad Command => GetCommandStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
 streamCommands getCommandStream workspaceId = do
   (streamAll (getCommandStream workspaceId) &
       S.map (\PersistedItem { offset = offset, item = cqrsCommand} ->

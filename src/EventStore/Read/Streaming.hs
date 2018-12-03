@@ -40,17 +40,17 @@ isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
         EventStore.ReadNoStream -> True
         _ -> False
 
-streamAllInfinitely :: Streamable monad stream item => EventStoreStream item -> stream monad (Persisted item)
+streamAllInfinitely :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
 streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)
 
-streamAll :: Streamable monad stream item =>
+streamAll :: Streamable stream monad item =>
                 EventStoreStream item ->
                 stream monad (Persisted item)
 streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
-streamFromOffset :: Streamable monad stream item =>
+streamFromOffset :: Streamable stream monad item =>
                       EventStoreStream item ->
                       Offset ->
                       stream monad (Persisted item)

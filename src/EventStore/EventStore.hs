@@ -11,12 +11,12 @@ import qualified EventStore.Read.Subscribing as Subscribing
 import Cqrs.Streams
 import Data.Aeson
 
-data EventStoreStreaming = Streaming { streamFromOffset ::    forall monad stream item . Streamable monad stream item => EventStoreStream item -> Offset -> stream monad (Persisted item),
-                                     streamAllInfinitely :: forall monad stream item . Streamable monad stream item => EventStoreStream item -> stream monad (Persisted item)}
+data EventStoreStreaming = Streaming { streamFromOffset ::    forall  stream monad item . Streamable stream monad item => EventStoreStream item -> Offset -> stream monad (Persisted item),
+                                     streamAllInfinitely :: forall stream monad item . Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)}
 
 data EventStoreQuerying = Querying { retrieveLast :: forall item . FromJSON item => EventStoreStream item -> IO( Maybe (Persisted item)) }
 
-data EventStoreSubscribing = Subscribing { subscribe :: forall monad stream item . Streamable monad stream item => EventStoreStream item -> stream monad (Persisted item) }
+data EventStoreSubscribing = Subscribing { subscribe :: forall stream monad item . Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item) }
 
 data EventStoreReading = Reading { streaming :: EventStoreStreaming, querying :: EventStoreQuerying , subscribing :: EventStoreSubscribing }
 

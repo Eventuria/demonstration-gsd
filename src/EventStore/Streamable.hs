@@ -9,11 +9,11 @@ import Streamly
 import Data.Aeson
 
 class (FromJSON item,
-       Monad m,
+       Monad monad,
        IsStream stream,
-       MonadIO (stream m),
-       MonadAsync m,
-       Semigroup (stream m (Persisted item))) => Streamable m stream item
+       MonadIO (stream monad),
+       MonadAsync monad,
+       Semigroup (stream monad (Persisted item))) => Streamable stream monad item
 
-instance FromJSON item =>  Streamable IO SerialT item
-instance FromJSON item =>  Streamable IO ParallelT item
+instance FromJSON item =>  Streamable SerialT IO item
+instance FromJSON item =>  Streamable ParallelT IO  item

@@ -15,7 +15,7 @@ import Data.Maybe
 import Data.Aeson
 import EventStore.Streamable
 
-subscribe :: Streamable monad stream item => EventStoreStream item -> stream monad (Persisted item)
+subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
 subscribe eventStoreStream @ EventStoreStream {
                                              context = Context { logger = logger,
                                                                  credentials = credentials,
