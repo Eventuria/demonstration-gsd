@@ -1,19 +1,22 @@
 module Plugins.EventStore.InterpreterEventStore where
 
-
 import Control.Monad.Free
 import qualified Data.Time as Time
 import qualified Data.UUID.V4 as Uuid
 import Control.Monad.IO.Class (MonadIO(..))
-import Cqrs.EventStore.Write.WDsl
+
+import Logger.Core
 
 import EventStore.Write.Persisting
+
+import Cqrs.EventStore.Write.WDsl
 import Cqrs.Aggregate.Events.Event
 import Cqrs.Aggregate.Core
-import Logger.Core
 import Cqrs.Aggregate.StreamRepository
 
-interpretWriteEventStoreLanguage :: WriteEventStoreLanguage a -> Logger -> EventStoreStreamRepository   -> IO a
+type InterpreterWriteEventStoreLanguage a = WriteEventStoreLanguage a -> Logger -> EventStoreStreamRepository   ->  IO a
+
+interpretWriteEventStoreLanguage :: InterpreterWriteEventStoreLanguage a
 
 interpretWriteEventStoreLanguage (Pure a) logger streamRepository = return a
 interpretWriteEventStoreLanguage (Free (PersistEvent event next)) logger streamRepository = do

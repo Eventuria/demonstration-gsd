@@ -5,38 +5,37 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Cqrs.CommandConsumerFlow  where
 
-import Cqrs.Aggregate.Commands.Command
-
-
 import Streamly
 import qualified Streamly.Prelude as S
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.Function ((&))
-
-import Logger.Core
+import Control.Concurrent
 import Data.Maybe
 
+import Logger.Core
+
+import Cqrs.Aggregate.Commands.Command
 import Cqrs.CommandHandler
-import Plugins.EventStore.InterpreterEventStore
 import Cqrs.EventStore.Translation
 import Cqrs.EDsl
 import Cqrs.EventStore.Write.WDsl
-import EventStore.Read.PersistedItem
-import Control.Concurrent
 import Cqrs.Aggregate.StreamRepository
 import Cqrs.Streams
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
-import EventStore.Streamable
 import Cqrs.Aggregate.Ids.AggregateId
+-- to be removed
+import Plugins.EventStore.InterpreterEventStore
+import EventStore.Streamable
 import EventStore.EventStore
+import EventStore.Read.PersistedItem
 
-runCommandConsumers :: Logger -> EventStoreStreamRepository  -> EventStoreReading -> CommandHandler -> IO ()
+runCommandConsumers :: Logger -> EventStoreStreamRepository  -> EventStoreReading -> CommandHandler -> InterpreterWriteEventStoreLanguage () -> IO ()
 runCommandConsumers logger
                     streamRepository @ StreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream }
                     Reading { streaming = Streaming {streamAllInfinitely, streamFromOffset},
                               querying = querying @ Querying {retrieveLast},
                               subscribing }
-                    commandHandler = do
+                    commandHandler interpretWriteEventStoreLanguage = do
   logInfo logger "runnning command consummers"
   runStream
     $ parallely
@@ -51,7 +50,7 @@ runCommandConsumers logger
             liftIO $ logInfo logger $ "processing commands for aggregate " ++ (show aggregateId)
             let validationStateStream = getValidationStateStream aggregateId
             let commandStream = getCommandStream aggregateId
-            lastOffsetConsumed <- liftIO $ retrieveLastOffsetConsumed querying validationStateStream
+            lastOffsetConsumed <- liftIO $ getLastOffsetConsumed (retrieveLast validationStateStream)
             liftIO $ logInfo logger $ "last offset command consummed is   " ++ (show lastOffsetConsumed)
             runStream
               $ serially
@@ -66,20 +65,15 @@ runCommandConsumers logger
                 interpretWriteEventStoreLanguage transaction logger streamRepository)))
 
 
-retrieveLastOffsetConsumed :: EventStoreQuerying -> ValidateStateStream -> IO (Maybe Offset)
-retrieveLastOffsetConsumed Querying {retrieveLast} validationStateStream = (fmap.fmap) ( \persistedValidationState -> lastOffsetConsumed $ item $ persistedValidationState ) (retrieveLast validationStateStream)
+getLastOffsetConsumed :: IO( Maybe (Persisted ValidationState)) -> IO (Maybe Offset)
+getLastOffsetConsumed lastValidationStateCall = (fmap.fmap) ( \persistedValidationState -> lastOffsetConsumed $ item $ persistedValidationState ) $ lastValidationStateCall
 
-yieldAndSubscribeToAggregateUpdates :: (Streamable monad stream Command, Streamable monad stream AggregateId) =>
+yieldAndSubscribeToAggregateUpdates :: (Streamable stream monad Command, Streamable stream monad AggregateId) =>
                                        EventStoreSubscribing -> GetCommandStream ->
                                        Persisted AggregateId ->
                                        stream monad (Persisted AggregateId)
-yieldAndSubscribeToAggregateUpdates subscribing getCommandStream persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =
-  (S.yield persistedAggregate) <>
-  ((subscribeToAggregateUpdates subscribing getCommandStream aggregateId  ) & S.map (\aggregateId -> PersistedItem { offset = offset,item = aggregateId }))
+yieldAndSubscribeToAggregateUpdates Subscribing {subscribe} getCommandStream persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =
+  (S.yield persistedAggregate) <> ((subscribe $ getCommandStream aggregateId) & S.map (\newCommand -> PersistedItem { offset = offset,item = aggregateId }))
 
 
-subscribeToAggregateUpdates :: (Streamable monad stream Command, Streamable monad stream AggregateId)  =>
-                                  EventStoreSubscribing -> GetCommandStream -> AggregateId ->
-                                  stream monad AggregateId
-subscribeToAggregateUpdates Subscribing {subscribe} getCommandStream aggregateId =
-  (subscribe $ getCommandStream aggregateId) & S.map (\persistedCommand -> aggregateId)
+
