@@ -12,24 +12,28 @@ import Data.Function ((&))
 import Control.Concurrent
 import Data.Maybe
 
+import Streamly.Streamable
+
 import Logger.Core
 
 import Cqrs.Aggregate.Commands.Command
 import Cqrs.CommandHandler
-import Cqrs.EventStore.Translation
+import Cqrs.PersistedStream.Translation
 import Cqrs.EDsl
-import Cqrs.EventStore.Write.WDsl
+import Cqrs.PersistedStream.Write.WDsl
 import Cqrs.Aggregate.StreamRepository
 import Cqrs.Streams
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Aggregate.Ids.AggregateId
--- to be removed
-import Plugins.EventStore.InterpreterEventStore
-import EventStore.Streamable
-import EventStore.EventStore
-import EventStore.Read.PersistedItem
+import qualified Cqrs.PersistedStream.Stream as PersistedStream
+import Cqrs.PersistedStream.Stream
+import Cqrs.PersistedStream.PersistedItem
 
-runCommandConsumers :: Logger -> EventStoreStreamRepository  -> EventStoreReading -> CommandHandler -> InterpreterWriteEventStoreLanguage () -> IO ()
+-- to be removed
+import Plugins.GregYoungEventStore.InterpreterEventStore
+
+
+runCommandConsumers :: Logger -> EventStoreStreamRepository  -> PersistedStream.Reading -> CommandHandler -> InterpreterWriteEventStoreLanguage () -> IO ()
 runCommandConsumers logger
                     streamRepository @ StreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream }
                     Reading { streaming = Streaming {streamAllInfinitely, streamFromOffset},
@@ -69,7 +73,7 @@ getLastOffsetConsumed :: IO( Maybe (Persisted ValidationState)) -> IO (Maybe Off
 getLastOffsetConsumed lastValidationStateCall = (fmap.fmap) ( \persistedValidationState -> lastOffsetConsumed $ item $ persistedValidationState ) $ lastValidationStateCall
 
 yieldAndSubscribeToAggregateUpdates :: (Streamable stream monad Command, Streamable stream monad AggregateId) =>
-                                       EventStoreSubscribing -> GetCommandStream ->
+                                       PersistedStream.Subscribing -> GetCommandStream ->
                                        Persisted AggregateId ->
                                        stream monad (Persisted AggregateId)
 yieldAndSubscribeToAggregateUpdates Subscribing {subscribe} getCommandStream persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =

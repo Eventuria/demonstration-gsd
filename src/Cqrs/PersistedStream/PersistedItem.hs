@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module EventStore.Read.PersistedItem where
+module Cqrs.PersistedStream.PersistedItem where
 
 import Data.Aeson
 import Cqrs.Streams

@@ -1,9 +1,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-module EventStore.Streamable where
+module Streamly.Streamable where
 
-import EventStore.Read.PersistedItem
+import Cqrs.PersistedStream.PersistedItem
 import Control.Monad.IO.Class
 import Streamly
 import Data.Aeson

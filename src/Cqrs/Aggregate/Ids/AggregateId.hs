@@ -2,7 +2,7 @@
 module Cqrs.Aggregate.Ids.AggregateId where
 
 import Data.UUID
-import EventStore.Write.Persisting
+import Plugins.GregYoungEventStore.Write.Persisting
 
 type AggregateId = UUID
 

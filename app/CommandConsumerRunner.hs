@@ -4,9 +4,9 @@ import Logger.Core
 import qualified Database.EventStore as GYEventStore
 import Control.Exception
 import Cqrs.Settings
-import EventStore.Settings
+import Plugins.GregYoungEventStore.Settings
 import qualified Gsd.Gsd as Gsd
-import qualified EventStore.EventStore as EventStore
+import qualified Plugins.GregYoungEventStore.Instance as EventStore
 main :: IO ()
 main = do
          let logger = Logger { loggerId = "[gsd.command.processing.manager]" , executableName = "command.processing.manager" }

@@ -1,7 +1,7 @@
 module Cqrs.Aggregate.StreamRepository where
 
 import Cqrs.Aggregate.Events.Event
-import EventStore.Stream
+import Plugins.GregYoungEventStore.Stream
 import Cqrs.Aggregate.Commands.Command
 import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.Aggregate.Commands.Responses.CommandResponse

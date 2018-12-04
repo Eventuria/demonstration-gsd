@@ -6,34 +6,42 @@ module Gsd.Gsd (requestCommand,
                 getEventStoreStreamRepository,
                 runCommandConsumers) where
 
-import Gsd.Commands
-import Gsd.Core
-import qualified Cqrs.Cqrs as Cqrs
-import Cqrs.Streams
-import EventStore.Settings
-import EventStore.Read.PersistedItem
-import Cqrs.Aggregate.Commands.Command
-import EventStore.Read.Streaming
-import Data.Function ((&))
-import qualified Streamly.Prelude as S
-import Data.Maybe
-import Data.UUID
-import Cqrs.Aggregate.Ids.AggregateId
-import EventStore.Streamable
-import Cqrs.Aggregate.StreamRepository
-import EventStore.Stream
 import qualified Data.Text as Text
 import Database.EventStore hiding (Command)
-import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
+import Data.Maybe
+import Data.UUID
+
+import Data.Function ((&))
+import qualified Streamly.Prelude as S
+
+import Streamly.Streamable
+
 import Logger.Core
+
+import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
+import qualified Cqrs.Cqrs as Cqrs
+import Cqrs.Aggregate.StreamRepository
+import Cqrs.PersistedStream.Stream
+import Cqrs.Streams
+import Cqrs.Aggregate.Ids.AggregateId
+import Cqrs.PersistedStream.PersistedItem
+import Cqrs.Aggregate.Commands.Command
+
 import Gsd.CommandHandler
-import EventStore.EventStore
-import Plugins.EventStore.InterpreterEventStore
+import Gsd.Commands
+import Gsd.Core
+
+-- to be removed
+
+import Plugins.GregYoungEventStore.Read.Streaming
+import Plugins.GregYoungEventStore.Settings
+import Plugins.GregYoungEventStore.Stream
+import Plugins.GregYoungEventStore.InterpreterEventStore
 
 requestCommand :: GetCommandStream -> AggregateIdStream -> GsdCommand -> IO (Either PersistenceFailure PersistResult)
 requestCommand getCommandStream aggregateIdStream gsdCommand = Cqrs.persistCommands getCommandStream aggregateIdStream $ toCommand gsdCommand
 
-runCommandConsumers :: Logger -> EventStoreContext -> EventStoreReading -> IO ()
+runCommandConsumers :: Logger -> EventStoreContext -> Reading -> IO ()
 runCommandConsumers logger eventStoreContext eventStoreReading = CommandConsumerFlow.runCommandConsumers logger (getEventStoreStreamRepository eventStoreContext) eventStoreReading gsdCommandHandler interpretWriteEventStoreLanguage
 
 streamWorkspaceIds :: Streamable stream monad WorkspaceId => AggregateIdStream -> stream monad (Persisted WorkspaceId)

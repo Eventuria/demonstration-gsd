@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module EventStore.Write.Persisting where
+module Plugins.GregYoungEventStore.Write.Persisting where
 
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
@@ -10,9 +10,9 @@ import Control.Concurrent.Async (wait)
 
 import Cqrs.Streams
 import Control.Monad.IO.Class (MonadIO(..))
-import EventStore.Stream
+import Plugins.GregYoungEventStore.Stream
 
-import EventStore.Settings
+import Plugins.GregYoungEventStore.Settings
 import Data.Aeson
 
 

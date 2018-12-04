@@ -3,9 +3,9 @@ module Cqrs.Cqrs where
 import Cqrs.Aggregate.StreamRepository
 import Cqrs.Aggregate.Commands.Command
 import Cqrs.Streams
-import EventStore.Read.Streaming
+import Plugins.GregYoungEventStore.Read.Streaming
 import Cqrs.Aggregate.Core
-import EventStore.Write.Persisting
+import Plugins.GregYoungEventStore.Write.Persisting
 
 
 persistCommands :: GetCommandStream -> AggregateIdStream -> Command -> IO (Either PersistenceFailure PersistResult)

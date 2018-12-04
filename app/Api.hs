@@ -13,7 +13,7 @@ import Data.UUID
 import Cqrs.Settings
 import Streamly.Prelude
 import Control.Monad.IO.Class (MonadIO(..))
-import EventStore.Settings
+import Plugins.GregYoungEventStore.Settings
 import qualified Gsd.Gsd as Gsd
 import Cqrs.Aggregate.StreamRepository
 

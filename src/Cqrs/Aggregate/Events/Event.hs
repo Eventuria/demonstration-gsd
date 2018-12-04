@@ -8,7 +8,7 @@ import Data.Aeson
 import Data.Text
 import Data.Time
 import Cqrs.Aggregate.Core
-import qualified EventStore.Write.Persisting as EventStore.Writing
+import qualified Plugins.GregYoungEventStore.Write.Persisting as EventStore.Writing
 
 
 

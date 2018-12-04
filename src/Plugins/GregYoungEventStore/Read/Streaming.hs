@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-module EventStore.Read.Streaming where
+module Plugins.GregYoungEventStore.Read.Streaming where
 
 import Streamly
 import qualified Streamly.Prelude as S
@@ -12,15 +12,15 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Concurrent.Async (wait)
 
 import qualified Database.EventStore as EventStore
-import qualified EventStore.Read.Subscribing as EventStore.Subscribing
-import EventStore.Read.PersistedItem
+import qualified Plugins.GregYoungEventStore.Read.Subscribing as EventStore.Subscribing
+import Cqrs.PersistedStream.PersistedItem
 import Logger.Core
 import Cqrs.Streams (Offset)
-import EventStore.Stream
-import EventStore.Settings
+import Plugins.GregYoungEventStore.Stream
+import Plugins.GregYoungEventStore.Settings
 import Data.Aeson
 import Data.Maybe
-import EventStore.Streamable
+import Streamly.Streamable
 
 isStreamNotExistRequest :: EventStoreStream item -> IO Bool
 isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
@@ -54,7 +54,6 @@ streamFromOffset :: Streamable stream monad item =>
                       EventStoreStream item ->
                       Offset ->
                       stream monad (Persisted item)
-
 
 streamFromOffset eventStoreStream @ EventStoreStream {
                                        context = Context { logger = logger,

@@ -1,4 +1,4 @@
-module EventStore.Read.Subscribing where
+module Plugins.GregYoungEventStore.Read.Subscribing where
 
 import qualified Streamly.Prelude as S
 import Control.Concurrent
@@ -8,12 +8,12 @@ import qualified Database.EventStore as EventStore
 
 import Logger.Core
 import Control.Exception
-import EventStore.Stream
-import EventStore.Settings
-import EventStore.Read.PersistedItem
+import Plugins.GregYoungEventStore.Stream
+import Plugins.GregYoungEventStore.Settings
+import Cqrs.PersistedStream.PersistedItem
 import Data.Maybe
 import Data.Aeson
-import EventStore.Streamable
+import Streamly.Streamable
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
 subscribe eventStoreStream @ EventStoreStream {

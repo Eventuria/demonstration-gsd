@@ -1,4 +1,4 @@
-module Plugins.EventStore.InterpreterEventStore where
+module Plugins.GregYoungEventStore.InterpreterEventStore where
 
 import Control.Monad.Free
 import qualified Data.Time as Time
@@ -7,9 +7,9 @@ import Control.Monad.IO.Class (MonadIO(..))
 
 import Logger.Core
 
-import EventStore.Write.Persisting
+import Plugins.GregYoungEventStore.Write.Persisting
 
-import Cqrs.EventStore.Write.WDsl
+import Cqrs.PersistedStream.Write.WDsl
 import Cqrs.Aggregate.Events.Event
 import Cqrs.Aggregate.Core
 import Cqrs.Aggregate.StreamRepository

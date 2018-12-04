@@ -1,8 +1,8 @@
-module Cqrs.EventStore.Translation where
+module Cqrs.PersistedStream.Translation where
 
 import Control.Monad.Free
 import qualified Cqrs.EDsl as CqrsEDsl
-import qualified Cqrs.EventStore.Write.WDsl as EventStoreDsl
+import qualified Cqrs.PersistedStream.Write.WDsl as EventStoreDsl
 
 translate :: CqrsEDsl.CommandTransaction () -> EventStoreDsl.WriteEventStoreLanguage ()
 translate (Pure a)  = return a

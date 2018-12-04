@@ -7,7 +7,7 @@ import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import Data.Text
 import Cqrs.Aggregate.Core
-import qualified EventStore.Write.Persisting as EventStore.Writing
+import qualified Plugins.GregYoungEventStore.Write.Persisting as EventStore.Writing
 
 
 
