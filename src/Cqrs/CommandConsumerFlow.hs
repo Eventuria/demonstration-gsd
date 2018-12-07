@@ -25,21 +25,16 @@ import Cqrs.Aggregate.StreamRepository
 import Cqrs.Streams
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Aggregate.Ids.AggregateId
-import qualified Cqrs.PersistedStream.Stream as PersistedStream
-import Cqrs.PersistedStream.Stream
+import Cqrs.PersistedStream.Read.Interface
 import Cqrs.PersistedStream.PersistedItem
 
--- to be removed
-import Plugins.GregYoungEventStore.InterpreterEventStore
-
-
-runCommandConsumers :: Logger -> EventStoreStreamRepository  -> PersistedStream.Reading -> CommandHandler -> InterpreterWriteEventStoreLanguage () -> IO ()
+runCommandConsumers :: Logger -> CqrsStreamRepository persistedStream -> Reading persistedStream -> CommandHandler -> InterpreterWritePersistedStreamLanguage persistedStream () -> IO ()
 runCommandConsumers logger
-                    streamRepository @ StreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream }
+                    streamRepository @ CqrsStreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream }
                     Reading { streaming = Streaming {streamAllInfinitely, streamFromOffset},
                               querying = querying @ Querying {retrieveLast},
                               subscribing }
-                    commandHandler interpretWriteEventStoreLanguage = do
+                    commandHandler interpreterWritePersistedStreamLanguage = do
   logInfo logger "runnning command consummers"
   runStream
     $ parallely
@@ -66,14 +61,14 @@ runCommandConsumers logger
                                     Reject reason -> rejectCommandTransaction lastValidationState aggregateId commandId reason
                                     SkipBecauseAlreadyProcessed -> skipCommandTransaction aggregateId commandId
                                     Validate commandTransaction -> validateCommandTransaction aggregateId commandId (translate $ commandTransaction)
-                interpretWriteEventStoreLanguage transaction logger streamRepository)))
+                interpreterWritePersistedStreamLanguage transaction logger streamRepository)))
 
 
 getLastOffsetConsumed :: IO( Maybe (Persisted ValidationState)) -> IO (Maybe Offset)
 getLastOffsetConsumed lastValidationStateCall = (fmap.fmap) ( \persistedValidationState -> lastOffsetConsumed $ item $ persistedValidationState ) $ lastValidationStateCall
 
 yieldAndSubscribeToAggregateUpdates :: (Streamable stream monad Command, Streamable stream monad AggregateId) =>
-                                       PersistedStream.Subscribing -> GetCommandStream ->
+                                       Subscribing persistedStream -> GetCommandStream persistedStream ->
                                        Persisted AggregateId ->
                                        stream monad (Persisted AggregateId)
 yieldAndSubscribeToAggregateUpdates Subscribing {subscribe} getCommandStream persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =

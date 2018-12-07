@@ -2,11 +2,11 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Cqrs.Aggregate.Commands.Responses.CommandResponse where
 
-import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import qualified Data.Text as Text
+
 import Cqrs.Aggregate.Ids.AggregateId
-import Plugins.GregYoungEventStore.Write.Persisting
+import Cqrs.Aggregate.Commands.CommandId
 import Cqrs.Aggregate.Core
 import Cqrs.Aggregate.Commands.Command
 
@@ -31,10 +31,6 @@ instance AggregateJoinable CommandResponse where
   getAggregateId CommandSkippedBecauseAlreadyProcessed { aggregateId = aggregateId} = aggregateId
   getAggregateId CommandFailed { aggregateId = aggregateId} = aggregateId
 
-instance Writable CommandResponse where
-  getItemName CommandSuccessfullyProcessed {} = commandResponseNameForCommandSuccessfullyProcessed
-  getItemName CommandSkippedBecauseAlreadyProcessed {} = commandResponseNameForCommandSkippedBecauseAlreadyProcessed
-  getItemName CommandFailed {} = commandResponseNameForCommandFailed
 
 instance CommandJoinable CommandResponse where
 
@@ -48,15 +44,15 @@ instance ToJSON CommandResponse where
    toJSON (commandResponse @ (CommandSuccessfullyProcessed commandId aggregateId)) = object [
           "commandId" .= commandId,
           "aggregateId" .= aggregateId,
-          "commandResponseName" .= getItemName commandResponse]
+          "commandResponseName" .= commandResponseNameForCommandSuccessfullyProcessed]
    toJSON (commandResponse @ (CommandSkippedBecauseAlreadyProcessed commandId aggregateId)) = object [
              "commandId" .= commandId,
              "aggregateId" .= aggregateId,
-             "commandResponseName" .= getItemName commandResponse]
+             "commandResponseName" .= commandResponseNameForCommandSkippedBecauseAlreadyProcessed]
    toJSON (commandResponse @ (CommandFailed commandId aggregateId reason)) = object [
              "commandId" .= commandId,
              "aggregateId" .= aggregateId,
-             "commandResponseName" .= getItemName commandResponse,
+             "commandResponseName" .= commandResponseNameForCommandFailed,
              "reason" .= reason]
 
 instance FromJSON CommandResponse  where

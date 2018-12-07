@@ -4,6 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Plugins.GregYoungEventStore.Read.Streaming where
 
 import Streamly
@@ -22,23 +23,7 @@ import Data.Aeson
 import Data.Maybe
 import Streamly.Streamable
 
-isStreamNotExistRequest :: EventStoreStream item -> IO Bool
-isStreamNotExistRequest EventStoreStream { context = Context { logger = logger,
-                                                     credentials = credentials,
-                                                     connection = connection },
-                                 streamName = streamName} = do
-   let resolveLinkTos = False
-   asyncRead <- EventStore.readStreamEventsForward
-                    connection
-                    streamName
-                    (fromInteger 0)
-                    (fromInteger 1)
-                    resolveLinkTos
-                    (Just credentials)
-   commandFetched <- liftIO $ wait asyncRead
-   return $ case commandFetched of
-        EventStore.ReadNoStream -> True
-        _ -> False
+
 
 streamAllInfinitely :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
 streamAllInfinitely eventStoreStream =
@@ -55,12 +40,14 @@ streamFromOffset :: Streamable stream monad item =>
                       Offset ->
                       stream monad (Persisted item)
 
+
+
+
 streamFromOffset eventStoreStream @ EventStoreStream {
-                                       context = Context { logger = logger,
-                                                           credentials = credentials,
-                                                           connection = connection },
+                                       settings = EventStoreSettings { logger, credentials, connection },
                                        streamName = streamName } fromOffset = do
      liftIO $ logInfo logger $ "streaming [" ++ (show fromOffset) ++ "..] > " ++ show streamName
+
      let batchSize = 100
          resolveLinkTos = False
      asyncRead <- liftIO $ EventStore.readStreamEventsForward

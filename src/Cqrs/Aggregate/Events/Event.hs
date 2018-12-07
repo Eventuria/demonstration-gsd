@@ -8,8 +8,6 @@ import Data.Aeson
 import Data.Text
 import Data.Time
 import Cqrs.Aggregate.Core
-import qualified Plugins.GregYoungEventStore.Write.Persisting as EventStore.Writing
-
 
 
 type Pair = (Text, Value)
@@ -25,8 +23,6 @@ data EventHeader =  EventHeader { aggregateId :: AggregateId,
 type EventPayload = [Pair]
 
 
-instance EventStore.Writing.Writable Event where
-  getItemName Event { eventHeader = EventHeader { eventName = eventName}} = eventName
 
 instance AggregateJoinable Event where
   getAggregateId Event { eventHeader = EventHeader {aggregateId = aggregateId} } = aggregateId

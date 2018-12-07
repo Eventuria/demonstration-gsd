@@ -7,8 +7,6 @@ import Cqrs.Aggregate.Commands.CommandId
 import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.Aggregate.Core
 import Data.Aeson
-import qualified Plugins.GregYoungEventStore.Write.Persisting as EventStore.Writing
-
 
 
 data ValidationState = ValidationState { lastOffsetConsumed::Offset , commandsProcessed :: Set CommandId, state :: AggregateState } deriving (Eq)
@@ -23,8 +21,6 @@ instance Show ValidationState where
 
 data AggregateState = AggregateState {aggregateId :: AggregateId } deriving (Eq,Show)
 
-instance EventStore.Writing.Writable ValidationState where
-  getItemName validationState  = "validationState"
 
 
 instance ToJSON AggregateState where

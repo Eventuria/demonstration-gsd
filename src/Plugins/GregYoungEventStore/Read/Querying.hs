@@ -1,5 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Plugins.GregYoungEventStore.Read.Querying where
 
 import Data.Maybe
@@ -11,12 +12,28 @@ import Plugins.GregYoungEventStore.Settings
 import Data.Aeson
 import Cqrs.Streams
 
+isStreamNotFound :: EventStoreStream item -> IO Bool
+isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },
+                                           streamName = streamName} = do
+   let resolveLinkTos = False
+
+   asyncRead <- EventStore.readStreamEventsForward
+                    connection
+                    streamName
+                    (fromInteger 0)
+                    (fromInteger 1)
+                    resolveLinkTos
+                    (Just credentials)
+   commandFetched <- wait asyncRead
+   return $ case commandFetched of
+        EventStore.ReadNoStream -> True
+        _ -> False
+
 retrieveLast :: FromJSON item => EventStoreStream item -> IO( Maybe (Persisted item))
-retrieveLast EventStoreStream { context = Context { logger = logger,
-                                                    credentials = credentials,
-                                                    connection = connection },
+retrieveLast EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },
                                 streamName = streamName} =  do
         let resolveLinkTos = False
+
         readResult <- EventStore.readEvent
                     connection
                     streamName

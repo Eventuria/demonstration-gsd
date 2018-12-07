@@ -2,13 +2,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Cqrs.Aggregate.Commands.Command where
 
-import Cqrs.Aggregate.Ids.AggregateId
-import Cqrs.Aggregate.Commands.CommandId
 import Data.Aeson
 import Data.Text
-import Cqrs.Aggregate.Core
-import qualified Plugins.GregYoungEventStore.Write.Persisting as EventStore.Writing
 
+import Cqrs.Aggregate.Core
+import Cqrs.Aggregate.Ids.AggregateId
+import Cqrs.Aggregate.Commands.CommandId
 
 
 type Pair = (Text, Value)
@@ -29,8 +28,6 @@ instance AggregateJoinable Command where
   getAggregateId Command { commandHeader = CommandHeader {aggregateId = aggregateId} } = aggregateId
 
 
-instance EventStore.Writing.Writable Command where
-  getItemName Command { commandHeader = CommandHeader {commandName = commandName} }  = commandName
 
 instance ToJSON Command where
   toJSON (Command {commandHeader = commandHeader , payload = payload  } ) = object [

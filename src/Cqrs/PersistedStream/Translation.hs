@@ -4,7 +4,7 @@ import Control.Monad.Free
 import qualified Cqrs.EDsl as CqrsEDsl
 import qualified Cqrs.PersistedStream.Write.WDsl as EventStoreDsl
 
-translate :: CqrsEDsl.CommandTransaction () -> EventStoreDsl.WriteEventStoreLanguage ()
+translate :: CqrsEDsl.CommandTransaction () -> EventStoreDsl.WritePersistenceStreamLanguage ()
 translate (Pure a)  = return a
 translate (Free (CqrsEDsl.PersistEvent event next)) = Free (EventStoreDsl.PersistEvent event $ translate next)
 translate (Free (CqrsEDsl.UpdateValidationState validationState next))  = Free (EventStoreDsl.PersistValidationState validationState $ translate next)

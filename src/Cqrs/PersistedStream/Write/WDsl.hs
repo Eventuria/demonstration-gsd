@@ -12,6 +12,10 @@ import Data.Time
 import Control.Monad.Free
 import qualified Data.Set as Set
 import Cqrs.Aggregate.Ids.AggregateId
+import Logger.Core
+import Cqrs.Aggregate.StreamRepository
+
+type InterpreterWritePersistedStreamLanguage persistedStream a = WritePersistenceStreamLanguage a -> Logger -> CqrsStreamRepository persistedStream   ->  IO a
 
 data Directive a = PersistEvent Event a
                 | PersistValidationState ValidationState a
@@ -19,24 +23,24 @@ data Directive a = PersistEvent Event a
                 | GetCurrentTime (UTCTime -> a )
                 | GetNewEventId (EventId -> a) deriving (Functor)
 
-type WriteEventStoreLanguage a = Free Directive a
+type WritePersistenceStreamLanguage a = Free Directive a
 
-persistEvent :: Event -> WriteEventStoreLanguage ()
+persistEvent :: Event -> WritePersistenceStreamLanguage ()
 persistEvent event = Free (PersistEvent event (Pure ()))
 
-persistAggregate :: ValidationState -> WriteEventStoreLanguage ()
+persistAggregate :: ValidationState -> WritePersistenceStreamLanguage ()
 persistAggregate validationState = Free (PersistValidationState validationState (Pure ()))
 
-persistCommandResponse :: CommandResponse -> WriteEventStoreLanguage ()
+persistCommandResponse :: CommandResponse -> WritePersistenceStreamLanguage ()
 persistCommandResponse commandResponse = Free (PersistCommandResponse commandResponse (Pure ()))
 
-getNewEventID :: WriteEventStoreLanguage EventId
+getNewEventID :: WritePersistenceStreamLanguage EventId
 getNewEventID = Free (GetNewEventId Pure)
 
-getCurrentTime :: WriteEventStoreLanguage UTCTime
+getCurrentTime :: WritePersistenceStreamLanguage UTCTime
 getCurrentTime = Free (GetCurrentTime Pure)
 
-validateCommandTransaction :: AggregateId -> CommandId -> WriteEventStoreLanguage () -> WriteEventStoreLanguage ()
+validateCommandTransaction :: AggregateId -> CommandId -> WritePersistenceStreamLanguage () -> WritePersistenceStreamLanguage ()
 validateCommandTransaction  aggregateId commandId transaction  = do
     transaction
     persistCommandResponse CommandSuccessfullyProcessed {
@@ -45,7 +49,7 @@ validateCommandTransaction  aggregateId commandId transaction  = do
 
 
 
-skipCommandTransaction :: AggregateId -> CommandId -> WriteEventStoreLanguage ()
+skipCommandTransaction :: AggregateId -> CommandId -> WritePersistenceStreamLanguage ()
 skipCommandTransaction  aggregateId commandId  = do
     persistCommandResponse CommandSkippedBecauseAlreadyProcessed {
                                    commandId = commandId  ,
@@ -53,7 +57,7 @@ skipCommandTransaction  aggregateId commandId  = do
 
 
 
-rejectCommandTransaction :: Maybe ValidationState -> AggregateId -> CommandId -> RejectionReason -> WriteEventStoreLanguage ()
+rejectCommandTransaction :: Maybe ValidationState -> AggregateId -> CommandId -> RejectionReason -> WritePersistenceStreamLanguage ()
 rejectCommandTransaction (Just snapshot) aggregateId commandId rejectionReason = do
     persistAggregate ValidationState { lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
                                          commandsProcessed = Set.insert commandId (commandsProcessed snapshot),

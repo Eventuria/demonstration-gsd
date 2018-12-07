@@ -1,9 +1,10 @@
+{-# LANGUAGE NamedFieldPuns #-}
+
 module Plugins.GregYoungEventStore.Read.Subscribing where
 
 import qualified Streamly.Prelude as S
 import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(liftIO))
-
 import qualified Database.EventStore as EventStore
 
 import Logger.Core
@@ -16,12 +17,10 @@ import Data.Aeson
 import Streamly.Streamable
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
-subscribe eventStoreStream @ EventStoreStream {
-                                             context = Context { logger = logger,
-                                                                 credentials = credentials,
-                                                                 connection = connection },
-                                             streamName = streamName} = do
+subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },
+                                               streamName = streamName} = do
               liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
+
               subscription <- liftIO $ EventStore.subscribe connection streamName True Nothing
               result <- liftIO $ (try $ EventStore.waitConfirmation subscription )
               case result of

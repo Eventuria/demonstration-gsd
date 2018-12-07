@@ -38,7 +38,6 @@ dependencies:
   - free == 5.0.2
   - transformers == 0.5.5.0
   - safe == 0.3.17
-  - io-memoize == 1.1.1.0
 library:
   source-dirs: src
 ghc-options:

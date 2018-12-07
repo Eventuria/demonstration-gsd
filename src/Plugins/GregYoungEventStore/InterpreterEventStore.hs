@@ -7,16 +7,16 @@ import Control.Monad.IO.Class (MonadIO(..))
 
 import Logger.Core
 
-import Plugins.GregYoungEventStore.Write.Persisting
-
 import Cqrs.PersistedStream.Write.WDsl
 import Cqrs.Aggregate.Events.Event
 import Cqrs.Aggregate.Core
 import Cqrs.Aggregate.StreamRepository
 
-type InterpreterWriteEventStoreLanguage a = WriteEventStoreLanguage a -> Logger -> EventStoreStreamRepository   ->  IO a
+import Plugins.GregYoungEventStore.Write.Persisting
+import Plugins.GregYoungEventStore.Stream
 
-interpretWriteEventStoreLanguage :: InterpreterWriteEventStoreLanguage a
+
+interpretWriteEventStoreLanguage :: InterpreterWritePersistedStreamLanguage EventStoreStream a
 
 interpretWriteEventStoreLanguage (Pure a) logger streamRepository = return a
 interpretWriteEventStoreLanguage (Free (PersistEvent event next)) logger streamRepository = do

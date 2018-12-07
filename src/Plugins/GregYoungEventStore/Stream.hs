@@ -7,7 +7,7 @@ import qualified Database.EventStore as EventStore
 import Plugins.GregYoungEventStore.Settings
 
 data EventStoreStream item = EventStoreStream {
-                                           context :: EventStoreContext,
+                                           settings :: EventStoreSettings,
                                            streamName :: EventStore.StreamName}
 
 

@@ -1,25 +1,32 @@
 
 module Plugins.GregYoungEventStore.Instance where
 
-import Cqrs.PersistedStream.Stream
+import Cqrs.PersistedStream.Read.Interface
+import Cqrs.PersistedStream.Write.Interface
 
 import qualified Plugins.GregYoungEventStore.Read.Streaming as EventStoreStreaming
 import qualified Plugins.GregYoungEventStore.Read.Querying as EventStoreQuerying
 import qualified Plugins.GregYoungEventStore.Read.Subscribing as EventStoreSubscribing
+import qualified Plugins.GregYoungEventStore.Write.Persisting as EventStoreWriting
 
+import Plugins.GregYoungEventStore.Stream
 
-
-getStreaming :: Streaming
-getStreaming = Streaming {
+getEventStoreStreaming :: Streaming EventStoreStream
+getEventStoreStreaming = Streaming {
                   streamFromOffset = EventStoreStreaming.streamFromOffset,
                   streamAllInfinitely = EventStoreStreaming.streamAllInfinitely  }
 
-getQuerying :: Querying
-getQuerying = Querying  {retrieveLast = EventStoreQuerying.retrieveLast}
+getEventStoreQuerying :: Querying EventStoreStream
+getEventStoreQuerying = Querying  {
+                  retrieveLast = EventStoreQuerying.retrieveLast,
+                  isStreamNotFound = EventStoreQuerying.isStreamNotFound}
 
-getSubscribing :: Subscribing
-getSubscribing = Subscribing { subscribe = EventStoreSubscribing.subscribe}
+getEventStoreSubscribing :: Subscribing EventStoreStream
+getEventStoreSubscribing = Subscribing { subscribe = EventStoreSubscribing.subscribe}
 
 
-getEventStoreReading :: Reading
-getEventStoreReading = Reading { streaming = getStreaming, querying = getQuerying, subscribing = getSubscribing}
+getEventStoreReading :: Reading EventStoreStream
+getEventStoreReading = Reading { streaming = getEventStoreStreaming, querying = getEventStoreQuerying, subscribing = getEventStoreSubscribing}
+
+getEventStoreWriting :: Writing EventStoreStream
+getEventStoreWriting = Writing {persist = EventStoreWriting.persist}
