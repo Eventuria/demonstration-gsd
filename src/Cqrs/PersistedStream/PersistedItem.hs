@@ -2,7 +2,7 @@
 module Cqrs.PersistedStream.PersistedItem where
 
 import Data.Aeson
-import Cqrs.Streams
+import Cqrs.PersistedStream.Offset
 
 data Persisted item = PersistedItem {
                                 offset :: Offset ,

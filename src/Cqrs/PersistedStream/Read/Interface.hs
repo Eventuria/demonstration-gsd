@@ -6,7 +6,7 @@ import Data.Aeson
 
 import Streamly.Streamable
 
-import Cqrs.Streams
+import Cqrs.PersistedStream.Offset
 import Cqrs.PersistedStream.PersistedItem
 
 data Reading persistedStream = Reading {

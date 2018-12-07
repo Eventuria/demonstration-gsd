@@ -22,7 +22,7 @@ import Cqrs.PersistedStream.Translation
 import Cqrs.EDsl
 import Cqrs.PersistedStream.Write.WDsl
 import Cqrs.Aggregate.StreamRepository
-import Cqrs.Streams
+import Cqrs.PersistedStream.Offset
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.PersistedStream.Read.Interface

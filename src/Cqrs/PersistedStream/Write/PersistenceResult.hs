@@ -1,6 +1,6 @@
 module Cqrs.PersistedStream.Write.PersistenceResult where
 
-import Cqrs.Streams
+import Cqrs.PersistedStream.Offset
 
 data PersistenceResult = PersistenceFailure {reason :: String} | PersistenceSuccess {lastOffsetPersisted :: Offset}
 
