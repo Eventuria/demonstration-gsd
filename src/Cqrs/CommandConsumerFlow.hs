@@ -28,6 +28,10 @@ import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.PersistedStream.Read.Interface
 import Cqrs.PersistedStream.PersistedItem
 
+import Cqrs.Serialization.Aggregate.Command ()
+import Cqrs.Serialization.Aggregate.ValidationState ()
+
+
 runCommandConsumers :: Logger -> CqrsStreamRepository persistedStream -> Reading persistedStream -> CommandHandler -> InterpreterWritePersistedStreamLanguage persistedStream () -> IO ()
 runCommandConsumers logger
                     streamRepository @ CqrsStreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream }

@@ -15,6 +15,13 @@ import Cqrs.Aggregate.StreamRepository
 import Plugins.GregYoungEventStore.Write.Persisting
 import Plugins.GregYoungEventStore.Stream
 
+import Cqrs.Serialization.Aggregate.Command ()
+import Cqrs.Serialization.Aggregate.AggregateId ()
+import Cqrs.Serialization.Aggregate.Event ()
+import Cqrs.Serialization.Aggregate.ValidationState ()
+import Cqrs.Serialization.Aggregate.CommandResponse ()
+
+
 
 interpretWriteEventStoreLanguage :: InterpreterWritePersistedStreamLanguage EventStoreStream a
 

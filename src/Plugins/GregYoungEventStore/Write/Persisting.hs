@@ -7,7 +7,7 @@ import qualified Data.Text as Text
 import qualified Data.UUID.V4 as Uuid
 import Control.Concurrent.Async (wait)
 
-import Cqrs.PersistedStream.Write.Interface
+import Cqrs.PersistedStream.Write.Writable
 import Cqrs.Streams
 import Control.Monad.IO.Class (MonadIO(..))
 

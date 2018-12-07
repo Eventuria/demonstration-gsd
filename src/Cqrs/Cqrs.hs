@@ -9,6 +9,10 @@ import Cqrs.Aggregate.Core
 import Cqrs.PersistedStream.Read.Interface
 import Cqrs.PersistedStream.Write.Interface
 
+import Cqrs.Serialization.Aggregate.Command ()
+import Cqrs.Serialization.Aggregate.AggregateId ()
+
+
 persistCommands :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO (Either PersistenceFailure PersistResult)
 persistCommands Writing {persist} Querying {isStreamNotFound} getCommandStream  aggregateIdStream  command = do
  let commandStream = getCommandStream $ getAggregateId command

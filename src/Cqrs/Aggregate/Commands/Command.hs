@@ -1,5 +1,4 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Cqrs.Aggregate.Commands.Command where
 
 import Data.Aeson
@@ -29,30 +28,4 @@ instance AggregateJoinable Command where
 
 
 
-instance ToJSON Command where
-  toJSON (Command {commandHeader = commandHeader , payload = payload  } ) = object [
-            "commandHeader" .= commandHeader,
-            "payload" .= payload]
-
-instance FromJSON Command where
-
-  parseJSON (Object jsonObject) =
-    Command <$> jsonObject .: "commandHeader"
-            <*> jsonObject .: "payload"
-  parseJSON _ =  error $ "Json format not expected"
-
-
-instance ToJSON CommandHeader where
-  toJSON (CommandHeader {aggregateId = aggregateId , commandId = commandId ,  commandName = commandName} ) =
-    object ["aggregateId" .= aggregateId,
-            "commandId" .= commandId,
-            "commandName" .= commandName]
-
-instance FromJSON CommandHeader where
-
-  parseJSON (Object jsonObject) =
-     CommandHeader <$> jsonObject .: "aggregateId"
-              <*> jsonObject .: "commandId"
-              <*> jsonObject .: "commandName"
-  parseJSON _ =  error $ "Json format not expected"
 
