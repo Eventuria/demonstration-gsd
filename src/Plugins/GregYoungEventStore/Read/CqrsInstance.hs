@@ -1,13 +1,10 @@
-
-module Plugins.GregYoungEventStore.Instance where
+module Plugins.GregYoungEventStore.Read.CqrsInstance where
 
 import Cqrs.PersistedStream.Read.Interface
-import Cqrs.PersistedStream.Write.Interface
 
 import qualified Plugins.GregYoungEventStore.Read.Streaming as EventStoreStreaming
 import qualified Plugins.GregYoungEventStore.Read.Querying as EventStoreQuerying
 import qualified Plugins.GregYoungEventStore.Read.Subscribing as EventStoreSubscribing
-import qualified Plugins.GregYoungEventStore.Write.Persisting as EventStoreWriting
 
 import Plugins.GregYoungEventStore.Stream
 
@@ -27,6 +24,3 @@ getEventStoreSubscribing = Subscribing { subscribe = EventStoreSubscribing.subsc
 
 getEventStoreReading :: Reading EventStoreStream
 getEventStoreReading = Reading { streaming = getEventStoreStreaming, querying = getEventStoreQuerying, subscribing = getEventStoreSubscribing}
-
-getEventStoreWriting :: Writing EventStoreStream
-getEventStoreWriting = Writing {persist = EventStoreWriting.persist}
