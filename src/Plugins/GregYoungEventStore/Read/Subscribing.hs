@@ -9,8 +9,8 @@ import qualified Database.EventStore as EventStore
 
 import Logger.Core
 import Control.Exception
-import Plugins.GregYoungEventStore.Stream
-import Plugins.GregYoungEventStore.Settings
+import Plugins.GregYoungEventStore.EventStoreStream
+import Plugins.GregYoungEventStore.EventStoreSettings
 import Cqrs.PersistedStream.PersistedItem
 import Data.Maybe
 import Data.Aeson

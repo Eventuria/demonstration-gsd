@@ -1,4 +1,4 @@
-module Plugins.GregYoungEventStore.Settings where
+module Plugins.GregYoungEventStore.EventStoreSettings where
 
 import Logger.Core
 import qualified Database.EventStore as EventStore

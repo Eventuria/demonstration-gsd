@@ -13,8 +13,8 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.PersistedStream.Write.Writable
 import Cqrs.PersistedStream.Write.PersistenceResult
 
-import Plugins.GregYoungEventStore.Stream
-import Plugins.GregYoungEventStore.Settings
+import Plugins.GregYoungEventStore.EventStoreStream
+import Plugins.GregYoungEventStore.EventStoreSettings
 
 
 persist :: Writable item =>  EventStoreStream item -> item -> IO PersistenceResult

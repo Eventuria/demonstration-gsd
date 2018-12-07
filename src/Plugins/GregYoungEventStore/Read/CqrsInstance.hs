@@ -6,7 +6,7 @@ import qualified Plugins.GregYoungEventStore.Read.Streaming as EventStoreStreami
 import qualified Plugins.GregYoungEventStore.Read.Querying as EventStoreQuerying
 import qualified Plugins.GregYoungEventStore.Read.Subscribing as EventStoreSubscribing
 
-import Plugins.GregYoungEventStore.Stream
+import Plugins.GregYoungEventStore.EventStoreStream
 
 getEventStoreStreaming :: Streaming EventStoreStream
 getEventStoreStreaming = Streaming {

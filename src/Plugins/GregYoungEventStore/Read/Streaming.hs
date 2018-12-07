@@ -17,8 +17,8 @@ import qualified Plugins.GregYoungEventStore.Read.Subscribing as EventStore.Subs
 import Cqrs.PersistedStream.PersistedItem
 import Cqrs.PersistedStream.Offset
 import Logger.Core
-import Plugins.GregYoungEventStore.Stream
-import Plugins.GregYoungEventStore.Settings
+import Plugins.GregYoungEventStore.EventStoreStream
+import Plugins.GregYoungEventStore.EventStoreSettings
 import Data.Aeson
 import Data.Maybe
 import Streamly.Streamable

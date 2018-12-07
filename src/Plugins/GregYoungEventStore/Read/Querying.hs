@@ -4,11 +4,11 @@
 module Plugins.GregYoungEventStore.Read.Querying where
 
 import Data.Maybe
-import Plugins.GregYoungEventStore.Stream
+import Plugins.GregYoungEventStore.EventStoreStream
 import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
 import Cqrs.PersistedStream.PersistedItem
-import Plugins.GregYoungEventStore.Settings
+import Plugins.GregYoungEventStore.EventStoreSettings
 import Data.Aeson
 import Cqrs.PersistedStream.Offset
 

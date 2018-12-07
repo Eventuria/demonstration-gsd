@@ -18,7 +18,7 @@ import Logger.Core
 
 import Cqrs.Aggregate.Commands.Command
 import Cqrs.CommandHandler
-import Cqrs.PersistedStream.Translation
+import Cqrs.PersistedStream.Write.CqrsEDslToWDslTranslation
 import Cqrs.EDsl
 import Cqrs.PersistedStream.Write.WDsl
 import Cqrs.PersistedStream.Repository

@@ -15,7 +15,7 @@ import Data.UUID
 
 import Streamly.Prelude
 import Control.Monad.IO.Class (MonadIO(..))
-import Plugins.GregYoungEventStore.Settings
+import Plugins.GregYoungEventStore.EventStoreSettings
 import qualified Gsd.GsdOverEventStore as Gsd
 
 import Cqrs.Serialization.Aggregate.PersistenceResult ()

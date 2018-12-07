@@ -5,7 +5,7 @@ import qualified Database.EventStore as GYEventStore
 import Control.Exception
 import Settings
 
-import Plugins.GregYoungEventStore.Settings
+import Plugins.GregYoungEventStore.EventStoreSettings
 import qualified Gsd.GsdOverEventStore as Gsd
 
 main :: IO ()

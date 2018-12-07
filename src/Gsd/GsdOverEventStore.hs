@@ -30,9 +30,9 @@ import Gsd.Commands
 import Gsd.Core
 
 import Plugins.GregYoungEventStore.Read.Streaming
-import Plugins.GregYoungEventStore.Settings
-import Plugins.GregYoungEventStore.Stream
-import Plugins.GregYoungEventStore.InterpreterEventStore
+import Plugins.GregYoungEventStore.EventStoreSettings
+import Plugins.GregYoungEventStore.EventStoreStream
+import Plugins.GregYoungEventStore.CqrsEDSLInterpreter
 
 import Plugins.GregYoungEventStore.Read.CqrsInstance
 import Plugins.GregYoungEventStore.Write.CqrsInstance

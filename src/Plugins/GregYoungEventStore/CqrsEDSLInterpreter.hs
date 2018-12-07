@@ -1,4 +1,4 @@
-module Plugins.GregYoungEventStore.InterpreterEventStore where
+module Plugins.GregYoungEventStore.CqrsEDSLInterpreter where
 
 import Control.Monad.Free
 import qualified Data.Time as Time
@@ -13,7 +13,7 @@ import Cqrs.Aggregate.Core
 import Cqrs.PersistedStream.Repository
 
 import Plugins.GregYoungEventStore.Write.Persisting
-import Plugins.GregYoungEventStore.Stream
+import Plugins.GregYoungEventStore.EventStoreStream
 
 import Cqrs.Serialization.Aggregate.Command ()
 import Cqrs.Serialization.Aggregate.AggregateId ()
