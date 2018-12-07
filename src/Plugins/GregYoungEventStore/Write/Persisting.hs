@@ -5,11 +5,13 @@ module Plugins.GregYoungEventStore.Write.Persisting where
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
 import qualified Data.UUID.V4 as Uuid
+
 import Control.Concurrent.Async (wait)
+import Control.Monad.IO.Class (MonadIO(..))
+
 
 import Cqrs.PersistedStream.Write.Writable
-import Cqrs.Streams
-import Control.Monad.IO.Class (MonadIO(..))
+import Cqrs.PersistedStream.Write.PersistenceResult
 
 import Plugins.GregYoungEventStore.Stream
 import Plugins.GregYoungEventStore.Settings

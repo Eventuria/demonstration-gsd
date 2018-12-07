@@ -18,6 +18,8 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Plugins.GregYoungEventStore.Settings
 import qualified Gsd.GsdOverEventStore as Gsd
 
+import Cqrs.Serialization.Aggregate.PersistenceResult ()
+
 main :: IO ()
 main = do
   let logger = Logger { loggerId = "[gsd.api]" , executableName = "api" }

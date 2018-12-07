@@ -3,7 +3,6 @@ module Cqrs.Cqrs where
 
 import Cqrs.Aggregate.StreamRepository
 import Cqrs.Aggregate.Commands.Command
-import Cqrs.Streams
 
 import Cqrs.Aggregate.Core
 import Cqrs.PersistedStream.Read.Interface
@@ -12,6 +11,7 @@ import Cqrs.PersistedStream.Write.Interface
 import Cqrs.Serialization.Aggregate.Command ()
 import Cqrs.Serialization.Aggregate.AggregateId ()
 
+import Cqrs.PersistedStream.Write.PersistenceResult
 
 persistCommands :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO (Either PersistenceFailure PersistResult)
 persistCommands Writing {persist} Querying {isStreamNotFound} getCommandStream  aggregateIdStream  command = do

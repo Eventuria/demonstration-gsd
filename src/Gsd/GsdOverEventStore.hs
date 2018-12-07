@@ -21,7 +21,6 @@ import Logger.Core
 import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
 import qualified Cqrs.Cqrs as Cqrs
 import Cqrs.Aggregate.StreamRepository
-import Cqrs.Streams
 import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.PersistedStream.PersistedItem
 import Cqrs.Aggregate.Commands.Command
@@ -35,6 +34,8 @@ import Plugins.GregYoungEventStore.Settings
 import Plugins.GregYoungEventStore.Stream
 import Plugins.GregYoungEventStore.InterpreterEventStore
 import Plugins.GregYoungEventStore.Instance
+
+import Cqrs.PersistedStream.Write.PersistenceResult
 
 requestCommand ::  EventStoreSettings -> GsdCommand -> IO (Either PersistenceFailure PersistResult)
 requestCommand settings gsdCommand =
