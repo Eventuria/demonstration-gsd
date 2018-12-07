@@ -13,7 +13,7 @@ import Control.Monad.Free
 import qualified Data.Set as Set
 import Cqrs.Aggregate.Ids.AggregateId
 import Logger.Core
-import Cqrs.Aggregate.StreamRepository
+import Cqrs.PersistedStream.Repository
 
 type InterpreterWritePersistedStreamLanguage persistedStream a = WritePersistenceStreamLanguage a -> Logger -> CqrsStreamRepository persistedStream   ->  IO a
 

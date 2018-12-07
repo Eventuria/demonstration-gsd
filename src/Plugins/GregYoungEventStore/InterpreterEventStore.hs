@@ -10,7 +10,7 @@ import Logger.Core
 import Cqrs.PersistedStream.Write.WDsl
 import Cqrs.Aggregate.Events.Event
 import Cqrs.Aggregate.Core
-import Cqrs.Aggregate.StreamRepository
+import Cqrs.PersistedStream.Repository
 
 import Plugins.GregYoungEventStore.Write.Persisting
 import Plugins.GregYoungEventStore.Stream

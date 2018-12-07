@@ -20,7 +20,7 @@ import Logger.Core
 
 import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
 import qualified Cqrs.Cqrs as Cqrs
-import Cqrs.Aggregate.StreamRepository
+import Cqrs.PersistedStream.Repository
 import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.PersistedStream.PersistedItem
 import Cqrs.Aggregate.Commands.Command

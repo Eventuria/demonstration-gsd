@@ -21,7 +21,7 @@ import Cqrs.CommandHandler
 import Cqrs.PersistedStream.Translation
 import Cqrs.EDsl
 import Cqrs.PersistedStream.Write.WDsl
-import Cqrs.Aggregate.StreamRepository
+import Cqrs.PersistedStream.Repository
 import Cqrs.PersistedStream.Offset
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Aggregate.Ids.AggregateId

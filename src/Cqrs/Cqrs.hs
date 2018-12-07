@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Cqrs.Cqrs where
 
-import Cqrs.Aggregate.StreamRepository
+import Cqrs.PersistedStream.Repository
 import Cqrs.Aggregate.Commands.Command
 
 import Cqrs.Aggregate.Core
