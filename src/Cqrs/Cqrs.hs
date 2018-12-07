@@ -13,7 +13,7 @@ import Cqrs.Serialization.Aggregate.AggregateId ()
 
 import Cqrs.PersistedStream.Write.PersistenceResult
 
-persistCommands :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO (Either PersistenceFailure PersistResult)
+persistCommands :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO PersistenceResult
 persistCommands Writing {persist} Querying {isStreamNotFound} getCommandStream  aggregateIdStream  command = do
  let commandStream = getCommandStream $ getAggregateId command
  isStreamNotExist <- isStreamNotFound commandStream

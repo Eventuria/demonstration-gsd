@@ -37,7 +37,7 @@ import Plugins.GregYoungEventStore.Instance
 
 import Cqrs.PersistedStream.Write.PersistenceResult
 
-requestCommand ::  EventStoreSettings -> GsdCommand -> IO (Either PersistenceFailure PersistResult)
+requestCommand ::  EventStoreSettings -> GsdCommand -> IO PersistenceResult
 requestCommand settings gsdCommand =
   Cqrs.persistCommands
     getEventStoreWriting

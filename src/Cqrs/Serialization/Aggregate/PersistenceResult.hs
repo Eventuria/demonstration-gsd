@@ -5,26 +5,30 @@ import Data.Aeson
 import qualified Data.Text as Text
 import Cqrs.PersistedStream.Write.PersistenceResult
 
-instance ToJSON PersistResult where
-   toJSON (PersistResult writeNextVersion) = object [
-             "writeNextVersion" .= writeNextVersion]
+persistenceSuccessName :: String
+persistenceSuccessName = "success"
 
+persistenceFailureName :: String
+persistenceFailureName = "failure"
 
-instance FromJSON PersistResult  where
+instance ToJSON PersistenceResult where
+   toJSON (PersistenceSuccess lastOffsetPersisted) = object [
+             "persistenceResult" .= persistenceSuccessName,
+             "lastOffsetPersisted" .= lastOffsetPersisted]
+   toJSON (PersistenceFailure reason) = object [
+             "persistenceResult" .= persistenceFailureName,
+             "reason" .= reason]
 
-    parseJSON (Object jsonObject) = PersistResult <$> jsonObject .: "writeNextVersion"
-    parseJSON _ =  error $ "Json format not expected"
+instance FromJSON PersistenceResult  where
+    parseJSON (Object jsonObject) =  do
+                   persistenceResult <- jsonObject .: "persistenceResult"
+                   case persistenceResult of
+                        Just (String persistenceResultName) | (Text.unpack persistenceResultName) == persistenceSuccessName -> PersistenceSuccess
+                            <$> jsonObject .: "lastOffsetPersisted"
+                        Just (String persistenceResultName) | (Text.unpack persistenceResultName) == persistenceFailureName -> PersistenceFailure
+                            <$> jsonObject .:  "reason"
+                        Just (String unknownResponseName) -> error $ "Persistence response unknown : " ++ Text.unpack unknownResponseName
+                        Nothing -> error $ "persistenceResult status not provided"
+                        _ -> error $ "Json format not expected"
 
-instance ToJSON PersistenceFailure where
-   toJSON (ItemAlreadyPersisted) = object [("errorName" ,"ItemAlreadyPersisted")]
-
-
-instance FromJSON PersistenceFailure  where
-
-    parseJSON (Object jsonObject) = do
-             errorNameMaybe <- jsonObject .: "errorName"
-             case errorNameMaybe of
-                  Just (String errorName) | (Text.unpack errorName) == "ItemAlreadyPersisted" -> return ItemAlreadyPersisted
-                  Nothing -> error $ "error name not provided or invalid"
-                  _ -> error $ "Json format not expected"
-    parseJSON _ =  error $ "Json format not expected"
+    parseJSON _ = error $ "Json format not expected"

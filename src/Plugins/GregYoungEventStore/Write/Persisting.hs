@@ -17,7 +17,7 @@ import Plugins.GregYoungEventStore.Stream
 import Plugins.GregYoungEventStore.Settings
 
 
-persist :: Writable item =>  EventStoreStream item -> item -> IO (Either PersistenceFailure PersistResult)
+persist :: Writable item =>  EventStoreStream item -> item -> IO PersistenceResult
 persist eventStoreStream @ EventStoreStream {  settings = EventStoreSettings { logger, credentials, connection },
                                                streamName = streamName } itemToPersist =  do
 
@@ -33,4 +33,4 @@ persist eventStoreStream @ EventStoreStream {  settings = EventStoreSettings { l
             eventInEventStoreDomain
             (Just credentials) >>= wait
 
-    return $ Right $ PersistResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult
+    return $ PersistenceSuccess $ toInteger $ EventStore.writeNextExpectedVersion writeResult

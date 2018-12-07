@@ -1,4 +1,6 @@
 module Cqrs.PersistedStream.Write.PersistenceResult where
 
-data PersistenceFailure = ItemAlreadyPersisted
-data PersistResult = PersistResult {writeNextVersion :: Integer}
+import Cqrs.Streams
+
+data PersistenceResult = PersistenceFailure {reason :: String} | PersistenceSuccess {lastOffsetPersisted :: Offset}
+
