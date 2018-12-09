@@ -18,18 +18,18 @@ import Logger.Core
 
 import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
 import qualified Cqrs.Cqrs as Cqrs
-import Cqrs.PersistedStream.Repository
-import Cqrs.PersistedStream.PersistedItem
+import Cqrs.PersistedStreamEngine.Repository
+import Cqrs.PersistedStreamEngine.PersistedItem
 import Cqrs.Aggregate.Commands.Command
-import Cqrs.PersistedStream.Write.Interface
-import Cqrs.PersistedStream.Read.Interface
-import Cqrs.PersistedStream.Write.WDsl
+import Cqrs.PersistedStreamEngine.Write.Interface
+import Cqrs.PersistedStreamEngine.Read.Interface
+import Cqrs.PersistedStreamEngine.Write.WDsl
 
 import Gsd.CommandHandler
 import Gsd.Commands
 import Gsd.Core
 
-import Cqrs.PersistedStream.Write.PersistenceResult
+import Cqrs.PersistedStreamEngine.Write.PersistenceResult
 
 requestCommand ::  CqrsStreamRepository persistedStream -> Querying persistedStream -> Writing persistedStream -> GsdCommand -> IO PersistenceResult
 requestCommand cqrsStreamRepository querying writing gsdCommand =

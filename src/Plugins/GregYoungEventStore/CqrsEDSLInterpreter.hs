@@ -7,10 +7,10 @@ import Control.Monad.IO.Class (MonadIO(..))
 
 import Logger.Core
 
-import Cqrs.PersistedStream.Write.WDsl
+import Cqrs.PersistedStreamEngine.Write.WDsl
 import Cqrs.Aggregate.Events.Event
 import Cqrs.Aggregate.Core
-import Cqrs.PersistedStream.Repository
+import Cqrs.PersistedStreamEngine.Repository
 
 import Plugins.GregYoungEventStore.Write.Persisting
 import Plugins.GregYoungEventStore.EventStoreStream

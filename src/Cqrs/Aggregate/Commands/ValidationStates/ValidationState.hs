@@ -3,7 +3,7 @@ module Cqrs.Aggregate.Commands.ValidationStates.ValidationState where
 
 import Data.Set (Set)
 
-import Cqrs.PersistedStream.Offset
+import Cqrs.PersistedStreamEngine.Offset
 import Cqrs.Aggregate.Commands.CommandId
 import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.Aggregate.Core

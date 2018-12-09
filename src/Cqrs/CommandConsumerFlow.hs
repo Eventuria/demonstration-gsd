@@ -18,15 +18,15 @@ import Logger.Core
 
 import Cqrs.Aggregate.Commands.Command
 import Cqrs.CommandHandler
-import Cqrs.PersistedStream.Write.CqrsEDslToWDslTranslation
+import Cqrs.PersistedStreamEngine.Write.CqrsEDslToWDslTranslation
 import Cqrs.EDsl
-import Cqrs.PersistedStream.Write.WDsl
-import Cqrs.PersistedStream.Repository
-import Cqrs.PersistedStream.Offset
+import Cqrs.PersistedStreamEngine.Write.WDsl
+import Cqrs.PersistedStreamEngine.Repository
+import Cqrs.PersistedStreamEngine.Offset
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Aggregate.Ids.AggregateId
-import Cqrs.PersistedStream.Read.Interface
-import Cqrs.PersistedStream.PersistedItem
+import Cqrs.PersistedStreamEngine.Read.Interface
+import Cqrs.PersistedStreamEngine.PersistedItem
 
 import Cqrs.Serialization.Aggregate.Command ()
 import Cqrs.Serialization.Aggregate.ValidationState ()

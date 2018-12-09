@@ -14,8 +14,8 @@ import Control.Concurrent.Async (wait)
 
 import qualified Database.EventStore as EventStore
 import qualified Plugins.GregYoungEventStore.Read.Subscribing as EventStore.Subscribing
-import Cqrs.PersistedStream.PersistedItem
-import Cqrs.PersistedStream.Offset
+import Cqrs.PersistedStreamEngine.PersistedItem
+import Cqrs.PersistedStreamEngine.Offset
 import Logger.Core
 import Plugins.GregYoungEventStore.EventStoreStream
 import Plugins.GregYoungEventStore.EventStoreSettings

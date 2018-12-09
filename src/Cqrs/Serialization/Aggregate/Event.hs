@@ -3,7 +3,7 @@ module Cqrs.Serialization.Aggregate.Event where
 
 import Data.Aeson
 
-import Cqrs.PersistedStream.Write.Writable
+import Cqrs.PersistedStreamEngine.Write.Writable
 import Cqrs.Aggregate.Events.Event
 
 instance Writable Event where

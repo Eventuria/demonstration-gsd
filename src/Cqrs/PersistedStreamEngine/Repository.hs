@@ -1,4 +1,4 @@
-module Cqrs.PersistedStream.Repository where
+module Cqrs.PersistedStreamEngine.Repository where
 
 import Cqrs.Aggregate.Events.Event
 import Cqrs.Aggregate.Commands.Command

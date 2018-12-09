@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Cqrs.PersistedStream.Write.WDsl where
+module Cqrs.PersistedStreamEngine.Write.WDsl where
 
 import Cqrs.Aggregate.Commands.CommandId
 import Cqrs.Aggregate.Commands.Responses.CommandResponse
@@ -13,7 +13,7 @@ import Control.Monad.Free
 import qualified Data.Set as Set
 import Cqrs.Aggregate.Ids.AggregateId
 import Logger.Core
-import Cqrs.PersistedStream.Repository
+import Cqrs.PersistedStreamEngine.Repository
 
 type InterpreterWritePersistedStreamLanguage persistedStream a = WritePersistenceStreamLanguage a -> Logger -> CqrsStreamRepository persistedStream   ->  IO a
 

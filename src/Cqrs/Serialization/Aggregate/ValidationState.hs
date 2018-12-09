@@ -3,7 +3,7 @@ module Cqrs.Serialization.Aggregate.ValidationState where
 
 import Data.Aeson
 
-import Cqrs.PersistedStream.Write.Writable
+import Cqrs.PersistedStreamEngine.Write.Writable
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
 
 instance Writable ValidationState where

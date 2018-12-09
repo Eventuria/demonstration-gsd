@@ -4,7 +4,7 @@ module Cqrs.Serialization.Aggregate.Command where
 import Data.Aeson
 
 import Cqrs.Aggregate.Commands.Command
-import Cqrs.PersistedStream.Write.Writable
+import Cqrs.PersistedStreamEngine.Write.Writable
 
 instance Writable Command where
   getItemName Command { commandHeader = CommandHeader {commandName = commandName} }  = commandName

@@ -1,4 +1,4 @@
-module Cqrs.PersistedStream.Write.Writable where
+module Cqrs.PersistedStreamEngine.Write.Writable where
 
 import Data.Aeson
 

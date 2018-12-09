@@ -7,10 +7,10 @@ import Data.Maybe
 import Plugins.GregYoungEventStore.EventStoreStream
 import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
-import Cqrs.PersistedStream.PersistedItem
+import Cqrs.PersistedStreamEngine.PersistedItem
 import Plugins.GregYoungEventStore.EventStoreSettings
 import Data.Aeson
-import Cqrs.PersistedStream.Offset
+import Cqrs.PersistedStreamEngine.Offset
 
 isStreamNotFound :: EventStoreStream item -> IO Bool
 isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },

@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Cqrs.PersistedStream.PersistedItem where
+module Cqrs.PersistedStreamEngine.PersistedItem where
 
 import Data.Aeson
-import Cqrs.PersistedStream.Offset
+import Cqrs.PersistedStreamEngine.Offset
 
 data Persisted item = PersistedItem {
                                 offset :: Offset ,

@@ -1,7 +1,7 @@
 module Gsd.CommandPredicates where
 
 import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.PersistedStream.Offset
+import Cqrs.PersistedStreamEngine.Offset
 
 isAlreadyProcessed :: Offset -> Maybe ValidationState -> Bool
 isAlreadyProcessed offset snapshotMaybe = Just offset <= (lastOffsetConsumed <$> snapshotMaybe)

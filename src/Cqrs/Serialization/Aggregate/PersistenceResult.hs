@@ -3,7 +3,7 @@ module Cqrs.Serialization.Aggregate.PersistenceResult where
 
 import Data.Aeson
 import qualified Data.Text as Text
-import Cqrs.PersistedStream.Write.PersistenceResult
+import Cqrs.PersistedStreamEngine.Write.PersistenceResult
 
 persistenceSuccessName :: String
 persistenceSuccessName = "success"
