@@ -1,5 +1,7 @@
 
-# GSD [![][license img]][license]
+# GSD 
+
+[![][license img]][license]
 
 GSD (Getting Stuffs Done) is a simple todo list over a CQRS | command sourcing architecture : 
 
