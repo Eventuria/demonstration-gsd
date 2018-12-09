@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Plugins.GregYoungEventStore.Write.Persisting where
+module Plugins.EventStore.Write.Persisting where
 
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
@@ -13,8 +13,8 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.PersistedStreamEngine.Write.Writable
 import Cqrs.PersistedStreamEngine.Write.PersistenceResult
 
-import Plugins.GregYoungEventStore.EventStoreStream
-import Plugins.GregYoungEventStore.EventStoreSettings
+import Plugins.EventStore.EventStoreStream
+import Plugins.EventStore.EventStoreSettings
 
 
 persist :: Writable item =>  EventStoreStream item -> item -> IO PersistenceResult

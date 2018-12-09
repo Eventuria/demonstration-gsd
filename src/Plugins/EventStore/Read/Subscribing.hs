@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Plugins.GregYoungEventStore.Read.Subscribing where
+module Plugins.EventStore.Read.Subscribing where
 
 import qualified Streamly.Prelude as S
 import Control.Concurrent
@@ -9,8 +9,8 @@ import qualified Database.EventStore as EventStore
 
 import Logger.Core
 import Control.Exception
-import Plugins.GregYoungEventStore.EventStoreStream
-import Plugins.GregYoungEventStore.EventStoreSettings
+import Plugins.EventStore.EventStoreStream
+import Plugins.EventStore.EventStoreSettings
 import Cqrs.PersistedStreamEngine.PersistedItem
 import Data.Maybe
 import Data.Aeson

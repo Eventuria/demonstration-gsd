@@ -25,12 +25,12 @@ import Gsd.Core
 
 import qualified Gsd.GenericGsd as GenericGsd
 
-import Plugins.GregYoungEventStore.EventStoreSettings
-import Plugins.GregYoungEventStore.EventStoreStream
-import Plugins.GregYoungEventStore.CqrsEDSLInterpreter
+import Plugins.EventStore.EventStoreSettings
+import Plugins.EventStore.EventStoreStream
+import Plugins.EventStore.CqrsEDSLInterpreter
 
-import Plugins.GregYoungEventStore.Read.CqrsInstance
-import Plugins.GregYoungEventStore.Write.CqrsInstance
+import Plugins.EventStore.Read.CqrsInstance
+import Plugins.EventStore.Write.CqrsInstance
 
 
 requestCommand ::  EventStoreSettings -> GsdCommand -> IO PersistenceResult

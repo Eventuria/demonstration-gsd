@@ -1,14 +1,14 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Plugins.GregYoungEventStore.Read.Querying where
+module Plugins.EventStore.Read.Querying where
 
 import Data.Maybe
-import Plugins.GregYoungEventStore.EventStoreStream
+import Plugins.EventStore.EventStoreStream
 import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
 import Cqrs.PersistedStreamEngine.PersistedItem
-import Plugins.GregYoungEventStore.EventStoreSettings
+import Plugins.EventStore.EventStoreSettings
 import Data.Aeson
 import Cqrs.PersistedStreamEngine.Offset
 
