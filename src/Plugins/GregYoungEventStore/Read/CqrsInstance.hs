@@ -11,7 +11,8 @@ import Plugins.GregYoungEventStore.EventStoreStream
 getEventStoreStreaming :: Streaming EventStoreStream
 getEventStoreStreaming = Streaming {
                   streamFromOffset = EventStoreStreaming.streamFromOffset,
-                  streamAllInfinitely = EventStoreStreaming.streamAllInfinitely  }
+                  streamAllInfinitely = EventStoreStreaming.streamAllInfinitely,
+                  streamAll = EventStoreStreaming.streamAll }
 
 getEventStoreQuerying :: Querying EventStoreStream
 getEventStoreQuerying = Querying  {

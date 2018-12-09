@@ -3,33 +3,28 @@
 module Gsd.GsdOverEventStore (requestCommand,
                 streamCommands,
                 streamWorkspaceIds,
-                getEventStoreStreamRepository,
                 runCommandConsumers) where
 
 import qualified Data.Text as Text
 import Database.EventStore hiding (Command)
-import Data.Maybe
 import Data.UUID
-
-import Data.Function ((&))
-import qualified Streamly.Prelude as S
 
 import Streamly.Streamable
 
 import Logger.Core
 
-import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
-import qualified Cqrs.Cqrs as Cqrs
 import Cqrs.PersistedStream.Repository
 import Cqrs.Aggregate.Ids.AggregateId
 import Cqrs.PersistedStream.PersistedItem
 import Cqrs.Aggregate.Commands.Command
+import Cqrs.PersistedStream.Write.PersistenceResult
 
-import Gsd.CommandHandler
+
 import Gsd.Commands
 import Gsd.Core
 
-import Plugins.GregYoungEventStore.Read.Streaming
+import qualified Gsd.GenericGsd as GenericGsd
+
 import Plugins.GregYoungEventStore.EventStoreSettings
 import Plugins.GregYoungEventStore.EventStoreStream
 import Plugins.GregYoungEventStore.CqrsEDSLInterpreter
@@ -37,34 +32,37 @@ import Plugins.GregYoungEventStore.CqrsEDSLInterpreter
 import Plugins.GregYoungEventStore.Read.CqrsInstance
 import Plugins.GregYoungEventStore.Write.CqrsInstance
 
-import Cqrs.PersistedStream.Write.PersistenceResult
 
 requestCommand ::  EventStoreSettings -> GsdCommand -> IO PersistenceResult
 requestCommand settings gsdCommand =
-  Cqrs.persistCommands
-    getEventStoreWriting
+  GenericGsd.requestCommand
+    (getEventStoreStreamRepository settings)
     getEventStoreQuerying
-    (getCommandStream  $ getEventStoreStreamRepository settings)
-    (aggregateIdStream $ getEventStoreStreamRepository settings) $ toCommand gsdCommand
+    getEventStoreWriting
+    gsdCommand
 
 runCommandConsumers :: EventStoreSettings -> Logger ->  IO ()
 runCommandConsumers settings logger  =
-   CommandConsumerFlow.runCommandConsumers
-      logger
+   GenericGsd.runCommandConsumers
       (getEventStoreStreamRepository settings)
       getEventStoreReading
-      gsdCommandHandler
       interpretWriteEventStoreLanguage
+      logger
+
 
 streamWorkspaceIds :: Streamable stream monad WorkspaceId => EventStoreSettings -> stream monad (Persisted WorkspaceId)
-streamWorkspaceIds settings = streamAll (aggregateIdStream $ getEventStoreStreamRepository settings)
+streamWorkspaceIds settings =
+    GenericGsd.streamWorkspaceIds
+      (getEventStoreStreamRepository settings)
+      getEventStoreStreaming
 
 
 streamCommands ::  Streamable stream monad Command => EventStoreSettings -> WorkspaceId -> stream monad (Persisted GsdCommand)
-streamCommands settings workspaceId = do
-  (streamAll $ (getCommandStream  $ getEventStoreStreamRepository settings) workspaceId) &
-      S.map (\PersistedItem { offset = offset, item = cqrsCommand} ->
-              PersistedItem { offset = offset, item = fromJust $ fromCommand $ cqrsCommand})
+streamCommands settings workspaceId =
+    GenericGsd.streamCommands
+      (getEventStoreStreamRepository settings)
+      getEventStoreStreaming
+      workspaceId
 
 
 getEventStoreStreamRepository :: EventStoreSettings -> CqrsStreamRepository EventStoreStream
