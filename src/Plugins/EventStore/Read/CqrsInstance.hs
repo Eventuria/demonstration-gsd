@@ -1,6 +1,6 @@
 module Plugins.EventStore.Read.CqrsInstance where
 
-import Cqrs.PersistedStreamEngine.Read.Interface
+import PersistedStreamEngine.Read.Interface
 
 import qualified Plugins.EventStore.Read.Streaming as EventStoreStreaming
 import qualified Plugins.EventStore.Read.Querying as EventStoreQuerying

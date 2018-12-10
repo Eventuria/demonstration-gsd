@@ -7,12 +7,12 @@ module Cqrs.EDsl (
   persistEvent,updateValidationState,getNewEventID,getCurrentTime
  ) where
 
-import Cqrs.Aggregate.Events.Event
-import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
+import Cqrs.Write.Aggregate.Events.Event
+import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import qualified Data.Time as Time
 import Control.Monad.Free
-import Cqrs.Aggregate.Commands.Responses.CommandResponse
-import Cqrs.Aggregate.Events.EventId
+import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import Cqrs.Write.Aggregate.Events.EventId
 
 data CommandDirective = Reject RejectionReason | SkipBecauseAlreadyProcessed | Validate (CommandTransaction ())
 

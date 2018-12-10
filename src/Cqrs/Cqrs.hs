@@ -1,17 +1,17 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Cqrs.Cqrs where
 
-import Cqrs.PersistedStreamEngine.Repository
-import Cqrs.Aggregate.Commands.Command
+import Cqrs.Write.StreamRepository
+import Cqrs.Write.Aggregate.Commands.Command
 
-import Cqrs.Aggregate.Core
-import Cqrs.PersistedStreamEngine.Read.Interface
-import Cqrs.PersistedStreamEngine.Write.Interface
+import Cqrs.Write.Aggregate.Core
+import PersistedStreamEngine.Read.Interface
+import PersistedStreamEngine.Write.Interface
 
-import Cqrs.Serialization.Aggregate.Command ()
-import Cqrs.Serialization.Aggregate.AggregateId ()
+import Cqrs.Write.Serialization.Command ()
+import Cqrs.Write.Serialization.AggregateId ()
 
-import Cqrs.PersistedStreamEngine.Write.PersistenceResult
+import PersistedStreamEngine.Write.PersistenceResult
 
 persistCommands :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO PersistenceResult
 persistCommands Writing {persist} Querying {isStreamNotFound} getCommandStream  aggregateIdStream  command = do

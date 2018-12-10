@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Streamly.Streamable where
 
-import Cqrs.PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.PersistedItem
 import Control.Monad.IO.Class
 import Streamly
 import Data.Aeson

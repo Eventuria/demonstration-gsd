@@ -18,7 +18,7 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Plugins.EventStore.EventStoreSettings
 import qualified Gsd.GsdOverEventStore as Gsd
 
-import Cqrs.Serialization.Aggregate.PersistenceResult ()
+import Cqrs.Write.Serialization.PersistenceResult ()
 
 main :: IO ()
 main = do

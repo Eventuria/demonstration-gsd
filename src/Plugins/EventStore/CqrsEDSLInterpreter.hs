@@ -7,19 +7,19 @@ import Control.Monad.IO.Class (MonadIO(..))
 
 import Logger.Core
 
-import Cqrs.PersistedStreamEngine.Write.WDsl
-import Cqrs.Aggregate.Events.Event
-import Cqrs.Aggregate.Core
-import Cqrs.PersistedStreamEngine.Repository
+import PersistedStreamEngine.Write.WDsl
+import Cqrs.Write.Aggregate.Events.Event
+import Cqrs.Write.Aggregate.Core
+import Cqrs.Write.StreamRepository
 
 import Plugins.EventStore.Write.Persisting
 import Plugins.EventStore.EventStoreStream
 
-import Cqrs.Serialization.Aggregate.Command ()
-import Cqrs.Serialization.Aggregate.AggregateId ()
-import Cqrs.Serialization.Aggregate.Event ()
-import Cqrs.Serialization.Aggregate.ValidationState ()
-import Cqrs.Serialization.Aggregate.CommandResponse ()
+import Cqrs.Write.Serialization.Command ()
+import Cqrs.Write.Serialization.AggregateId ()
+import Cqrs.Write.Serialization.Event ()
+import Cqrs.Write.Serialization.ValidationState ()
+import Cqrs.Write.Serialization.CommandResponse ()
 
 
 

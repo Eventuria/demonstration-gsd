@@ -10,8 +10,8 @@ import Control.Concurrent.Async (wait)
 import Control.Monad.IO.Class (MonadIO(..))
 
 
-import Cqrs.PersistedStreamEngine.Write.Writable
-import Cqrs.PersistedStreamEngine.Write.PersistenceResult
+import PersistedStreamEngine.Write.Writable
+import PersistedStreamEngine.Write.PersistenceResult
 
 import Plugins.EventStore.EventStoreStream
 import Plugins.EventStore.EventStoreSettings

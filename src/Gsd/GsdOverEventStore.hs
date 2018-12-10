@@ -13,11 +13,11 @@ import Streamly.Streamable
 
 import Logger.Core
 
-import Cqrs.PersistedStreamEngine.Repository
-import Cqrs.Aggregate.Ids.AggregateId
-import Cqrs.PersistedStreamEngine.PersistedItem
-import Cqrs.Aggregate.Commands.Command
-import Cqrs.PersistedStreamEngine.Write.PersistenceResult
+import Cqrs.Write.StreamRepository
+import Cqrs.Write.Aggregate.Ids.AggregateId
+import PersistedStreamEngine.PersistedItem
+import Cqrs.Write.Aggregate.Commands.Command
+import PersistedStreamEngine.Write.PersistenceResult
 
 
 import Gsd.Commands

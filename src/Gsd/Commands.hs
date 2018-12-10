@@ -6,9 +6,9 @@ import Data.Aeson
 
 import Gsd.Core
 
-import Cqrs.Aggregate.Commands.CommandId
-import Cqrs.Aggregate.Commands.Command
-import qualified Cqrs.Aggregate.Commands.Command as CommandModule
+import Cqrs.Write.Aggregate.Commands.CommandId
+import Cqrs.Write.Aggregate.Commands.Command
+import qualified Cqrs.Write.Aggregate.Commands.Command as CommandModule
 
 import qualified Data.Text as Text
 

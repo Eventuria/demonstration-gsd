@@ -10,12 +10,12 @@ import Gsd.Commands
 import Gsd.Events
 import Gsd.CommandPredicates
 
-import Cqrs.CommandHandler
+import Cqrs.Write.CommandHandler
 import Cqrs.EDsl
-import Cqrs.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.Aggregate.Commands.Command
+import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
+import Cqrs.Write.Aggregate.Commands.Command
 
-import Cqrs.PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.PersistedItem
 
 gsdCommandHandler :: CommandHandler
 gsdCommandHandler persistedCommand@PersistedItem {offset = offset , item = command } snapshotMaybe

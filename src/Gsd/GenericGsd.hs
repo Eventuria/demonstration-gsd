@@ -16,20 +16,20 @@ import Streamly.Streamable
 
 import Logger.Core
 
-import qualified Cqrs.CommandConsumerFlow as CommandConsumerFlow
+import qualified Cqrs.Write.CommandConsumerFlow as CommandConsumerFlow
 import qualified Cqrs.Cqrs as Cqrs
-import Cqrs.PersistedStreamEngine.Repository
-import Cqrs.PersistedStreamEngine.PersistedItem
-import Cqrs.Aggregate.Commands.Command
-import Cqrs.PersistedStreamEngine.Write.Interface
-import Cqrs.PersistedStreamEngine.Read.Interface
-import Cqrs.PersistedStreamEngine.Write.WDsl
+import Cqrs.Write.StreamRepository
+import PersistedStreamEngine.PersistedItem
+import Cqrs.Write.Aggregate.Commands.Command
+import PersistedStreamEngine.Write.Interface
+import PersistedStreamEngine.Read.Interface
+import PersistedStreamEngine.Write.WDsl
 
 import Gsd.CommandHandler
 import Gsd.Commands
 import Gsd.Core
 
-import Cqrs.PersistedStreamEngine.Write.PersistenceResult
+import PersistedStreamEngine.Write.PersistenceResult
 
 requestCommand ::  CqrsStreamRepository persistedStream -> Querying persistedStream -> Writing persistedStream -> GsdCommand -> IO PersistenceResult
 requestCommand cqrsStreamRepository querying writing gsdCommand =

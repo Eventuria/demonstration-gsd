@@ -11,7 +11,7 @@ import Logger.Core
 import Control.Exception
 import Plugins.EventStore.EventStoreStream
 import Plugins.EventStore.EventStoreSettings
-import Cqrs.PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.PersistedItem
 import Data.Maybe
 import Data.Aeson
 import Streamly.Streamable
