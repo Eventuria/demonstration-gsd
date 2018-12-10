@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
-module Cqrs.Write.CommandHandler  where
+module Cqrs.Write.CommandConsumption.CommandHandler  where
 
 import PersistedStreamEngine.PersistedItem
 import Cqrs.Write.Aggregate.Commands.Command

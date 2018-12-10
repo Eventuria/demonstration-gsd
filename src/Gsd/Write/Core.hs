@@ -1,4 +1,4 @@
-module Gsd.Core where
+module Gsd.Write.Core where
 
 import Data.UUID
 

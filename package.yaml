@@ -58,21 +58,31 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  gsd-api:
-    main:                Api.hs
+  gsd-monitoring-api:
+    main:                GsdMonitoringApi.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Api
+    - -main-is GsdMonitoringApi
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  command-consumers:
-    main:                CommandConsumerRunner.hs
+  gsd-write-api:
+    main:                WriteApi.hs
     source-dirs:         app
     ghc-options:
-    - -main-is CommandConsumerRunner
+    - -main-is WriteApi
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - gsdFlow
+  gsd-write-command-consumption-streamer:
+    main:                CommandConsumptionStreamer.hs
+    source-dirs:         app
+    ghc-options:
+    - -main-is CommandConsumptionStreamer
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

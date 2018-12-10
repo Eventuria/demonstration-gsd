@@ -1,4 +1,4 @@
-module Gsd.CommandPredicates where
+module Gsd.Write.CommandPredicates where
 
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import PersistedStreamEngine.Offset

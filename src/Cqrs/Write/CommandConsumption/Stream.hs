@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Cqrs.Write.CommandConsumerFlow  where
+module Cqrs.Write.CommandConsumption.Stream  where
 
 import Streamly
 import qualified Streamly.Prelude as S
@@ -17,7 +17,7 @@ import Streamly.Streamable
 import Logger.Core
 
 import Cqrs.Write.Aggregate.Commands.Command
-import Cqrs.Write.CommandHandler
+import Cqrs.Write.CommandConsumption.CommandHandler
 import PersistedStreamEngine.Write.CqrsEDslToWDslTranslation
 import Cqrs.EDsl
 import PersistedStreamEngine.Write.WDsl
@@ -32,13 +32,13 @@ import Cqrs.Write.Serialization.Command ()
 import Cqrs.Write.Serialization.ValidationState ()
 
 
-runCommandConsumers :: Logger -> CqrsStreamRepository persistedStream -> Reading persistedStream -> CommandHandler -> InterpreterWritePersistedStreamLanguage persistedStream () -> IO ()
-runCommandConsumers logger
-                    streamRepository @ CqrsStreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream }
-                    Reading { streaming = Streaming {streamAllInfinitely, streamFromOffset},
-                              querying = querying @ Querying {retrieveLast},
-                              subscribing }
-                    commandHandler interpreterWritePersistedStreamLanguage = do
+stream :: Logger -> CqrsStreamRepository persistedStream -> Reading persistedStream -> CommandHandler -> InterpreterWritePersistedStreamLanguage persistedStream () -> IO ()
+stream logger
+       streamRepository @ CqrsStreamRepository { aggregateIdStream, getCommandStream, getValidationStateStream }
+       Reading { streaming = Streaming {streamAllInfinitely, streamFromOffset},
+                 querying = querying @ Querying {retrieveLast},
+                 subscribing }
+       commandHandler interpreterWritePersistedStreamLanguage = do
   logInfo logger "runnning command consummers"
   runStream
     $ parallely

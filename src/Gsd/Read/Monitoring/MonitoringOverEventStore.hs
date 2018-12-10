@@ -1,0 +1,34 @@
+{-# LANGUAGE FlexibleContexts #-}
+module Gsd.Read.Monitoring.MonitoringOverEventStore (
+                streamCommands,
+                streamWorkspaceIds) where
+
+import Streamly.Streamable
+
+import PersistedStreamEngine.PersistedItem
+import Cqrs.Write.Aggregate.Commands.Command
+
+import Gsd.Write.Commands
+import Gsd.Write.Core
+import Gsd.Write.EventStoreStreamRepository
+
+import qualified Gsd.Read.Monitoring.GenericMonitoring  as GenericGSDMonitoring
+
+import Plugins.EventStore.EventStoreSettings
+import Plugins.EventStore.Read.CqrsInstance
+
+streamWorkspaceIds :: Streamable stream monad WorkspaceId => EventStoreSettings -> stream monad (Persisted WorkspaceId)
+streamWorkspaceIds settings =
+    GenericGSDMonitoring.streamWorkspaceIds
+      (getEventStoreStreamRepository settings)
+      getEventStoreStreaming
+
+
+streamCommands ::  Streamable stream monad Command => EventStoreSettings -> WorkspaceId -> stream monad (Persisted GsdCommand)
+streamCommands settings workspaceId =
+    GenericGSDMonitoring.streamCommands
+      (getEventStoreStreamRepository settings)
+      getEventStoreStreaming
+      workspaceId
+
+

@@ -1,5 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module Cqrs.Cqrs where
+module Cqrs.Write.CqrsWrite where
 
 import Cqrs.Write.StreamRepository
 import Cqrs.Write.Aggregate.Commands.Command
@@ -13,8 +13,8 @@ import Cqrs.Write.Serialization.AggregateId ()
 
 import PersistedStreamEngine.Write.PersistenceResult
 
-persistCommands :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO PersistenceResult
-persistCommands Writing {persist} Querying {isStreamNotFound} getCommandStream  aggregateIdStream  command = do
+persistCommand :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO PersistenceResult
+persistCommand Writing {persist} Querying {isStreamNotFound} getCommandStream  aggregateIdStream  command = do
  let commandStream = getCommandStream $ getAggregateId command
  isStreamNotExist <- isStreamNotFound commandStream
  if(isStreamNotExist) then do

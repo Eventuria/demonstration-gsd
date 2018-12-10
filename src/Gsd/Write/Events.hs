@@ -1,8 +1,8 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-module Gsd.Events where
+module Gsd.Write.Events where
 
 
-import Gsd.Core
+import Gsd.Write.Core
 import Cqrs.Write.Aggregate.Events.Event
 import Cqrs.Write.Aggregate.Events.EventId
 import qualified Cqrs.Write.Aggregate.Events.Event as CoreEvent

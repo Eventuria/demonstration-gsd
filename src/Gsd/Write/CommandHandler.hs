@@ -1,16 +1,16 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 
-module Gsd.CommandHandler where
+module Gsd.Write.CommandHandler where
 
 import Data.Set (fromList)
 import Data.Maybe
 import Data.Function ((&))
 
-import Gsd.Commands
-import Gsd.Events
-import Gsd.CommandPredicates
+import Gsd.Write.Commands
+import Gsd.Write.Events
+import Gsd.Write.CommandPredicates
 
-import Cqrs.Write.CommandHandler
+import Cqrs.Write.CommandConsumption.CommandHandler
 import Cqrs.EDsl
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Aggregate.Commands.Command

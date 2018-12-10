@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Api where
+module GsdMonitoringApi where
 
 import Settings
 
@@ -16,15 +16,17 @@ import Data.UUID
 import Streamly.Prelude
 import Control.Monad.IO.Class (MonadIO(..))
 import Plugins.EventStore.EventStoreSettings
-import qualified Gsd.GsdOverEventStore as Gsd
+import qualified Gsd.Read.Monitoring.MonitoringOverEventStore as GsdMonitoring
 
 import Cqrs.Write.Serialization.PersistenceResult ()
+import Cqrs.Write.Serialization.Command ()
+import Gsd.Write.Commands ()
 
 main :: IO ()
 main = do
-  let logger = Logger { loggerId = "[gsd.api]" , executableName = "api" }
+  let logger = Logger { loggerId = "[gsd.monitoring.api]" , executableName = "monitoring.api" }
   initLogger logger
-  logInfo logger "[api] - Starting"
+  logInfo logger "[monitoring.api] - Starting"
 
   bracket (EventStore.connect getEventStoreSettings getConnectionType)
          (\connection -> do EventStore.shutdown connection
@@ -33,22 +35,16 @@ main = do
 
 
 routing :: Logger -> EventStoreSettings  -> IO()
-routing logger eventStoreSettings = scotty 3000 $ do
-  get  "/health/liveness" $ do html "OK"
+routing logger eventStoreSettings = scotty getGsdMonitoringApiPort $ do
   get  "/readWorkspaceIds" $ do
-    workspaceIds <- (liftIO $ foldr (:) [] $ Gsd.streamWorkspaceIds eventStoreSettings )
+    workspaceIds <- (liftIO $ foldr (:) [] $ GsdMonitoring.streamWorkspaceIds eventStoreSettings )
     liftIO $ logInfo logger $ "[api] - result > " ++ show workspaceIds
     json workspaceIds
   get  "/readCommands/:workspaceIdGiven" $ do
     workspaceIdString <- param "workspaceIdGiven"
     let workspaceIdOpt = fromString workspaceIdString
     case workspaceIdOpt of
-                   Just (workspaceId) -> (liftIO $ foldr (:) []  $ Gsd.streamCommands eventStoreSettings workspaceId) >>= json
+                   Just (workspaceId) -> (liftIO $ foldr (:) []  $ GsdMonitoring.streamCommands eventStoreSettings workspaceId) >>= json
                    Nothing -> html "you've passed an invalid workspace id format"
-  post "/requestCommand/" $ do
-     liftIO $ logInfo logger "post /requestCommand/"
-     command <- jsonData
-     commands <- (liftIO $ Gsd.requestCommand eventStoreSettings command )
-     json commands
 
 

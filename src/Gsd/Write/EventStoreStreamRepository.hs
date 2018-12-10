@@ -1,69 +1,14 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
-module Gsd.GsdOverEventStore (requestCommand,
-                streamCommands,
-                streamWorkspaceIds,
-                runCommandConsumers) where
+module Gsd.Write.EventStoreStreamRepository (getEventStoreStreamRepository) where
 
 import qualified Data.Text as Text
 import Database.EventStore hiding (Command)
 import Data.UUID
 
-import Streamly.Streamable
-
-import Logger.Core
-
-import Cqrs.Write.StreamRepository
-import Cqrs.Write.Aggregate.Ids.AggregateId
-import PersistedStreamEngine.PersistedItem
-import Cqrs.Write.Aggregate.Commands.Command
-import PersistedStreamEngine.Write.PersistenceResult
-
-
-import Gsd.Commands
-import Gsd.Core
-
-import qualified Gsd.GenericGsd as GenericGsd
-
 import Plugins.EventStore.EventStoreSettings
 import Plugins.EventStore.EventStoreStream
-import Plugins.EventStore.CqrsEDSLInterpreter
-
-import Plugins.EventStore.Read.CqrsInstance
-import Plugins.EventStore.Write.CqrsInstance
-
-
-requestCommand ::  EventStoreSettings -> GsdCommand -> IO PersistenceResult
-requestCommand settings gsdCommand =
-  GenericGsd.requestCommand
-    (getEventStoreStreamRepository settings)
-    getEventStoreQuerying
-    getEventStoreWriting
-    gsdCommand
-
-runCommandConsumers :: EventStoreSettings -> Logger ->  IO ()
-runCommandConsumers settings logger  =
-   GenericGsd.runCommandConsumers
-      (getEventStoreStreamRepository settings)
-      getEventStoreReading
-      interpretWriteEventStoreLanguage
-      logger
-
-
-streamWorkspaceIds :: Streamable stream monad WorkspaceId => EventStoreSettings -> stream monad (Persisted WorkspaceId)
-streamWorkspaceIds settings =
-    GenericGsd.streamWorkspaceIds
-      (getEventStoreStreamRepository settings)
-      getEventStoreStreaming
-
-
-streamCommands ::  Streamable stream monad Command => EventStoreSettings -> WorkspaceId -> stream monad (Persisted GsdCommand)
-streamCommands settings workspaceId =
-    GenericGsd.streamCommands
-      (getEventStoreStreamRepository settings)
-      getEventStoreStreaming
-      workspaceId
-
+import Cqrs.Write.StreamRepository
+import Cqrs.Write.Aggregate.Ids.AggregateId
 
 getEventStoreStreamRepository :: EventStoreSettings -> CqrsStreamRepository EventStoreStream
 getEventStoreStreamRepository settings = CqrsStreamRepository  {

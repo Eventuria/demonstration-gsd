@@ -1,10 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings     #-}
-module Gsd.Commands where
+module Gsd.Write.Commands where
 
 import Data.Aeson
 
-import Gsd.Core
+import Gsd.Write.Core
 
 import Cqrs.Write.Aggregate.Commands.CommandId
 import Cqrs.Write.Aggregate.Commands.Command
