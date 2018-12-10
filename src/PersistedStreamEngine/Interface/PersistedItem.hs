@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module PersistedStreamEngine.PersistedItem where
+module PersistedStreamEngine.Interface.PersistedItem where
 
 import Data.Aeson
-import PersistedStreamEngine.Offset
+import PersistedStreamEngine.Interface.Offset
 
 data Persisted item = PersistedItem {
                                 offset :: Offset ,

@@ -15,7 +15,7 @@ import Cqrs.EDsl
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Aggregate.Commands.Command
 
-import PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.Interface.PersistedItem
 
 gsdCommandHandler :: CommandHandler
 gsdCommandHandler persistedCommand@PersistedItem {offset = offset , item = command } snapshotMaybe

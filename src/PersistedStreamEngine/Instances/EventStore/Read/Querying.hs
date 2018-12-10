@@ -1,16 +1,16 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Plugins.EventStore.Read.Querying where
+module PersistedStreamEngine.Instances.EventStore.Read.Querying where
 
 import Data.Maybe
-import Plugins.EventStore.EventStoreStream
+import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
-import PersistedStreamEngine.PersistedItem
-import Plugins.EventStore.EventStoreSettings
+import PersistedStreamEngine.Interface.PersistedItem
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import Data.Aeson
-import PersistedStreamEngine.Offset
+import PersistedStreamEngine.Interface.Offset
 
 isStreamNotFound :: EventStoreStream item -> IO Bool
 isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },

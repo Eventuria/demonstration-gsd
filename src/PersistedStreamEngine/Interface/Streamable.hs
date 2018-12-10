@@ -1,9 +1,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Streamly.Streamable where
+module PersistedStreamEngine.Interface.Streamable where
 
-import PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.Interface.PersistedItem
 import Control.Monad.IO.Class
 import Streamly
 import Data.Aeson

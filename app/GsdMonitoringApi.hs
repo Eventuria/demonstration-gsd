@@ -15,7 +15,7 @@ import Data.UUID
 
 import Streamly.Prelude
 import Control.Monad.IO.Class (MonadIO(..))
-import Plugins.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Read.Monitoring.MonitoringOverEventStore as GsdMonitoring
 
 import Cqrs.Write.Serialization.PersistenceResult ()

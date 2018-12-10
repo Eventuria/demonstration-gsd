@@ -5,7 +5,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Plugins.EventStore.Read.Streaming where
+module PersistedStreamEngine.Instances.EventStore.Read.Streaming where
 
 import Streamly
 import qualified Streamly.Prelude as S
@@ -13,15 +13,15 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Concurrent.Async (wait)
 
 import qualified Database.EventStore as EventStore
-import qualified Plugins.EventStore.Read.Subscribing as EventStore.Subscribing
-import PersistedStreamEngine.PersistedItem
-import PersistedStreamEngine.Offset
+import qualified PersistedStreamEngine.Instances.EventStore.Read.Subscribing as EventStore.Subscribing
+import PersistedStreamEngine.Interface.PersistedItem
+import PersistedStreamEngine.Interface.Offset
 import Logger.Core
-import Plugins.EventStore.EventStoreStream
-import Plugins.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreStream
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import Data.Aeson
 import Data.Maybe
-import Streamly.Streamable
+import PersistedStreamEngine.Interface.Streamable
 
 
 

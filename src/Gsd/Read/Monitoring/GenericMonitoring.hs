@@ -11,12 +11,12 @@ import Data.Maybe
 import Data.Function ((&))
 import qualified Streamly.Prelude as S
 
-import Streamly.Streamable
+import PersistedStreamEngine.Interface.Streamable
 import Cqrs.Write.StreamRepository
-import PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.Interface.PersistedItem
 import Cqrs.Write.Aggregate.Commands.Command
 
-import PersistedStreamEngine.Read.Interface
+import PersistedStreamEngine.Interface.Read.Reading
 
 import Gsd.Write.Commands
 import Gsd.Write.Core

@@ -12,21 +12,21 @@ import Data.Function ((&))
 import Control.Concurrent
 import Data.Maybe
 
-import Streamly.Streamable
+import PersistedStreamEngine.Interface.Streamable
 
 import Logger.Core
 
 import Cqrs.Write.Aggregate.Commands.Command
 import Cqrs.Write.CommandConsumption.CommandHandler
-import PersistedStreamEngine.Write.CqrsEDslToWDslTranslation
+import PersistedStreamEngine.Interface.Write.CqrsEDslToWDslTranslation
 import Cqrs.EDsl
-import PersistedStreamEngine.Write.WDsl
+import PersistedStreamEngine.Interface.Write.WDsl
 import Cqrs.Write.StreamRepository
-import PersistedStreamEngine.Offset
+import PersistedStreamEngine.Interface.Offset
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Aggregate.Ids.AggregateId
-import PersistedStreamEngine.Read.Interface
-import PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.Interface.Read.Reading
+import PersistedStreamEngine.Interface.PersistedItem
 
 import Cqrs.Write.Serialization.Command ()
 import Cqrs.Write.Serialization.ValidationState ()

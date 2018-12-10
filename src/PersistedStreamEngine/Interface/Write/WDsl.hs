@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module PersistedStreamEngine.Write.WDsl where
+module PersistedStreamEngine.Interface.Write.WDsl where
 
 import Cqrs.Write.Aggregate.Commands.CommandId
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse

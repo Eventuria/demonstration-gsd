@@ -9,15 +9,15 @@ import qualified Cqrs.Write.CommandConsumption.Stream as Cqrs.Write.CommandConsu
 import qualified Cqrs.Write.CqrsWrite as Cqrs.Write
 import Cqrs.Write.StreamRepository
 
-import PersistedStreamEngine.Write.Interface
-import PersistedStreamEngine.Read.Interface
-import PersistedStreamEngine.Write.WDsl
+import PersistedStreamEngine.Interface.Write.Writing
+import PersistedStreamEngine.Interface.Read.Reading
+import PersistedStreamEngine.Interface.Write.WDsl
 
 import Gsd.Write.CommandHandler
 import Gsd.Write.Commands
 
 
-import PersistedStreamEngine.Write.PersistenceResult
+import PersistedStreamEngine.Interface.Write.PersistenceResult
 
 persistCommand ::  CqrsStreamRepository persistedStream -> Querying persistedStream -> Writing persistedStream -> GsdCommand -> IO PersistenceResult
 persistCommand cqrsStreamRepository querying writing gsdCommand =

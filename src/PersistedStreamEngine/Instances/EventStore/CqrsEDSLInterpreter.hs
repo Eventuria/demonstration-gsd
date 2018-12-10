@@ -1,4 +1,4 @@
-module Plugins.EventStore.CqrsEDSLInterpreter where
+module PersistedStreamEngine.Instances.EventStore.CqrsEDSLInterpreter where
 
 import Control.Monad.Free
 import qualified Data.Time as Time
@@ -7,13 +7,13 @@ import Control.Monad.IO.Class (MonadIO(..))
 
 import Logger.Core
 
-import PersistedStreamEngine.Write.WDsl
+import PersistedStreamEngine.Interface.Write.WDsl
 import Cqrs.Write.Aggregate.Events.Event
 import Cqrs.Write.Aggregate.Core
 import Cqrs.Write.StreamRepository
 
-import Plugins.EventStore.Write.Persisting
-import Plugins.EventStore.EventStoreStream
+import PersistedStreamEngine.Instances.EventStore.Write.Persisting
+import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 
 import Cqrs.Write.Serialization.Command ()
 import Cqrs.Write.Serialization.AggregateId ()

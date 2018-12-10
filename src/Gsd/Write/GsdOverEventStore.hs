@@ -2,7 +2,7 @@ module Gsd.Write.GsdOverEventStore (persistCommand,streamCommandConsumption) whe
 
 import Logger.Core
 
-import PersistedStreamEngine.Write.PersistenceResult
+import PersistedStreamEngine.Interface.Write.PersistenceResult
 
 
 import Gsd.Write.Commands
@@ -10,11 +10,11 @@ import Gsd.Write.Commands
 import Gsd.Write.EventStoreStreamRepository
 import qualified Gsd.Write.GenericGsd as GenericGsd
 
-import Plugins.EventStore.EventStoreSettings
-import Plugins.EventStore.CqrsEDSLInterpreter
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.CqrsEDSLInterpreter
 
-import Plugins.EventStore.Read.CqrsInstance
-import Plugins.EventStore.Write.CqrsInstance
+import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
+import PersistedStreamEngine.Instances.EventStore.Write.CqrsInstance
 
 
 persistCommand ::  EventStoreSettings -> GsdCommand -> IO PersistenceResult

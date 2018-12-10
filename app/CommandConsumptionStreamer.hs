@@ -5,7 +5,7 @@ import qualified Database.EventStore as GYEventStore
 import Control.Exception
 import Settings
 
-import Plugins.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Write.GsdOverEventStore as Gsd.Write
 
 main :: IO ()

@@ -5,7 +5,7 @@ import Data.Aeson
 import qualified Data.Text as Text
 
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import PersistedStreamEngine.Write.Writable
+import PersistedStreamEngine.Interface.Write.Writable
 
 commandResponseNameForCommandSuccessfullyProcessed :: String
 commandResponseNameForCommandSuccessfullyProcessed = "commandSuccessfullyProcessed"

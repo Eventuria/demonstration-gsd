@@ -5,8 +5,8 @@ import qualified Data.Text as Text
 import Database.EventStore hiding (Command)
 import Data.UUID
 
-import Plugins.EventStore.EventStoreSettings
-import Plugins.EventStore.EventStoreStream
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 import Cqrs.Write.StreamRepository
 import Cqrs.Write.Aggregate.Ids.AggregateId
 

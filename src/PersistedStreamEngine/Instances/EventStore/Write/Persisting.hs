@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Plugins.EventStore.Write.Persisting where
+module PersistedStreamEngine.Instances.EventStore.Write.Persisting where
 
 import qualified Database.EventStore as EventStore
 import qualified Data.Text as Text
@@ -10,11 +10,11 @@ import Control.Concurrent.Async (wait)
 import Control.Monad.IO.Class (MonadIO(..))
 
 
-import PersistedStreamEngine.Write.Writable
-import PersistedStreamEngine.Write.PersistenceResult
+import PersistedStreamEngine.Interface.Write.Writable
+import PersistedStreamEngine.Interface.Write.PersistenceResult
 
-import Plugins.EventStore.EventStoreStream
-import Plugins.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreStream
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 
 
 persist :: Writable item =>  EventStoreStream item -> item -> IO PersistenceResult

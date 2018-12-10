@@ -1,4 +1,4 @@
-module Plugins.EventStore.EventStoreSettings where
+module PersistedStreamEngine.Instances.EventStore.EventStoreSettings where
 
 import Logger.Core
 import qualified Database.EventStore as EventStore

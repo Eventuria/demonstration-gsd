@@ -13,7 +13,7 @@ import qualified Database.EventStore as EventStore
 import Control.Exception
 
 import Control.Monad.IO.Class (MonadIO(..))
-import Plugins.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Write.GsdOverEventStore as Gsd.Write
 
 import Cqrs.Write.Serialization.PersistenceResult ()

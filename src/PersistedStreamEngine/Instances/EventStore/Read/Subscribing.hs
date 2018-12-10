@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
-module Plugins.EventStore.Read.Subscribing where
+module PersistedStreamEngine.Instances.EventStore.Read.Subscribing where
 
 import qualified Streamly.Prelude as S
 import Control.Concurrent
@@ -9,12 +9,12 @@ import qualified Database.EventStore as EventStore
 
 import Logger.Core
 import Control.Exception
-import Plugins.EventStore.EventStoreStream
-import Plugins.EventStore.EventStoreSettings
-import PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.Instances.EventStore.EventStoreStream
+import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
+import PersistedStreamEngine.Interface.PersistedItem
 import Data.Maybe
 import Data.Aeson
-import Streamly.Streamable
+import PersistedStreamEngine.Interface.Streamable
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
 subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },

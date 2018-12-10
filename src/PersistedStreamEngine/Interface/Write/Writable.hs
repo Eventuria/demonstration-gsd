@@ -1,4 +1,4 @@
-module PersistedStreamEngine.Write.Writable where
+module PersistedStreamEngine.Interface.Write.Writable where
 
 import Data.Aeson
 

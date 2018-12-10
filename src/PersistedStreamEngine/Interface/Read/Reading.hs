@@ -1,13 +1,13 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ExistentialQuantification #-}
-module PersistedStreamEngine.Read.Interface where
+module PersistedStreamEngine.Interface.Read.Reading where
 
 import Data.Aeson
 
-import Streamly.Streamable
+import PersistedStreamEngine.Interface.Streamable
 
-import PersistedStreamEngine.Offset
-import PersistedStreamEngine.PersistedItem
+import PersistedStreamEngine.Interface.Offset
+import PersistedStreamEngine.Interface.PersistedItem
 
 data Reading persistedStream = Reading {
     streaming :: Streaming persistedStream,

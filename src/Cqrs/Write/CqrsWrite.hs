@@ -5,13 +5,13 @@ import Cqrs.Write.StreamRepository
 import Cqrs.Write.Aggregate.Commands.Command
 
 import Cqrs.Write.Aggregate.Core
-import PersistedStreamEngine.Read.Interface
-import PersistedStreamEngine.Write.Interface
+import PersistedStreamEngine.Interface.Read.Reading
+import PersistedStreamEngine.Interface.Write.Writing
 
 import Cqrs.Write.Serialization.Command ()
 import Cqrs.Write.Serialization.AggregateId ()
 
-import PersistedStreamEngine.Write.PersistenceResult
+import PersistedStreamEngine.Interface.Write.PersistenceResult
 
 persistCommand :: Writing persistedStream -> Querying persistedStream -> GetCommandStream persistedStream -> AggregateIdStream persistedStream -> Command -> IO PersistenceResult
 persistCommand Writing {persist} Querying {isStreamNotFound} getCommandStream  aggregateIdStream  command = do

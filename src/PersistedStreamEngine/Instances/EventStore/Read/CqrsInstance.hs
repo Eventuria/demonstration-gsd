@@ -1,12 +1,12 @@
-module Plugins.EventStore.Read.CqrsInstance where
+module PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance where
 
-import PersistedStreamEngine.Read.Interface
+import PersistedStreamEngine.Interface.Read.Reading
 
-import qualified Plugins.EventStore.Read.Streaming as EventStoreStreaming
-import qualified Plugins.EventStore.Read.Querying as EventStoreQuerying
-import qualified Plugins.EventStore.Read.Subscribing as EventStoreSubscribing
+import qualified PersistedStreamEngine.Instances.EventStore.Read.Streaming as EventStoreStreaming
+import qualified PersistedStreamEngine.Instances.EventStore.Read.Querying as EventStoreQuerying
+import qualified PersistedStreamEngine.Instances.EventStore.Read.Subscribing as EventStoreSubscribing
 
-import Plugins.EventStore.EventStoreStream
+import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 
 getEventStoreStreaming :: Streaming EventStoreStream
 getEventStoreStreaming = Streaming {
