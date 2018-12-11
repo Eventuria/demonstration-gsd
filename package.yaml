@@ -48,41 +48,31 @@ ghc-options:
 
 
 executables:
-  gsd-sandbox:
-    main:                Sandbox.hs
-    source-dirs:         app
-    ghc-options:
-    - -main-is Sandbox
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - gsdFlow
   gsd-monitoring-api:
-    main:                GsdMonitoringApi.hs
+    main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is GsdMonitoringApi
+    - -main-is Executables.gsdMonitoringApi
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
   gsd-write-api:
-    main:                WriteApi.hs
+    main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is WriteApi
+    - -main-is Executables.gsdWriteApi
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
   gsd-write-command-consumption-streamer:
-    main:                CommandConsumptionStreamer.hs
+    main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is CommandConsumptionStreamer
+    - -main-is Executables.gsdCommandConsumptionStreamer
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

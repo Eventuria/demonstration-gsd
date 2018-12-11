@@ -1,9 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module GsdMonitoringApi where
-
-import Settings
+module Gsd.Read.Monitoring.Api where
 
 import Web.Scotty
 import Prelude hiding (foldr)
@@ -22,20 +20,22 @@ import Cqrs.Write.Serialization.PersistenceResult ()
 import Cqrs.Write.Serialization.Command ()
 import Gsd.Write.Commands ()
 
-main :: IO ()
-main = do
+type ApiPort = Int
+
+execute :: ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
+execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
   let logger = Logger { loggerId = "[gsd.monitoring.api]" , executableName = "monitoring.api" }
   initLogger logger
   logInfo logger "[monitoring.api] - Starting"
 
-  bracket (EventStore.connect getEventStoreSettings getConnectionType)
+  bracket (EventStore.connect eventStoreSettings eventStoreConnectionType)
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
-         (\connection -> routing logger $ EventStoreSettings {logger = logger, credentials = getCredentials, connection = connection})
+         (\connection -> routing logger apiPort $ EventStoreSettings {logger, credentials, connection})
 
 
-routing :: Logger -> EventStoreSettings  -> IO()
-routing logger eventStoreSettings = scotty getGsdMonitoringApiPort $ do
+routing :: Logger -> ApiPort -> EventStoreSettings  -> IO()
+routing logger apiPort eventStoreSettings = scotty apiPort $ do
   get  "/readWorkspaceIds" $ do
     workspaceIds <- (liftIO $ foldr (:) [] $ GsdMonitoring.streamWorkspaceIds eventStoreSettings )
     liftIO $ logInfo logger $ "[api] - result > " ++ show workspaceIds
