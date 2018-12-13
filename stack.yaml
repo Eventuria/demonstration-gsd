@@ -18,7 +18,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-12.19
+resolver: lts-12.22
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -38,6 +38,19 @@ packages:
 extra-deps :
   - git: git@github.com:composewell/streamly.git
     commit: d9188336a366adc430b0ea6fba29b3868100687b
+
+  - git: git@github.com:haskell-servant/servant.git
+    commit: e3e5d2b23057c2c3409e5e210b613527baf3b77d
+    subdirs:
+      - servant
+      - servant-server
+      - servant-client
+
+  - QuickCheck-2.12.6.1
+  - aeson-1.4.2.0
+  - http-api-data-0.4
+  - network-2.8.0.0
+  - tagged-0.8.6
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.
