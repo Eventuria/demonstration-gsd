@@ -1,7 +1,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Gsd.Read.Monitoring.MonitoringOverEventStore (
                 streamCommands,
-                streamWorkspaceIds) where
+                streamWorkspaceIds,
+                streamInfinitelyCommands) where
 
 import PersistedStreamEngine.Interface.Streamable
 
@@ -31,4 +32,9 @@ streamCommands settings workspaceId =
       getEventStoreStreaming
       workspaceId
 
-
+streamInfinitelyCommands ::  Streamable stream monad Command => EventStoreSettings -> WorkspaceId -> stream monad (Persisted GsdCommand)
+streamInfinitelyCommands settings workspaceId =
+    GenericGSDMonitoring.streamInfinitelyCommands
+      (getEventStoreStreamRepository settings)
+      getEventStoreStreaming
+      workspaceId

@@ -42,10 +42,15 @@ type ApiPort = Int
 
 type GSDMonitoringStreamingApi =   StreamWorkspaceIdsCreated
                              :<|>  StreamGsdCommandsByWorkspaceId
+                             :<|>  StreamInfinitelyGsdCommandsByWorkspaceId
 
 type StreamWorkspaceIdsCreated =      "gsd" :> "monitoring" :> "stream" :> "workspaceIds" :> StreamGet NewlineFraming JSON (P.Producer (Persisted WorkspaceId) IO () )
-type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "commands" :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
-
+type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
+                                                            :> "commands"
+                                                            :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
+type StreamInfinitelyGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
+                                                                      :> "infinitely"
+                                                                      :> "commands" :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
 
 execute :: ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
 execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
@@ -62,11 +67,14 @@ gsdMonitoringStreamingApi :: Proxy GSDMonitoringStreamingApi
 gsdMonitoringStreamingApi = Proxy
 
 gsdMonitoringStreamingServer :: EventStoreSettings  -> Server GSDMonitoringStreamingApi
-gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceIdsCreated :<|> streamCommands
+gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceIdsCreated :<|> streamCommands :<|> streamInfinitelyCommands
   where
         streamWorkspaceIdsCreated :: Handler (P.Producer (Persisted WorkspaceId) IO ())
         streamWorkspaceIdsCreated = return $ toPipes $ GsdMonitoring.streamWorkspaceIds eventStoreSettings
 
         streamCommands :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
         streamCommands workspaceId = return $ toPipes $ GsdMonitoring.streamCommands eventStoreSettings workspaceId
+
+        streamInfinitelyCommands :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
+        streamInfinitelyCommands workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyCommands eventStoreSettings workspaceId
 

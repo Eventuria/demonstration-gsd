@@ -3,7 +3,8 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Gsd.Read.Monitoring.GenericMonitoring (
                 streamCommands,
-                streamWorkspaceIds) where
+                streamWorkspaceIds,
+                streamInfinitelyCommands) where
 
 
 import Data.Maybe
@@ -26,8 +27,14 @@ streamWorkspaceIds cqrsStreamRepository Streaming {streamAll} = streamAll $ aggr
 
 
 streamCommands ::  Streamable stream monad Command => CqrsStreamRepository persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
-streamCommands cqrsStreamRepository Streaming {streamAll} workspaceId = do
+streamCommands cqrsStreamRepository Streaming {streamAll} workspaceId =
   (streamAll $ (getCommandStream cqrsStreamRepository) workspaceId) &
+      S.map (\PersistedItem { offset = offset, item = cqrsCommand} ->
+              PersistedItem { offset = offset, item = fromJust $ fromCommand $ cqrsCommand})
+
+streamInfinitelyCommands ::  Streamable stream monad Command => CqrsStreamRepository persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
+streamInfinitelyCommands cqrsStreamRepository Streaming {streamAllInfinitely} workspaceId =
+  (streamAllInfinitely $ (getCommandStream cqrsStreamRepository) workspaceId) &
       S.map (\PersistedItem { offset = offset, item = cqrsCommand} ->
               PersistedItem { offset = offset, item = fromJust $ fromCommand $ cqrsCommand})
 
