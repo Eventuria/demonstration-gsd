@@ -38,6 +38,8 @@ dependencies:
   - transformers == 0.5.5.0
   - safe == 0.3.17
   - servant-server == 0.15
+  - servant-pipes == 0.15
+  - pipes == 4.3.9
   - wai == 3.2.1.2
   - warp == 3.2.25
 library:
@@ -50,11 +52,21 @@ ghc-options:
 
 
 executables:
-  gsd-monitoring-api:
+  gsd-monitoring-fetching-api:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdMonitoringApi
+    - -main-is Executables.gsdMonitoringFetchingApi
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - gsdFlow
+  gsd-monitoring-streaming-api:
+    main:                Executables.hs
+    source-dirs:         app
+    ghc-options:
+    - -main-is Executables.gsdMonitoringStreamingApi
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

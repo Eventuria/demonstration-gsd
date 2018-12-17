@@ -10,11 +10,16 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
-module Gsd.Read.Monitoring.WebApi (execute) where
+
+module Gsd.Read.Monitoring.WebStreamingApi (execute) where
 
 
 import Servant
 import Network.Wai.Handler.Warp
+
+import Streamly.Adapters
+import Servant.Pipes ()
+import qualified Pipes as P
 
 import Prelude hiding (foldr)
 import Logger.Core
@@ -23,8 +28,6 @@ import qualified Database.EventStore as EventStore
 import Control.Exception hiding (Handler)
 
 
-import Streamly.Prelude
-import Control.Monad.IO.Class (MonadIO(..))
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Read.Monitoring.MonitoringOverEventStore as GsdMonitoring
 
@@ -37,11 +40,12 @@ import Gsd.Write.Commands
 
 type ApiPort = Int
 
-type GSDMonitoringApi =   FetchWorkspaceIdsCreated
-                    :<|>  FetchGsdCommandsByWorkspaceId
+type GSDMonitoringStreamingApi =   StreamWorkspaceIdsCreated
+                             :<|>  StreamGsdCommandsByWorkspaceId
 
-type FetchWorkspaceIdsCreated =      "gsd" :> "monitoring" :> "workspaceIds" :> Get '[JSON] [Persisted WorkspaceId]
-type FetchGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "commands" :> Capture "workspaceId" WorkspaceId :> Get '[JSON] [Persisted GsdCommand]
+type StreamWorkspaceIdsCreated =      "gsd" :> "monitoring" :> "stream" :> "workspaceIds" :> StreamGet NewlineFraming JSON (P.Producer (Persisted WorkspaceId) IO () )
+type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "commands" :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
+
 
 execute :: ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
 execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
@@ -51,23 +55,18 @@ execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
   bracket (EventStore.connect eventStoreSettings eventStoreConnectionType)
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
-         (\connection -> run apiPort $ serve gsdMonitoringApi $ gsdMonitoringServer EventStoreSettings {logger, credentials, connection})
+         (\connection -> run apiPort $ serve gsdMonitoringStreamingApi $ gsdMonitoringStreamingServer EventStoreSettings {logger, credentials, connection})
 
 
+gsdMonitoringStreamingApi :: Proxy GSDMonitoringStreamingApi
+gsdMonitoringStreamingApi = Proxy
 
-gsdMonitoringApi :: Proxy GSDMonitoringApi
-gsdMonitoringApi = Proxy
-
-gsdMonitoringServer :: EventStoreSettings  -> Server GSDMonitoringApi
-gsdMonitoringServer eventStoreSettings = fetchWorkspaceIdsCreated
-                                    :<|> fetchCommands
+gsdMonitoringStreamingServer :: EventStoreSettings  -> Server GSDMonitoringStreamingApi
+gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceIdsCreated :<|> streamCommands
   where
-        fetchWorkspaceIdsCreated :: Handler [Persisted WorkspaceId]
-        fetchWorkspaceIdsCreated = do
-            workspaceIds <- (liftIO $ foldr (:) [] $ GsdMonitoring.streamWorkspaceIds eventStoreSettings )
-            return workspaceIds
+        streamWorkspaceIdsCreated :: Handler (P.Producer (Persisted WorkspaceId) IO ())
+        streamWorkspaceIdsCreated = return $ toPipes $ GsdMonitoring.streamWorkspaceIds eventStoreSettings
 
-        fetchCommands :: WorkspaceId -> Handler [Persisted GsdCommand]
-        fetchCommands workspaceId = do
-            commands <- liftIO $ foldr (:) []  $ GsdMonitoring.streamCommands eventStoreSettings workspaceId
-            return commands
+        streamCommands :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
+        streamCommands workspaceId = return $ toPipes $ GsdMonitoring.streamCommands eventStoreSettings workspaceId
+

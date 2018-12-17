@@ -17,5 +17,8 @@ getEventStoreSettings = EventStore.defaultSettings
 getWriteApiPort :: Int
 getWriteApiPort = 3000
 
-getGsdMonitoringApiPort :: Int
-getGsdMonitoringApiPort = 3001
+getGsdMonitoringFetchingApiPort :: Int
+getGsdMonitoringFetchingApiPort = 3001
+
+getGsdMonitoringStreamingApiPort :: Int
+getGsdMonitoringStreamingApiPort = 3001
