@@ -3,6 +3,7 @@ module Settings where
 
 import qualified Database.EventStore as EventStore
 
+type ApiPort = Int
 
 getCredentials :: EventStore.Credentials
 getCredentials = EventStore.credentials "admin" "changeit"
@@ -14,11 +15,11 @@ getEventStoreSettings :: EventStore.Settings
 getEventStoreSettings = EventStore.defaultSettings
 
 
-getWriteApiPort :: Int
+getWriteApiPort :: ApiPort
 getWriteApiPort = 3000
 
-getGsdMonitoringFetchingApiPort :: Int
-getGsdMonitoringFetchingApiPort = 3001
-
-getGsdMonitoringStreamingApiPort :: Int
+getGsdMonitoringStreamingApiPort :: ApiPort
 getGsdMonitoringStreamingApiPort = 3001
+
+getGsdReadStreamingApiPort :: ApiPort
+getGsdReadStreamingApiPort = 3002

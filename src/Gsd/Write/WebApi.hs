@@ -10,7 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
-module Gsd.Write.WebApi (execute) where
+module Gsd.Write.WebApi (execute,GsdWriteApi) where
 
 import Prelude hiding (foldr)
 import Logger.Core

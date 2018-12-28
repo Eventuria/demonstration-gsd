@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Gsd.Read.Monitoring.GenericMonitoring (
+module Gsd.Monitoring.GenericMonitoring (
                 streamCommands,
                 streamWorkspaceIds,
                 streamInfinitelyCommands) where

@@ -11,7 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Gsd.Read.Monitoring.WebStreamingApi (execute) where
+module Gsd.Monitoring.WebStreamingApi (execute) where
 
 
 import Servant
@@ -29,7 +29,7 @@ import Control.Exception hiding (Handler)
 
 
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
-import qualified Gsd.Read.Monitoring.MonitoringOverEventStore as GsdMonitoring
+import qualified Gsd.Monitoring.MonitoringOverEventStore as GsdMonitoring
 
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Core

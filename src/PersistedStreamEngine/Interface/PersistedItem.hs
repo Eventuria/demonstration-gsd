@@ -12,3 +12,8 @@ instance (ToJSON item) => ToJSON (Persisted item) where
   toJSON (PersistedItem{ offset = offset , item = item} ) = object [
             "offset" .= offset,
             "item" .= item]
+
+instance  (FromJSON item) => FromJSON (Persisted item)  where
+
+    parseJSON (Object jsonObject) = PersistedItem <$> jsonObject .: "offset" <*>  jsonObject .: "item"
+    parseJSON _ =  error $ "Json format not expected"

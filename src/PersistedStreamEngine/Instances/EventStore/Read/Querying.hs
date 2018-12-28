@@ -15,14 +15,14 @@ import PersistedStreamEngine.Interface.Offset
 isStreamNotFound :: EventStoreStream item -> IO Bool
 isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },
                                            streamName = streamName} = do
-   let resolveLinkTos = False
 
-   asyncRead <- EventStore.readStreamEventsForward
+
+   asyncRead <- EventStore.readEventsForward
                     connection
                     streamName
-                    (fromInteger 0)
-                    (fromInteger 1)
-                    resolveLinkTos
+                    EventStore.streamStart
+                    1
+                    EventStore.NoResolveLink
                     (Just credentials)
    commandFetched <- wait asyncRead
    return $ case commandFetched of
@@ -37,8 +37,8 @@ retrieveLast EventStoreStream { settings = EventStoreSettings { logger, credenti
         readResult <- EventStore.readEvent
                     connection
                     streamName
-                    (fromInteger (-1)) -- constant for StreamPositionEnd
-                    resolveLinkTos
+                    EventStore.streamEnd
+                    EventStore.NoResolveLink
                     (Just credentials) >>= wait
         return $ case readResult of
           EventStore.ReadSuccess EventStore.ReadEvent {readEventResolved = readEventResolved , readEventNumber = readEventNumber} -> do

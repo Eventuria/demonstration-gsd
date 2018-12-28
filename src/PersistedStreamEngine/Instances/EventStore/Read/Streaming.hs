@@ -11,6 +11,7 @@ import Streamly
 import qualified Streamly.Prelude as S
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Control.Concurrent.Async (wait)
+import GHC.Natural
 
 import qualified Database.EventStore as EventStore
 import qualified PersistedStreamEngine.Instances.EventStore.Read.Subscribing as EventStore.Subscribing
@@ -49,13 +50,13 @@ streamFromOffset eventStoreStream @ EventStoreStream {
      liftIO $ logInfo logger $ "streaming [" ++ (show fromOffset) ++ "..] > " ++ show streamName
 
      let batchSize = 100
-         resolveLinkTos = False
-     asyncRead <- liftIO $ EventStore.readStreamEventsForward
+
+     asyncRead <- liftIO $ EventStore.readEventsForward
                       connection
                       streamName
-                      (fromInteger fromOffset)
+                      (EventStore.eventNumber $ naturalFromInteger fromOffset)
                       (fromInteger batchSize)
-                      resolveLinkTos
+                      EventStore.NoResolveLink
                       (Just credentials)
      commandFetched <- liftIO $ wait asyncRead
      case commandFetched of

@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Gsd.Read.Monitoring.MonitoringOverEventStore (
+module Gsd.Monitoring.MonitoringOverEventStore (
                 streamCommands,
                 streamWorkspaceIds,
                 streamInfinitelyCommands) where
@@ -13,7 +13,7 @@ import Gsd.Write.Commands
 import Gsd.Write.Core
 import Gsd.Write.EventStoreStreamRepository
 
-import qualified Gsd.Read.Monitoring.GenericMonitoring  as GenericGSDMonitoring
+import qualified Gsd.Monitoring.GenericMonitoring  as GenericGSDMonitoring
 
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance

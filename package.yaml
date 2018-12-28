@@ -26,22 +26,26 @@ dependencies:
   - attoparsec == 0.13.2.2
   - time == 1.8.0.2
   - async == 2.2.1
-  - eventstore == 1.1.6
+  - eventstore == 1.2.0
   - text == 1.2.3.1
-  - containers == 0.5.11.0
+  - containers
   - hslogger == 1.2.12
   - bytestring == 0.10.8.2
   - foundation == 0.0.21
   - streamly == 0.5.2
   - random == 1.1
-  - free == 5.0.2
+  - free == 5.1
   - transformers == 0.5.5.0
   - safe == 0.3.17
   - servant-server == 0.15
+  - servant-client == 0.15
   - servant-pipes == 0.15
+  - servant == 0.15
+  - http-client == 0.5.14
   - pipes == 4.3.9
   - wai == 3.2.1.2
   - warp == 3.2.25
+  - byline == 0.3.2.0
 library:
   source-dirs: src
 ghc-options:
@@ -52,11 +56,11 @@ ghc-options:
 
 
 executables:
-  gsd-monitoring-fetching-api:
+  gsd-read-streaming-api:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdMonitoringFetchingApi
+    - -main-is Executables.gsdReadStreamingApi
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
@@ -67,6 +71,16 @@ executables:
     source-dirs:         app
     ghc-options:
     - -main-is Executables.gsdMonitoringStreamingApi
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - gsdFlow
+  gsd-write-client-cli:
+    main:                Executables.hs
+    source-dirs:         app
+    ghc-options:
+    - -main-is Executables.gsdWriteClientCommandLineInterface
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

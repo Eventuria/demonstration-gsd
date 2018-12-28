@@ -21,7 +21,7 @@ subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { l
                                                streamName = streamName} = do
               liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
 
-              subscription <- liftIO $ EventStore.subscribe connection streamName True Nothing
+              subscription <- liftIO $ EventStore.subscribe connection streamName EventStore.NoResolveLink Nothing
               result <- liftIO $ (try $ EventStore.waitConfirmation subscription )
               case result of
                 Left e @ SomeException {} -> do
@@ -29,11 +29,11 @@ subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { l
                            liftIO $ threadDelay (5 * 1000000) -- 5 seconds
                            subscribe eventStoreStream
                 Right _ -> do
-                           liftIO $ logInfo logger $ "subscription started for stream " ++ show streamName
+                           liftIO $ logInfo logger $ "subscription enabled on stream " ++ show streamName
                            loopNextEvent subscription where
                            loopNextEvent subscription = do
                               resolvedEvent <- liftIO $ EventStore.nextEvent subscription
-                              liftIO $ logInfo logger $ "new aggregate created stream event triggered : " ++ (show resolvedEvent)
+                              liftIO $ logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
                               (S.yield $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)) <> loopNextEvent subscription
 
 recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
