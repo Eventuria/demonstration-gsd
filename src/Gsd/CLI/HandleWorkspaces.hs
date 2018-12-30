@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Gsd.CLI.HandleWorkspaces (handleWorkspaces)where
 
 import Prelude hiding (length)
@@ -23,6 +24,8 @@ import Streamly
 import qualified Streamly.Prelude as Streamly.Prelude
 import qualified Servant.Client.Streaming as S
 import PersistedStreamEngine.Interface.PersistedItem
+import Gsd.Read.Workspace
+import Gsd.CLI.HandleWorkspace (handleWorkspace)
 
 data HandleWorkspaceActions = CreateWorkspaceRequest  Text |
                DisplayWorkspaces Text |
@@ -30,61 +33,86 @@ data HandleWorkspaceActions = CreateWorkspaceRequest  Text |
                ExitScript Text deriving Show
 
 
-displayItem :: HandleWorkspaceActions -> Stylized
-displayItem (CreateWorkspaceRequest name) = fg cyan <> text name
-displayItem (DisplayWorkspaces name) = fg cyan <> text name
-displayItem (SelectAWorkspace name) = fg cyan <> text name
-displayItem (ExitScript name) = fg cyan <> text name
+displayHandleWorkspaceAction :: HandleWorkspaceActions -> Stylized
+displayHandleWorkspaceAction (CreateWorkspaceRequest description) = fg cyan <> text description
+displayHandleWorkspaceAction (DisplayWorkspaces description) = fg cyan <> text description
+displayHandleWorkspaceAction (SelectAWorkspace description) = fg cyan <> text description
+displayHandleWorkspaceAction (ExitScript description) = fg cyan <> text description
 
 
-items :: [HandleWorkspaceActions]
-items = [ CreateWorkspaceRequest "Create a workspace" ,
-          DisplayWorkspaces  "Display workspaces",
-          SelectAWorkspace  "Select a workspace",
-          ExitScript  "Exit from the command client"]
+displayPersistedWorkspace :: Persisted Workspace -> Stylized
+displayPersistedWorkspace PersistedItem {item = Workspace {workspaceId,workspaceName}} =
+  fg cyan <> "Workspace (" <> (text $ toText workspaceId) <> " , " <> text workspaceName <> " )"
+
+
+handleWorkspaceActions :: [HandleWorkspaceActions]
+handleWorkspaceActions =
+  [ CreateWorkspaceRequest "Create a workspace" ,
+    DisplayWorkspaces  "Display workspaces",
+    SelectAWorkspace  "Select a workspace",
+    ExitScript  "Exit from the command client"]
 
 
 handleWorkspaces :: BaseUrl -> BaseUrl -> Byline IO ()
 handleWorkspaces writeApiUrl gsdReadApiUrl = do
-  let menuConfig = banner "Handle your workspaces :" $ menu items displayItem
-      prompt     = "please select one (provide the index) : "
+  let menuConfig = banner "Handle your workspaces :" $ menu handleWorkspaceActions displayHandleWorkspaceAction
+      prompt     = "please choose an action (provide the index) : "
       onError    = "please enter a valid index..."
 
   answer <- askWithMenuRepeatedly menuConfig prompt onError
   case answer of
-    Match (CreateWorkspaceRequest name) -> do
+    Match (CreateWorkspaceRequest description) -> do
         workspaceId <- liftIO $ nextRandom
         commandId <- liftIO $ nextRandom
         sayLn $ fg green <> "generating a new Workspace Id (" <> text (toText workspaceId) <> ") "
         sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
-        workspaceName <- askUntil "Enter a workspace name : " Nothing atLeastThreeChars
+        workspaceName <- askUntil "Enter a workspace description : " Nothing atLeastThreeChars
         manager <- liftIO $ newManager defaultManagerSettings
         queryResult <- liftIO $ runClientM (sendCommand CreateWorkspace {commandId , workspaceId , workspaceName}) (mkClientEnv manager writeApiUrl)
         case queryResult of
           Left err -> do
-            sayLn $ fg red <> "Error: " <>  text (pack $ show err)
+            sayLn $ fg red <> "Error: " <>  (text . pack . show) err
             sayLn $ ""
             handleWorkspaces writeApiUrl gsdReadApiUrl
           Right persistenceResult -> do
-            sayLn $ fg green <> "Workpace "<> text (toText workspaceId) <> " successfully created !"
+            sayLn $ fg green <> "Workpace "<> (text . toText) workspaceId <> " successfully created !"
             sayLn $ ""
             handleWorkspaces writeApiUrl gsdReadApiUrl
-    Match (DisplayWorkspaces name) -> do
+    Match (DisplayWorkspaces description) -> do
       sayLn $ fg green <> "Listing all workspaces created : "
       manager <- liftIO $ newManager defaultManagerSettings
       liftIO $ S.withClientM streamWorkspaces (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
           Left err -> void $ runByline $ do
-            sayLn $ fg red <> "Error: " <>  text (pack $ show err)
+            sayLn $ fg red <> "Error: " <>  (text . pack . show) err
             sayLn $ ""
             handleWorkspaces writeApiUrl gsdReadApiUrl
           Right stream -> do
               runStream $ stream
                   & Streamly.Prelude.mapM (\PersistedItem { offset = offset, item = workspace} -> void $ runByline $ do
-                    sayLn $ fg green <> text (pack $ show workspace))
+                    sayLn $ fg green <> (text . pack . show) workspace)
               void $ runByline $ handleWorkspaces writeApiUrl gsdReadApiUrl
 
-    Match (SelectAWorkspace name) -> sayLn $ "you've picked: " <> fg blue <>  text name <> fg blue
-    Match (ExitScript name) -> do
+    Match (SelectAWorkspace description) -> do
+       manager <- liftIO $ newManager defaultManagerSettings
+       liftIO $ S.withClientM streamWorkspaces (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
+                 Left err -> void $ runByline $ do
+                   sayLn $ fg red <> "Error: " <>  (text . pack . show) err
+                   sayLn $ ""
+                   handleWorkspaces writeApiUrl gsdReadApiUrl
+                 Right stream -> void $ runByline $ do
+                   workspaces <- liftIO $ stream & Streamly.Prelude.toList
+                   let menuConfig = banner "Available workspaces :" $ menu workspaces displayPersistedWorkspace
+                       prompt     = "please choose an action (provide the index) : "
+                       onError    = "please enter a valid index..."
+                   workspaceSelectedMatch <- askWithMenuRepeatedly menuConfig prompt onError
+                   case workspaceSelectedMatch of
+                    Match PersistedItem {item = workspaceSelected} -> do
+                      sayLn $ fg green <> (text . pack . show) workspaceSelected <> " selected !"
+                      sayLn $ ""
+                      handleWorkspace writeApiUrl gsdReadApiUrl workspaceSelected handleWorkspaces
+                    NoItems -> sayLn $ "unexpected answer"
+                    Other x -> sayLn $ "unexpected answer"
+    Match (ExitScript description) -> do
       sayLn $ fg green <> "See you soon !! "
       liftIO $ exitSuccess
     NoItems -> sayLn $ "unexpected answer"
@@ -95,3 +123,4 @@ atLeastThreeChars input = return $
   if length input < 3
     then Left "3 characters minimum for a workspace please..."
     else Right input
+
