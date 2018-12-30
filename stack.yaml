@@ -36,8 +36,6 @@ resolver: lts-13.0
 packages:
 - .
 extra-deps :
-  - git: git@github.com:composewell/streamly.git
-    commit: d9188336a366adc430b0ea6fba29b3868100687b
 
   - QuickCheck-2.12.6.1
   - aeson-1.4.2.0

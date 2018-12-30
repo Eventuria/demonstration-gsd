@@ -14,7 +14,7 @@ import PersistedStreamEngine.Interface.Read.Reading
 import PersistedStreamEngine.Interface.Write.WDsl
 
 import Gsd.Write.CommandHandler
-import Gsd.Write.Commands
+import Gsd.Write.Commands.Command
 
 
 import PersistedStreamEngine.Interface.Write.PersistenceResult

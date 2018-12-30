@@ -34,6 +34,9 @@ import qualified Gsd.Read.ReadOverEventStore as GsdRead
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
 
+-- Issue with Streamly, we should not need to import CQRS Event Serialization here (to investigate)
+import Cqrs.Write.Serialization.Event ()
+
 
 type ApiPort = Int
 

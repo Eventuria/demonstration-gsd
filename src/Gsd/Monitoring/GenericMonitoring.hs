@@ -19,7 +19,7 @@ import Cqrs.Write.Aggregate.Commands.Command
 
 import PersistedStreamEngine.Interface.Read.Reading
 
-import Gsd.Write.Commands
+import Gsd.Write.Commands.Command
 import Gsd.Write.Core
 
 streamWorkspaceIds :: Streamable stream monad WorkspaceId => CqrsStreamRepository persistedStream -> Streaming persistedStream -> stream monad (Persisted WorkspaceId)

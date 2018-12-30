@@ -5,7 +5,7 @@ import Logger.Core
 import PersistedStreamEngine.Interface.Write.PersistenceResult
 
 
-import Gsd.Write.Commands
+import Gsd.Write.Commands.Command
 
 import Gsd.Write.EventStoreStreamRepository
 import qualified Gsd.Write.GenericGsd as GenericGsd

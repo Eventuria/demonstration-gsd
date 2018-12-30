@@ -12,9 +12,12 @@ import Gsd.Write.EventStoreStreamRepository
 import Gsd.Write.Core
 import Gsd.Read.Workspace
 import Cqrs.Write.StreamRepository
+import Cqrs.Write.Aggregate.Events.Event
+import Streamly (SerialT)
 
-streamWorkspaces :: Streamable stream monad WorkspaceId => EventStoreSettings -> stream monad (Persisted Workspace)
+streamWorkspaces :: (Streamable stream monad WorkspaceId , Streamable SerialT monad Event) => EventStoreSettings -> stream monad (Persisted Workspace)
 streamWorkspaces settings =
     GenericRead.streamWorkspaces
       (aggregateIdStream $ getEventStoreStreamRepository settings)
+      (getEventStream $ getEventStoreStreamRepository settings)
       getEventStoreStreaming

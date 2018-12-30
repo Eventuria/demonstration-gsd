@@ -2,13 +2,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Gsd.CLI.HandleWorkspaces (handleWorkspaces)where
 
+import Prelude hiding (length)
 import System.Console.Byline
 import Data.Text
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.Client (sendCommand)
-import Gsd.Write.Commands
+import Gsd.Write.Commands.Command
 import System.Exit (exitSuccess)
 import Gsd.Read.Client (streamWorkspaces)
 
@@ -56,15 +57,16 @@ handleWorkspaces writeApiUrl gsdReadApiUrl = do
         commandId <- liftIO $ nextRandom
         sayLn $ fg green <> "generating a new Workspace Id (" <> text (toText workspaceId) <> ") "
         sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
+        workspaceName <- askUntil "Enter a workspace name : " Nothing atLeastThreeChars
         manager <- liftIO $ newManager defaultManagerSettings
-        queryResult <- liftIO $ runClientM (sendCommand CreateWorkspace {commandId , workspaceId }) (mkClientEnv manager writeApiUrl)
+        queryResult <- liftIO $ runClientM (sendCommand CreateWorkspace {commandId , workspaceId , workspaceName}) (mkClientEnv manager writeApiUrl)
         case queryResult of
           Left err -> do
             sayLn $ fg red <> "Error: " <>  text (pack $ show err)
             sayLn $ ""
             handleWorkspaces writeApiUrl gsdReadApiUrl
           Right persistenceResult -> do
-            sayLn $ fg green <> "Workpace "<> text (toText workspaceId) <> " sucessfully created !"
+            sayLn $ fg green <> "Workpace "<> text (toText workspaceId) <> " successfully created !"
             sayLn $ ""
             handleWorkspaces writeApiUrl gsdReadApiUrl
     Match (DisplayWorkspaces name) -> do
@@ -87,3 +89,9 @@ handleWorkspaces writeApiUrl gsdReadApiUrl = do
       liftIO $ exitSuccess
     NoItems -> sayLn $ "unexpected answer"
     Other x -> sayLn $ "unexpected answer"
+
+atLeastThreeChars :: Text -> IO (Either Stylized Text)
+atLeastThreeChars input = return $
+  if length input < 3
+    then Left "3 characters minimum for a workspace please..."
+    else Right input

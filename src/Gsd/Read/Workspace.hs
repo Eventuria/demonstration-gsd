@@ -4,16 +4,17 @@ module Gsd.Read.Workspace where
 
 import Gsd.Write.Core
 import Data.Aeson
+import Data.Text
 
-type WorkspaceName = String
-data Workspace = Workspace { workspaceId :: WorkspaceId , name :: WorkspaceName } deriving Show
+type WorkspaceName = Text
+data Workspace = Workspace { workspaceId :: WorkspaceId , workspaceName :: WorkspaceName } deriving Show
 
 instance ToJSON Workspace where
-  toJSON (Workspace {workspaceId, name  } ) = object [
+  toJSON (Workspace {workspaceId, workspaceName  } ) = object [
             "workspaceId" .= workspaceId,
-            "name" .= name]
+            "workspaceName" .= workspaceName]
 
 instance FromJSON Workspace  where
 
-    parseJSON (Object jsonObject) = Workspace <$> jsonObject .: "workspaceId" <*>  jsonObject .: "name"
+    parseJSON (Object jsonObject) = Workspace <$> jsonObject .: "workspaceId" <*>  jsonObject .: "workspaceName"
     parseJSON _ =  error $ "Json format not expected"

@@ -27,7 +27,8 @@ import Cqrs.Write.Serialization.PersistenceResult ()
 
 import Servant
 import Network.Wai.Handler.Warp
-import Gsd.Write.Commands
+import Gsd.Write.Commands.Command
+import Gsd.Write.Commands.Serialization ()
 
 type ApiPort = Int
 

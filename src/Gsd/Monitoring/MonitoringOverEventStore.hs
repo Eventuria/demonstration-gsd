@@ -9,7 +9,7 @@ import PersistedStreamEngine.Interface.Streamable
 import PersistedStreamEngine.Interface.PersistedItem
 import Cqrs.Write.Aggregate.Commands.Command
 
-import Gsd.Write.Commands
+import Gsd.Write.Commands.Command
 import Gsd.Write.Core
 import Gsd.Write.EventStoreStreamRepository
 

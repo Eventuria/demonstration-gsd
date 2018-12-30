@@ -1,18 +1,22 @@
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE OverloadedStrings     #-}
-module Gsd.Write.Commands where
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+module Gsd.Write.Commands.Command where
 
+import Prelude hiding (lookup)
 import Data.Aeson
-
+import Data.Maybe
+import Data.Text
 import Gsd.Write.Core
-
+import qualified Data.Map as Map
 import Cqrs.Write.Aggregate.Commands.CommandId
 import Cqrs.Write.Aggregate.Commands.Command
 import qualified Cqrs.Write.Aggregate.Commands.Command as CommandModule
+import Control.Lens
+import Data.Aeson.Lens
 
-import qualified Data.Text as Text
 
-data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId }
+data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId , workspaceName :: Text }
                  | SetGoal  { commandId :: CommandId ,
                               workspaceId ::WorkspaceId ,
                               goalId :: GoalId ,
@@ -42,34 +46,17 @@ isCreateWorkspaceCommand :: Command -> Bool
 isCreateWorkspaceCommand command = (commandName $ commandHeader command) == createWorkspaceCommandName
 
 toCommand :: GsdCommand -> Command
-toCommand  CreateWorkspace {commandId = commandId, workspaceId = workspaceId} =
-  Command { commandHeader = CommandHeader { commandId = commandId, aggregateId = workspaceId , commandName = createWorkspaceCommandName } ,
-            payload = []}
+toCommand  CreateWorkspace {commandId, workspaceId, workspaceName} =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = createWorkspaceCommandName } ,
+            payload = Map.fromList [("workspaceName",  String workspaceName ) ] }
 toCommand _ = error "to handle..."
 
 fromCommand :: Command -> Maybe GsdCommand
 fromCommand command =
   case (commandName $ commandHeader command) of
-    "createWorkspace" -> Just CreateWorkspace {commandId = CommandModule.commandId $ commandHeader command, workspaceId = aggregateId $ commandHeader command}
+    "createWorkspace" -> Just CreateWorkspace {commandId = CommandModule.commandId $ commandHeader command,
+                                               workspaceId = aggregateId $ commandHeader command,
+                                               workspaceName =  fromJust $ (fromJust $ (Map.lookup "workspaceName" (payload command))) ^? _String  }
     _ -> Nothing
 
 
-instance ToJSON GsdCommand where
-  toJSON (CreateWorkspace {commandId = commandId , workspaceId = workspaceId  } ) = object [
-            "commandId" .= commandId,
-            "workspaceId" .= workspaceId,
-            "commandName" .= createWorkspaceCommandName]
-  toJSON _  = error "to handle..."
-
-instance FromJSON GsdCommand where
-
-  parseJSON (Object jsonObject) = do
-               commandNameMaybe <- jsonObject .: "commandName"
-               case commandNameMaybe of
-                    Just (String commandName) | (Text.unpack commandName) == createWorkspaceCommandName ->
-                      CreateWorkspace
-                          <$> jsonObject .: "commandId"
-                          <*> jsonObject .: "workspaceId"
-                    Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
-                    _ -> error $ "Command name not provided"
-  parseJSON _ =  error $ "Json format not expected"

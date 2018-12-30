@@ -36,7 +36,8 @@ import Gsd.Write.Core
 
 import Cqrs.Write.Serialization.PersistenceResult ()
 import Cqrs.Write.Serialization.Command ()
-import Gsd.Write.Commands
+import Gsd.Write.Commands.Command
+import Gsd.Write.Commands.Serialization ()
 
 type ApiPort = Int
 
