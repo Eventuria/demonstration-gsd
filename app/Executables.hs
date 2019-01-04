@@ -15,6 +15,7 @@ import Gsd.Monitoring.WebStreamingApi
 import Gsd.Read.WebStreamingApi
 import Gsd.CLI.CLI
 import Servant.Client
+import Gsd.Clients
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------
@@ -26,9 +27,10 @@ import Servant.Client
 -- | Client Command line : Allow you to use the gsd application
 --   (send commands and access to a specific gsd read model )
 gsdWriteClientCommandLineInterface :: IO ()
-gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute
-   (BaseUrl Http "localhost" getWriteApiPort "")
-   (BaseUrl Http "localhost" getGsdReadStreamingApiPort "")
+gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute Clients{
+   writeApiUrl = (BaseUrl Http "localhost" getWriteApiPort ""),
+   gsdReadApiUrl = (BaseUrl Http "localhost" getGsdReadStreamingApiPort ""),
+   gsdMonitoringApiUrl = (BaseUrl Http "localhost" getGsdMonitoringStreamingApiPort "")}
 
 
 --------------------------------------------------------------------------------

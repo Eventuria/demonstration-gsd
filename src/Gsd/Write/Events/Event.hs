@@ -1,6 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Gsd.Write.Events where
+module Gsd.Write.Events.Event where
 
 
 import Gsd.Write.Core
@@ -15,8 +15,9 @@ import Data.Aeson.Lens
 import Control.Lens
 import Data.Maybe
 
-data GsdEvent = WorkspaceCreated { workspaceId ::WorkspaceId , eventId :: EventId , createdOn :: UTCTime  }
-              | WorkspaceNamed { workspaceId ::WorkspaceId , workspaceName :: Text , eventId :: EventId , createdOn :: UTCTime }
+data GsdEvent = WorkspaceCreated { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId    }
+              | WorkspaceNamed   { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId , workspaceName :: Text }
+              | WorkspaceRenamed { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId , workspaceNewName :: Text }
     deriving (Eq,Show)
 
 eventNameForWorkspaceCreated :: String
@@ -24,6 +25,9 @@ eventNameForWorkspaceCreated = "workspaceCreated"
 
 eventNameForWorkspaceNamed :: String
 eventNameForWorkspaceNamed = "workspaceNamed"
+
+eventNameForWorkspaceRenamed :: String
+eventNameForWorkspaceRenamed = "workspaceRenamed"
 
 isCreateWorkspaceEvent :: Event -> Bool
 isCreateWorkspaceEvent event = (eventName $ eventHeader event) == eventNameForWorkspaceCreated
@@ -41,6 +45,13 @@ toEvent  WorkspaceNamed {eventId, workspaceId, workspaceName, createdOn} =
                                       createdOn,
                                       eventName = eventNameForWorkspaceNamed } ,
             payload = Map.fromList [("workspaceName",  String workspaceName ) ]}
+toEvent  WorkspaceRenamed {eventId, workspaceId, workspaceNewName, createdOn} =
+  Event { eventHeader = EventHeader { eventId,
+                                      aggregateId = workspaceId ,
+                                      createdOn,
+                                      eventName = eventNameForWorkspaceRenamed } ,
+            payload = Map.fromList [("workspaceNewName",  String workspaceNewName ) ]}
+
 
 
 fromEvent :: Event -> GsdEvent
@@ -53,4 +64,8 @@ fromEvent event =
                                              workspaceId = aggregateId $ eventHeader event,
                                              createdOn = CoreEvent.createdOn $ eventHeader event,
                                              workspaceName =  fromJust $ (fromJust $ (Map.lookup "workspaceName" (payload event))) ^? _String  }
+    "workspaceRenamed" -> WorkspaceRenamed {eventId = CoreEvent.eventId $ eventHeader event,
+                                           workspaceId = aggregateId $ eventHeader event,
+                                           createdOn = CoreEvent.createdOn $ eventHeader event,
+                                           workspaceNewName =  fromJust $ (fromJust $ (Map.lookup "workspaceNewName" (payload event))) ^? _String  }
     _ -> error "error from event"

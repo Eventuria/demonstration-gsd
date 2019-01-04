@@ -14,7 +14,12 @@ instance ToJSON GsdCommand where
             "workspaceId" .= workspaceId,
             "workspaceName" .= workspaceName,
             "commandName" .= createWorkspaceCommandName]
-  toJSON _  = error "to handle..."
+  toJSON (RenameWorkspace {commandId , workspaceId ,workspaceNewName } ) = object [
+              "commandId" .= commandId,
+              "workspaceId" .= workspaceId,
+              "workspaceNewName" .= workspaceNewName,
+              "commandName" .= renameWorkspaceCommandName]
+
 
 instance FromJSON GsdCommand where
 
@@ -26,6 +31,11 @@ instance FromJSON GsdCommand where
                           <$> jsonObject .: "commandId"
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "workspaceName"
+                    Just (String commandName) | (Text.unpack commandName) == renameWorkspaceCommandName ->
+                      RenameWorkspace
+                          <$> jsonObject .: "commandId"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "workspaceNewName"
                     Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
                     _ -> error $ "Command name not provided"
   parseJSON _ =  error $ "Json format not expected"

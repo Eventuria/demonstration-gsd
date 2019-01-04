@@ -18,7 +18,7 @@ import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Interface.Read.Reading
 import Gsd.Read.Workspace
 import Gsd.Write.Core
-import Gsd.Write.Events
+import Gsd.Write.Events.Event
 import Cqrs.Write.Aggregate.Events.Event
 
 data WorkspaceBuilder = WorkspaceBuilder { workspaceIdMaybe :: Maybe WorkspaceId , workspaceNameMaybe :: Maybe WorkspaceName } deriving Show
@@ -27,21 +27,27 @@ streamWorkspaces :: (Streamable stream monad WorkspaceId , Streamable SerialT mo
 streamWorkspaces aggregateIdStream getEventStream Streaming {streamAll} =
     (streamAll $ aggregateIdStream)
       & S.mapM (\PersistedItem { offset = offset, item = workspaceId} -> do
-          workspaceBuilder <-  S.foldr foldEventsForStreamingWorkspaces WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing}
-                                   $ (streamAll $ getEventStream workspaceId)
-                                      & S.map (\PersistedItem{item = event} -> fromEvent event)
-                                      & S.filter (\gsdEvent ->
-                                        case gsdEvent of
-                                            WorkspaceCreated {..} -> True
-                                            WorkspaceNamed {..} -> True)
-          return $ PersistedItem { offset = offset,
-                          item = Workspace {
-                                workspaceId = fromJust $ workspaceIdMaybe workspaceBuilder ,
-                                workspaceName = fromJust $ workspaceNameMaybe workspaceBuilder}})
+        S.foldx
+           foldEventsForStreamingWorkspaces
+           WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing}
+           (\workspaceBuilder -> PersistedItem {
+              offset = offset,
+              item = Workspace {
+                   workspaceId = fromJust $ workspaceIdMaybe workspaceBuilder ,
+                   workspaceName = fromJust $ workspaceNameMaybe workspaceBuilder}})
+           $ (streamAll $ getEventStream workspaceId)
+              & S.map (\PersistedItem{item = event} -> fromEvent event)
+              & S.filter (\gsdEvent ->
+                case gsdEvent of
+                    WorkspaceCreated {..} -> True
+                    WorkspaceNamed {..} -> True
+                    WorkspaceRenamed {..} -> True))
 
 
-foldEventsForStreamingWorkspaces :: GsdEvent -> WorkspaceBuilder ->  WorkspaceBuilder
-foldEventsForStreamingWorkspaces gsdEvent workspaceBuilder  =
+
+foldEventsForStreamingWorkspaces :: WorkspaceBuilder -> GsdEvent -> WorkspaceBuilder
+foldEventsForStreamingWorkspaces workspaceBuilder gsdEvent   =
   case (workspaceBuilder,gsdEvent) of
      (WorkspaceBuilder {workspaceIdMaybe,workspaceNameMaybe} , WorkspaceCreated {workspaceId}) -> WorkspaceBuilder { workspaceIdMaybe = Just workspaceId, workspaceNameMaybe}
      (WorkspaceBuilder {workspaceIdMaybe,workspaceNameMaybe} , WorkspaceNamed {workspaceName}) -> WorkspaceBuilder { workspaceIdMaybe, workspaceNameMaybe = Just workspaceName}
+     (WorkspaceBuilder {workspaceIdMaybe,workspaceNameMaybe} , WorkspaceRenamed {workspaceNewName}) -> WorkspaceBuilder { workspaceIdMaybe, workspaceNameMaybe = Just workspaceNewName}

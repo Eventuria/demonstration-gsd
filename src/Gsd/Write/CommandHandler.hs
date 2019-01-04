@@ -3,11 +3,10 @@
 module Gsd.Write.CommandHandler where
 
 import Data.Set (fromList)
-import Data.Maybe
 import Data.Function ((&))
 
 import Gsd.Write.Commands.Command
-import Gsd.Write.Events
+import Gsd.Write.Events.Event
 import Gsd.Write.CommandPredicates
 
 import Cqrs.Write.CommandConsumption.CommandHandler
@@ -20,7 +19,7 @@ import PersistedStreamEngine.Interface.PersistedItem
 gsdCommandHandler :: CommandHandler
 gsdCommandHandler persistedCommand@PersistedItem {offset = offset , item = command } snapshotMaybe
    | isAlreadyProcessed offset snapshotMaybe = SkipBecauseAlreadyProcessed
-   | (isFirstCommand snapshotMaybe) && (isCreateWorkspaceCommand command) = Validate $ (fromJust $ fromCommand (command::Command)) & (\CreateWorkspace {commandId, workspaceId, workspaceName} -> do
+   | (isFirstCommand snapshotMaybe) && (isCreateWorkspaceCommand command) = Validate $ (fromCommand (command::Command)) & (\CreateWorkspace {commandId, workspaceId, workspaceName} -> do
         now <- getCurrentTime
         eventId <- getNewEventID
         persistEvent $ toEvent $ WorkspaceCreated {  eventId , createdOn = now, workspaceId}
@@ -28,7 +27,14 @@ gsdCommandHandler persistedCommand@PersistedItem {offset = offset , item = comma
         updateValidationState ValidationState {lastOffsetConsumed = 0 ,
                                                             commandsProcessed = fromList [commandId] ,
                                                             state = AggregateState { aggregateId = workspaceId }})
-   | (not $ isFirstCommand snapshotMaybe ) && (isCreateWorkspaceCommand command) = Reject "CreateWorkspace can only be a the first command "
+   | (isNotFirstCommand snapshotMaybe) && (isRenameWorkspaceCommand command) = Validate $ (fromCommand (command::Command)) & (\RenameWorkspace {commandId, workspaceId, workspaceNewName} -> do
+           now <- getCurrentTime
+           eventId <- getNewEventID
+           persistEvent $ toEvent $ WorkspaceRenamed   {  eventId , createdOn = now, workspaceId , workspaceNewName}
+           updateValidationState ValidationState {lastOffsetConsumed = 0 ,
+                                                               commandsProcessed = fromList [commandId] ,
+                                                               state = AggregateState { aggregateId = workspaceId }})
+   | (isNotFirstCommand snapshotMaybe ) && (isCreateWorkspaceCommand command) = Reject "CreateWorkspace can only be a the first command "
    | otherwise = Reject "scenario not handle yet"
 
 

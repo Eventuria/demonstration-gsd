@@ -18,7 +18,7 @@ import Servant.Pipes ()
 
 import Streamly
 
-gsdReadStreamingApi :: Proxy StreamWorkspaces
+gsdReadStreamingApi :: Proxy GSDReadStreamingApi
 gsdReadStreamingApi = Proxy
 
 streamWorkspaces :: IsStream stream => S.ClientM (stream IO (Persisted Workspace) )

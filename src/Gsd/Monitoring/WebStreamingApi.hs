@@ -27,6 +27,7 @@ import Logger.Core
 import qualified Database.EventStore as EventStore
 import Control.Exception hiding (Handler)
 
+import Gsd.Monitoring.WebStreamingApiDefinition
 
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Monitoring.MonitoringOverEventStore as GsdMonitoring
@@ -36,22 +37,14 @@ import Gsd.Write.Core
 
 import Cqrs.Write.Serialization.PersistenceResult ()
 import Cqrs.Write.Serialization.Command ()
+import Cqrs.Write.Serialization.Event ()
 import Gsd.Write.Commands.Command
 import Gsd.Write.Commands.Serialization ()
+import Gsd.Write.Events.Event
+import Gsd.Write.Events.Serialization()
 
 type ApiPort = Int
 
-type GSDMonitoringStreamingApi =   StreamWorkspaceIdsCreated
-                             :<|>  StreamGsdCommandsByWorkspaceId
-                             :<|>  StreamInfinitelyGsdCommandsByWorkspaceId
-
-type StreamWorkspaceIdsCreated =      "gsd" :> "monitoring" :> "stream" :> "workspaceIds" :> StreamGet NewlineFraming JSON (P.Producer (Persisted WorkspaceId) IO () )
-type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                                            :> "commands"
-                                                            :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
-type StreamInfinitelyGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                                                      :> "infinitely"
-                                                                      :> "commands" :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
 
 execute :: ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
 execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
@@ -68,7 +61,11 @@ gsdMonitoringStreamingApi :: Proxy GSDMonitoringStreamingApi
 gsdMonitoringStreamingApi = Proxy
 
 gsdMonitoringStreamingServer :: EventStoreSettings  -> Server GSDMonitoringStreamingApi
-gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceIdsCreated :<|> streamCommands :<|> streamInfinitelyCommands
+gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceIdsCreated
+                                             :<|> streamCommands
+                                             :<|> streamInfinitelyCommands
+                                             :<|> streamEvents
+                                             :<|> streamInfinitelyEvents
   where
         streamWorkspaceIdsCreated :: Handler (P.Producer (Persisted WorkspaceId) IO ())
         streamWorkspaceIdsCreated = return $ toPipes $ GsdMonitoring.streamWorkspaceIds eventStoreSettings
@@ -78,4 +75,10 @@ gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceIdsCreated :<|>
 
         streamInfinitelyCommands :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
         streamInfinitelyCommands workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyCommands eventStoreSettings workspaceId
+
+        streamEvents :: WorkspaceId -> Handler (P.Producer (Persisted GsdEvent) IO ())
+        streamEvents workspaceId = return $ toPipes $ GsdMonitoring.streamEvents eventStoreSettings workspaceId
+
+        streamInfinitelyEvents :: WorkspaceId -> Handler (P.Producer (Persisted GsdEvent) IO ())
+        streamInfinitelyEvents workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyEvents eventStoreSettings workspaceId
 

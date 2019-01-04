@@ -17,46 +17,59 @@ import Data.Aeson.Lens
 
 
 data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId , workspaceName :: Text }
-                 | SetGoal  { commandId :: CommandId ,
-                              workspaceId ::WorkspaceId ,
-                              goalId :: GoalId ,
-                              goalDetails :: String}
-                 | QuestionGoal {  commandId :: CommandId ,
-                                   workspaceId ::WorkspaceId ,
-                                   goalId :: GoalId ,
-                                   questionId :: QuestionId ,
-                                   questionDetails :: String}
-                 | ActionizeOnQuestion {
-                                       commandId :: CommandId ,
-                                       workspaceId ::WorkspaceId ,
-                                       questionId :: QuestionId ,
-                                       actionId :: ActionId ,
-                                       actionDetails :: String}
-                 | ActionizeOnTheGoalDirectly {
-                                       commandId :: CommandId ,
-                                       workspaceId ::WorkspaceId ,
-                                       goalId :: GoalId ,
-                                       actionId :: ActionId ,
-                                       actionDetails :: String}
+                 | RenameWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId , workspaceNewName :: Text } deriving Show
+--                 | SetGoal  { commandId :: CommandId ,
+--                              workspaceId ::WorkspaceId ,
+--                              goalId :: GoalId ,
+--                              goalDetails :: String}
+--                 | QuestionGoal {  commandId :: CommandId ,
+--                                   workspaceId ::WorkspaceId ,
+--                                   goalId :: GoalId ,
+--                                   questionId :: QuestionId ,
+--                                   questionDetails :: String}
+--                 | ActionizeOnQuestion {
+--                                       commandId :: CommandId ,
+--                                       workspaceId ::WorkspaceId ,
+--                                       questionId :: QuestionId ,
+--                                       actionId :: ActionId ,
+--                                       actionDetails :: String}
+--                 | ActionizeOnTheGoalDirectly {
+--                                       commandId :: CommandId ,
+--                                       workspaceId ::WorkspaceId ,
+--                                       goalId :: GoalId ,
+--                                       actionId :: ActionId ,
+--                                       actionDetails :: String}
 
 createWorkspaceCommandName :: String
 createWorkspaceCommandName = "createWorkspace"
 
+renameWorkspaceCommandName :: String
+renameWorkspaceCommandName = "renameWorkspace"
+
 isCreateWorkspaceCommand :: Command -> Bool
 isCreateWorkspaceCommand command = (commandName $ commandHeader command) == createWorkspaceCommandName
+
+isRenameWorkspaceCommand :: Command -> Bool
+isRenameWorkspaceCommand command = (commandName $ commandHeader command) == renameWorkspaceCommandName
 
 toCommand :: GsdCommand -> Command
 toCommand  CreateWorkspace {commandId, workspaceId, workspaceName} =
   Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = createWorkspaceCommandName } ,
             payload = Map.fromList [("workspaceName",  String workspaceName ) ] }
-toCommand _ = error "to handle..."
+toCommand  RenameWorkspace {commandId, workspaceId, workspaceNewName} =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = renameWorkspaceCommandName } ,
+            payload = Map.fromList [("workspaceNewName",  String workspaceNewName ) ] }
 
-fromCommand :: Command -> Maybe GsdCommand
+
+fromCommand :: Command -> GsdCommand
 fromCommand command =
   case (commandName $ commandHeader command) of
-    "createWorkspace" -> Just CreateWorkspace {commandId = CommandModule.commandId $ commandHeader command,
+    "createWorkspace" -> CreateWorkspace {commandId = CommandModule.commandId $ commandHeader command,
                                                workspaceId = aggregateId $ commandHeader command,
                                                workspaceName =  fromJust $ (fromJust $ (Map.lookup "workspaceName" (payload command))) ^? _String  }
-    _ -> Nothing
+    "renameWorkspace" -> RenameWorkspace {commandId = CommandModule.commandId $ commandHeader command,
+                                                   workspaceId = aggregateId $ commandHeader command,
+                                                   workspaceNewName =  fromJust $ (fromJust $ (Map.lookup "workspaceNewName" (payload command))) ^? _String  }
+    _ -> error "error from event"
 
 

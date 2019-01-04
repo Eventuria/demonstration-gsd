@@ -9,4 +9,5 @@ isAlreadyProcessed offset snapshotMaybe = Just offset <= (lastOffsetConsumed <$>
 isFirstCommand :: Maybe ValidationState -> Bool
 isFirstCommand snapshotMaybe = snapshotMaybe == Nothing
 
-
+isNotFirstCommand :: Maybe ValidationState -> Bool
+isNotFirstCommand = not . isFirstCommand
