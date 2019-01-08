@@ -2,11 +2,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Gsd.Monitoring.GenericMonitoring (
-                streamWorkspaceIds,
-                streamCommands,
-                streamInfinitelyCommands,
-                streamEvents,
-                streamInfinitelyEvents) where
+                streamWorkspaceId,
+                streamCommand,
+                streamInfinitelyCommand,
+                streamCommandResponse,
+                streamEvent,
+                streamInfinitelyEvent,
+                streamValidationState) where
 
 import Data.Function ((&))
 import qualified Streamly.Prelude as S
@@ -16,42 +18,49 @@ import Cqrs.Write.StreamRepository
 import PersistedStreamEngine.Interface.PersistedItem
 import Cqrs.Write.Aggregate.Commands.Command
 import Cqrs.Write.Aggregate.Events.Event
+import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 
 import PersistedStreamEngine.Interface.Read.Reading
-
+import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import Gsd.Write.State
 import Gsd.Write.Commands.Command
 import Gsd.Write.Events.Event
 import Gsd.Write.Core
 
 
-streamWorkspaceIds :: Streamable stream monad WorkspaceId => CqrsStreamRepository persistedStream -> Streaming persistedStream -> stream monad (Persisted WorkspaceId)
-streamWorkspaceIds cqrsStreamRepository Streaming {streamAll} = streamAll $ aggregateIdStream cqrsStreamRepository
+streamWorkspaceId :: Streamable stream monad WorkspaceId => AggregateIdStream persistedStream -> Streaming persistedStream -> stream monad (Persisted WorkspaceId)
+streamWorkspaceId aggregateIdStream Streaming {streamAll} = streamAll aggregateIdStream
 
 
-streamCommands ::  Streamable stream monad Command => CqrsStreamRepository persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
-streamCommands cqrsStreamRepository Streaming {streamAll} workspaceId =
-  (streamAll $ (getCommandStream cqrsStreamRepository) workspaceId) &
+streamCommand ::  Streamable stream monad Command => GetCommandStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
+streamCommand getCommandStream Streaming {streamAll} workspaceId =
+  (streamAll $ getCommandStream workspaceId) &
       S.map (\PersistedItem { offset = offset, item = cqrsCommand} ->
               PersistedItem { offset = offset, item = fromCommand $ cqrsCommand})
 
-streamInfinitelyCommands ::  Streamable stream monad Command => CqrsStreamRepository persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
-streamInfinitelyCommands cqrsStreamRepository Streaming {streamAllInfinitely} workspaceId =
-  (streamAllInfinitely $ (getCommandStream cqrsStreamRepository) workspaceId) &
+streamInfinitelyCommand ::  Streamable stream monad Command => GetCommandStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
+streamInfinitelyCommand getCommandStream Streaming {streamAllInfinitely} workspaceId =
+  (streamAllInfinitely $ getCommandStream workspaceId) &
       S.map (\PersistedItem { offset = offset, item = cqrsCommand} ->
               PersistedItem { offset = offset, item = fromCommand $ cqrsCommand})
 
-streamEvents ::  Streamable stream monad Event => CqrsStreamRepository persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdEvent)
-streamEvents cqrsStreamRepository Streaming {streamAll} workspaceId =
-  (streamAll $ (getEventStream cqrsStreamRepository) workspaceId) &
+streamCommandResponse ::  Streamable stream monad CommandResponse => GetCommandResponseStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted CommandResponse)
+streamCommandResponse getCommandResponseStream Streaming {streamAll} workspaceId = (streamAll $ getCommandResponseStream workspaceId)
+
+streamEvent ::  Streamable stream monad Event => GetEventStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdEvent)
+streamEvent getEventStream Streaming {streamAll} workspaceId =
+  (streamAll $ getEventStream workspaceId) &
       S.map (\PersistedItem { offset = offset, item = cqrsEvent} ->
               PersistedItem { offset = offset, item = fromEvent $ cqrsEvent})
 
-streamInfinitelyEvents ::  Streamable stream monad Event => CqrsStreamRepository persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdEvent)
-streamInfinitelyEvents cqrsStreamRepository Streaming {streamAllInfinitely} workspaceId =
-  (streamAllInfinitely $ (getEventStream cqrsStreamRepository) workspaceId) &
+streamInfinitelyEvent ::  Streamable stream monad Event => GetEventStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdEvent)
+streamInfinitelyEvent getEventStream Streaming {streamAllInfinitely} workspaceId =
+  (streamAllInfinitely $ getEventStream  workspaceId) &
       S.map (\PersistedItem { offset = offset, item = cqrsEvent} ->
               PersistedItem { offset = offset, item = fromEvent $ cqrsEvent})
 
-
+streamValidationState ::  Streamable stream monad (ValidationState GsdState) => GetValidateStateStream persistedStream GsdState -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted (ValidationState GsdState))
+streamValidationState getValidateStateStream Streaming {streamAll} workspaceId =
+  (streamAll $ getValidateStateStream  workspaceId)
 
 

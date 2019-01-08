@@ -119,7 +119,7 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-    - hspec == 2.5.5
+    - hspec == 2.6.0
     - QuickCheck
     - aeson
     - generic-arbitrary

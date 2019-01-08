@@ -5,6 +5,8 @@ import Data.Aeson
 
 import Cqrs.Write.Aggregate.Commands.Command
 import PersistedStreamEngine.Interface.Write.Writable
+import Cqrs.Write.Serialization.CommandHeader()
+import Cqrs.Write.Aggregate.Commands.CommandHeader
 
 instance Writable Command where
   getItemName Command { commandHeader = CommandHeader {commandName = commandName} }  = commandName
@@ -23,16 +25,4 @@ instance FromJSON Command where
   parseJSON _ =  error $ "Json format not expected"
 
 
-instance ToJSON CommandHeader where
-  toJSON (CommandHeader {aggregateId = aggregateId , commandId = commandId ,  commandName = commandName} ) =
-    object ["aggregateId" .= aggregateId,
-            "commandId" .= commandId,
-            "commandName" .= commandName]
 
-instance FromJSON CommandHeader where
-
-  parseJSON (Object jsonObject) =
-     CommandHeader <$> jsonObject .: "aggregateId"
-              <*> jsonObject .: "commandId"
-              <*> jsonObject .: "commandName"
-  parseJSON _ =  error $ "Json format not expected"

@@ -1,8 +1,8 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module PersistedStreamEngine.Interface.Write.WDsl where
 
-import Cqrs.Write.Aggregate.Commands.CommandId
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Aggregate.Events.Event
@@ -11,66 +11,57 @@ import Cqrs.Write.Aggregate.Events.EventId
 import Data.Time
 import Control.Monad.Free
 import qualified Data.Set as Set
-import Cqrs.Write.Aggregate.Ids.AggregateId
 import Logger.Core
 import Cqrs.Write.StreamRepository
+import Cqrs.Write.Aggregate.Commands.CommandHeader
 
-type InterpreterWritePersistedStreamLanguage persistedStream a = WritePersistenceStreamLanguage a -> Logger -> CqrsStreamRepository persistedStream   ->  IO a
+type InterpreterWritePersistedStreamLanguage persistedStream applicationState a = WritePersistenceStreamLanguage applicationState a -> Logger -> CqrsStreamRepository persistedStream applicationState   ->  IO a
 
-data Directive a = PersistEvent Event a
-                | PersistValidationState ValidationState a
+data Directive applicationState a = PersistEvent Event a
+                | PersistValidationState (ValidationState applicationState) a
                 | PersistCommandResponse CommandResponse a
                 | GetCurrentTime (UTCTime -> a )
                 | GetNewEventId (EventId -> a) deriving (Functor)
 
-type WritePersistenceStreamLanguage a = Free Directive a
+type WritePersistenceStreamLanguage applicationState a = Free (Directive applicationState) a
 
-persistEvent :: Event -> WritePersistenceStreamLanguage ()
+persistEvent :: Event -> WritePersistenceStreamLanguage applicationState ()
 persistEvent event = Free (PersistEvent event (Pure ()))
 
-persistAggregate :: ValidationState -> WritePersistenceStreamLanguage ()
+persistAggregate :: ValidationState applicationState -> WritePersistenceStreamLanguage applicationState ()
 persistAggregate validationState = Free (PersistValidationState validationState (Pure ()))
 
-persistCommandResponse :: CommandResponse -> WritePersistenceStreamLanguage ()
+persistCommandResponse :: CommandResponse -> WritePersistenceStreamLanguage applicationState ()
 persistCommandResponse commandResponse = Free (PersistCommandResponse commandResponse (Pure ()))
 
-getNewEventID :: WritePersistenceStreamLanguage EventId
+getNewEventID :: WritePersistenceStreamLanguage applicationState EventId
 getNewEventID = Free (GetNewEventId Pure)
 
-getCurrentTime :: WritePersistenceStreamLanguage UTCTime
+getCurrentTime :: WritePersistenceStreamLanguage applicationState UTCTime
 getCurrentTime = Free (GetCurrentTime Pure)
 
-validateCommandTransaction :: AggregateId -> CommandId -> WritePersistenceStreamLanguage () -> WritePersistenceStreamLanguage ()
-validateCommandTransaction  aggregateId commandId transaction  = do
+validateCommandTransaction :: CommandHeader -> WritePersistenceStreamLanguage applicationState () -> WritePersistenceStreamLanguage applicationState ()
+validateCommandTransaction  commandHeaderProcessed transaction  = do
     transaction
-    persistCommandResponse CommandSuccessfullyProcessed {
-                                   commandId = commandId  ,
-                                   aggregateId = aggregateId }
+    persistCommandResponse CommandSuccessfullyProcessed {commandHeaderProcessed}
 
 
 
-skipCommandTransaction :: AggregateId -> CommandId -> WritePersistenceStreamLanguage ()
-skipCommandTransaction  aggregateId commandId  = do
-    persistCommandResponse CommandSkippedBecauseAlreadyProcessed {
-                                   commandId = commandId  ,
-                                   aggregateId = aggregateId }
+skipCommandTransaction :: CommandHeader -> WritePersistenceStreamLanguage applicationState ()
+skipCommandTransaction  commandHeaderProcessed  = persistCommandResponse CommandSkippedBecauseAlreadyProcessed {commandHeaderProcessed}
 
 
 
-rejectCommandTransaction :: Maybe ValidationState -> AggregateId -> CommandId -> RejectionReason -> WritePersistenceStreamLanguage ()
-rejectCommandTransaction (Just snapshot) aggregateId commandId rejectionReason = do
-    persistAggregate ValidationState { lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
-                                         commandsProcessed = Set.insert commandId (commandsProcessed snapshot),
-                                         state = state snapshot}
-    persistCommandResponse CommandFailed {
-                                   commandId = commandId  ,
-                                   aggregateId = aggregateId,
-                                   reason = rejectionReason }
-rejectCommandTransaction Nothing aggregateId commandId rejectionReason = do
+rejectCommandTransaction :: Maybe (ValidationState applicationState) -> CommandHeader -> RejectionReason -> WritePersistenceStreamLanguage applicationState ()
+rejectCommandTransaction (Just snapshot) commandHeaderProcessed@CommandHeader{aggregateId, commandId} rejectionReason = do
+    persistAggregate ValidationState {  lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
+                                        aggregateId,
+                                        commandsProcessed = Set.insert commandId (commandsProcessed snapshot),
+                                        state = state snapshot}
+    persistCommandResponse CommandFailed {commandHeaderProcessed, reason = rejectionReason }
+rejectCommandTransaction Nothing commandHeaderProcessed@CommandHeader{aggregateId, commandId}  rejectionReason = do
     persistAggregate ValidationState { lastOffsetConsumed = 0 ,
                                          commandsProcessed = Set.fromList [commandId],
-                                         state = AggregateState { aggregateId = aggregateId}}
-    persistCommandResponse CommandFailed {
-                                   commandId = commandId  ,
-                                   aggregateId = aggregateId,
-                                   reason = rejectionReason }
+                                         aggregateId,
+                                         state = Nothing}
+    persistCommandResponse CommandFailed {commandHeaderProcessed,reason = rejectionReason }

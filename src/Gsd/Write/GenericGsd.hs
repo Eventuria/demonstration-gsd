@@ -13,27 +13,27 @@ import PersistedStreamEngine.Interface.Write.Writing
 import PersistedStreamEngine.Interface.Read.Reading
 import PersistedStreamEngine.Interface.Write.WDsl
 
-import Gsd.Write.CommandHandler
+import Gsd.Write.Commands.Handling.CommandHandler (commandHandler)
 import Gsd.Write.Commands.Command
-
+import Gsd.Write.State
 
 import PersistedStreamEngine.Interface.Write.PersistenceResult
 
-persistCommand ::  CqrsStreamRepository persistedStream -> Querying persistedStream -> Writing persistedStream -> GsdCommand -> IO PersistenceResult
-persistCommand cqrsStreamRepository querying writing gsdCommand =
+persistCommand ::  AggregateIdStream persistedStream -> GetCommandStream persistedStream->  Querying persistedStream -> Writing persistedStream -> GsdCommand -> IO PersistenceResult
+persistCommand aggregateIdStream getCommandStream querying writing gsdCommand =
   Cqrs.Write.persistCommand
     writing
     querying
-    (getCommandStream  $ cqrsStreamRepository)
-    (aggregateIdStream $ cqrsStreamRepository) $ toCommand gsdCommand
+    getCommandStream
+    aggregateIdStream $ toCommand gsdCommand
 
-streamCommandConsumption :: CqrsStreamRepository persistedStream -> Reading persistedStream -> InterpreterWritePersistedStreamLanguage persistedStream () -> Logger ->  IO ()
+streamCommandConsumption :: CqrsStreamRepository persistedStream GsdState -> Reading persistedStream -> InterpreterWritePersistedStreamLanguage persistedStream GsdState () -> Logger ->  IO ()
 streamCommandConsumption cqrsStreamRepository reading interpreterWritePersistedStreamLanguage logger  =
    Cqrs.Write.CommandConsumption.stream
       logger
       cqrsStreamRepository
       reading
-      gsdCommandHandler
+      commandHandler
       interpreterWritePersistedStreamLanguage
 
 

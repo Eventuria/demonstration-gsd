@@ -42,6 +42,11 @@ import Gsd.Write.Commands.Command
 import Gsd.Write.Commands.Serialization ()
 import Gsd.Write.Events.Event
 import Gsd.Write.Events.Serialization()
+import Gsd.Write.State
+import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
+import Cqrs.Write.Serialization.ValidationState ()
+import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import Cqrs.Write.Serialization.CommandResponse ()
 
 type ApiPort = Int
 
@@ -61,24 +66,31 @@ gsdMonitoringStreamingApi :: Proxy GSDMonitoringStreamingApi
 gsdMonitoringStreamingApi = Proxy
 
 gsdMonitoringStreamingServer :: EventStoreSettings  -> Server GSDMonitoringStreamingApi
-gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceIdsCreated
-                                             :<|> streamCommands
-                                             :<|> streamInfinitelyCommands
-                                             :<|> streamEvents
-                                             :<|> streamInfinitelyEvents
+gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceId
+                                             :<|> streamCommand
+                                             :<|> streamInfinitelyCommand
+                                             :<|> streamCommandResponse
+                                             :<|> streamEvent
+                                             :<|> streamInfinitelyEvent
+                                             :<|> streamGsdValidationStateByWorkspaceId
   where
-        streamWorkspaceIdsCreated :: Handler (P.Producer (Persisted WorkspaceId) IO ())
-        streamWorkspaceIdsCreated = return $ toPipes $ GsdMonitoring.streamWorkspaceIds eventStoreSettings
+        streamWorkspaceId :: Handler (P.Producer (Persisted WorkspaceId) IO ())
+        streamWorkspaceId = return $ toPipes $ GsdMonitoring.streamWorkspaceId eventStoreSettings
 
-        streamCommands :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
-        streamCommands workspaceId = return $ toPipes $ GsdMonitoring.streamCommands eventStoreSettings workspaceId
+        streamCommandResponse :: WorkspaceId -> Handler (P.Producer (Persisted CommandResponse) IO ())
+        streamCommandResponse workspaceId = return $ toPipes $ GsdMonitoring.streamCommandResponse eventStoreSettings workspaceId
 
-        streamInfinitelyCommands :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
-        streamInfinitelyCommands workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyCommands eventStoreSettings workspaceId
+        streamInfinitelyCommand :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
+        streamInfinitelyCommand workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyCommand eventStoreSettings workspaceId
 
-        streamEvents :: WorkspaceId -> Handler (P.Producer (Persisted GsdEvent) IO ())
-        streamEvents workspaceId = return $ toPipes $ GsdMonitoring.streamEvents eventStoreSettings workspaceId
+        streamCommand :: WorkspaceId -> Handler (P.Producer (Persisted GsdCommand) IO ())
+        streamCommand workspaceId = return $ toPipes $ GsdMonitoring.streamCommand eventStoreSettings workspaceId
 
-        streamInfinitelyEvents :: WorkspaceId -> Handler (P.Producer (Persisted GsdEvent) IO ())
-        streamInfinitelyEvents workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyEvents eventStoreSettings workspaceId
+        streamEvent :: WorkspaceId -> Handler (P.Producer (Persisted GsdEvent) IO ())
+        streamEvent workspaceId = return $ toPipes $ GsdMonitoring.streamEvent eventStoreSettings workspaceId
 
+        streamInfinitelyEvent :: WorkspaceId -> Handler (P.Producer (Persisted GsdEvent) IO ())
+        streamInfinitelyEvent workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyEvent eventStoreSettings workspaceId
+
+        streamGsdValidationStateByWorkspaceId :: WorkspaceId -> Handler (P.Producer (Persisted (ValidationState GsdState)) IO ())
+        streamGsdValidationStateByWorkspaceId workspaceId = return $ toPipes $ GsdMonitoring.streamValidationState eventStoreSettings workspaceId

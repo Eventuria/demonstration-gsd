@@ -11,7 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Gsd.Read.WebStreamingApi  (execute , GSDReadStreamingApi, StreamWorkspaces) where
+module Gsd.Read.WebStreamingApi  (execute , GSDReadStreamingApi, StreamWorkspace) where
 
 
 import Servant
@@ -31,8 +31,11 @@ import Control.Exception hiding (Handler)
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Read.ReadOverEventStore as GsdRead
 
+import Gsd.Write.Core
+import Gsd.Read.Goal
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
+import Gsd.Read.WebStreamingApiDefinition
 
 -- Issue with Streamly, we should not need to import CQRS Event Serialization here (to investigate)
 import Cqrs.Write.Serialization.Event ()
@@ -40,9 +43,6 @@ import Cqrs.Write.Serialization.Event ()
 
 type ApiPort = Int
 
-type GSDReadStreamingApi =   StreamWorkspaces
-
-type StreamWorkspaces =   "gsd" :> "read" :> "stream" :> "workspaces" :> StreamGet NewlineFraming JSON (P.Producer (Persisted Workspace) IO () )
 
 execute :: ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
 execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
@@ -59,12 +59,13 @@ gsdReadStreamingApi :: Proxy GSDReadStreamingApi
 gsdReadStreamingApi = Proxy
 
 gsdReadStreamingServer :: EventStoreSettings  -> Server GSDReadStreamingApi
-gsdReadStreamingServer eventStoreSettings = streamWorkspaces
+gsdReadStreamingServer eventStoreSettings = streamWorkspace :<|> streamGoal
   where
-        streamWorkspaces :: Handler (P.Producer (Persisted Workspace) IO ())
-        streamWorkspaces = return $ toPipes $ GsdRead.streamWorkspaces eventStoreSettings
+        streamWorkspace :: Handler (P.Producer (Persisted Workspace) IO ())
+        streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace eventStoreSettings
 
-
+        streamGoal :: WorkspaceId -> Handler (P.Producer Goal IO ())
+        streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal eventStoreSettings workspaceId
 
 
 

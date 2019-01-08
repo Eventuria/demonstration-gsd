@@ -12,7 +12,7 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.Client (sendCommand)
 import Gsd.Write.Commands.Command
 import System.Exit (exitSuccess)
-import Gsd.Read.Client (streamWorkspaces)
+import Gsd.Read.Client (streamWorkspace)
 import Gsd.Clients
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 
@@ -82,7 +82,7 @@ handleWorkspaces clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
     Match (ListWorkspaces description) -> do
       sayLn $ fg green <> "Listing all workspaces created : "
       manager <- liftIO $ newManager defaultManagerSettings
-      liftIO $ S.withClientM streamWorkspaces (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
+      liftIO $ S.withClientM streamWorkspace (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
           Left err -> void $ runByline $ do
             sayLn $ fg red <> "Error: " <>  (text . pack . show) err
             sayLn $ ""
@@ -92,10 +92,9 @@ handleWorkspaces clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
                   & Streamly.Prelude.mapM (\PersistedItem { offset = offset, item = workspace} -> void $ runByline $ do
                     sayLn $ fg green <> (text . pack . show) workspace)
               void $ runByline $ handleWorkspaces clients
-
     Match (WorkOnAWorkspace description) -> do
        manager <- liftIO $ newManager defaultManagerSettings
-       liftIO $ S.withClientM streamWorkspaces (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
+       liftIO $ S.withClientM streamWorkspace (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
                  Left err -> void $ runByline $ do
                    sayLn $ fg red <> "Error: " <>  (text . pack . show) err
                    sayLn $ ""

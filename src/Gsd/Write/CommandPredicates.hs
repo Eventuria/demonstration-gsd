@@ -2,12 +2,15 @@ module Gsd.Write.CommandPredicates where
 
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import PersistedStreamEngine.Interface.Offset
+import Gsd.Write.State
 
-isAlreadyProcessed :: Offset -> Maybe ValidationState -> Bool
+
+isAlreadyProcessed :: Offset -> Maybe (ValidationState GsdState) -> Bool
 isAlreadyProcessed offset snapshotMaybe = Just offset <= (lastOffsetConsumed <$> snapshotMaybe)
 
-isFirstCommand :: Maybe ValidationState -> Bool
-isFirstCommand snapshotMaybe = snapshotMaybe == Nothing
+isFirstCommand :: Offset -> Bool
+isFirstCommand 0 = True
+isFirstCommand _ = False
 
-isNotFirstCommand :: Maybe ValidationState -> Bool
+isNotFirstCommand :: Offset -> Bool
 isNotFirstCommand = not . isFirstCommand

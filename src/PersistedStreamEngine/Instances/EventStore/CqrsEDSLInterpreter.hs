@@ -6,7 +6,7 @@ import qualified Data.UUID.V4 as Uuid
 import Control.Monad.IO.Class (MonadIO(..))
 
 import Logger.Core
-
+import Data.Aeson
 import PersistedStreamEngine.Interface.Write.WDsl
 import Cqrs.Write.Aggregate.Events.Event
 import Cqrs.Write.Aggregate.Core
@@ -23,7 +23,7 @@ import Cqrs.Write.Serialization.CommandResponse ()
 
 
 
-interpretWriteEventStoreLanguage :: InterpreterWritePersistedStreamLanguage EventStoreStream a
+interpretWriteEventStoreLanguage :: (ToJSON applicationState , Show applicationState) => InterpreterWritePersistedStreamLanguage EventStoreStream applicationState a
 
 interpretWriteEventStoreLanguage (Pure a) logger streamRepository = return a
 interpretWriteEventStoreLanguage (Free (PersistEvent event next)) logger streamRepository = do

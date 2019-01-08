@@ -26,6 +26,13 @@ instance ToJSON GsdEvent where
               "workspaceId" .= workspaceId,
               "workspaceNewName" .= workspaceNewName,
               "eventName" .= eventNameForWorkspaceRenamed]
+  toJSON (GoalSet {eventId, createdOn, workspaceId,goalId,goalDescription  } ) = object [
+                "eventId" .= eventId,
+                "createdOn" .= createdOn,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "goalDescription" .= goalDescription,
+                "eventName" .= eventNameForGoalSet]
 
 
 
@@ -51,6 +58,13 @@ instance FromJSON GsdEvent where
                           <*> jsonObject .: "createdOn"
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "workspaceNewName"
+                    Just (String commandName) | (Text.unpack commandName) == eventNameForGoalSet ->
+                      GoalSet
+                          <$> jsonObject .: "eventId"
+                          <*> jsonObject .: "createdOn"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "goalId"
+                          <*> jsonObject .: "goalDescription"
                     Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
                     _ -> error $ "Command name not provided"
   parseJSON _ =  error $ "Json format not expected"

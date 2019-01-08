@@ -8,7 +8,7 @@ import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 
 
 
-type CommandHandler = (Persisted Command) -> Maybe ValidationState -> CommandDirective
+type CommandHandler applicationState = (Persisted Command) -> Maybe (ValidationState applicationState) -> CommandDirective applicationState
 
 
 

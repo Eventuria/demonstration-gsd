@@ -4,7 +4,7 @@ import Control.Monad.Free
 import qualified Cqrs.EDsl as CqrsEDsl
 import qualified PersistedStreamEngine.Interface.Write.WDsl as WDsl
 
-translate :: CqrsEDsl.CommandTransaction () -> WDsl.WritePersistenceStreamLanguage ()
+translate :: CqrsEDsl.CommandTransaction applicationState () -> WDsl.WritePersistenceStreamLanguage applicationState ()
 translate (Pure a)  = return a
 translate (Free (CqrsEDsl.PersistEvent event next)) = Free (WDsl.PersistEvent event $ translate next)
 translate (Free (CqrsEDsl.UpdateValidationState validationState next))  = Free (WDsl.PersistValidationState validationState $ translate next)

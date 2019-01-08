@@ -6,28 +6,23 @@ import Data.Aeson
 import PersistedStreamEngine.Interface.Write.Writable
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 
-instance Writable ValidationState where
+instance ToJSON state => Writable (ValidationState state) where
   getItemName validationState  = "validationState"
 
 
-instance ToJSON AggregateState where
-   toJSON (AggregateState aggregateId) = object ["aggregateId" .= aggregateId]
-
-instance ToJSON ValidationState where
-   toJSON (ValidationState lastOffsetConsumed commandsProcessed state) = object [
+instance ToJSON state => ToJSON (ValidationState state) where
+   toJSON (ValidationState lastOffsetConsumed commandsProcessed aggregateId state) = object [
       "lastOffsetConsumed" .= lastOffsetConsumed,
       "commandsProcessed" .= commandsProcessed,
+      "aggregateId" .= aggregateId,
       "state" .= state
       ]
 
-instance FromJSON ValidationState  where
+instance FromJSON state => FromJSON (ValidationState state) where
 
     parseJSON (Object jsonObject) = ValidationState <$> jsonObject .: "lastOffsetConsumed"
                                              <*> jsonObject .: "commandsProcessed"
+                                             <*> jsonObject .: "aggregateId"
                                              <*> jsonObject .: "state"
     parseJSON _ =  error $ "Json format not expected"
 
-instance FromJSON AggregateState  where
-
-    parseJSON (Object jsonObject) = AggregateState <$> jsonObject .: "aggregateId"
-    parseJSON _ =  error $ "Json format not expected"
