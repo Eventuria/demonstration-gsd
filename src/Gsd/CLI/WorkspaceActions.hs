@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Gsd.CLI.HandleWorkspace (handleWorkspace)where
+module Gsd.CLI.WorkspaceActions (workOnWorkspace)where
 
 import Prelude hiding (length)
 import System.Console.Byline
@@ -27,48 +27,23 @@ import Streamly
 import Data.Function ((&))
 import Control.Monad (void)
 import Gsd.Read.Client (streamGoal)
-type HandleWorkspaces = Clients -> Byline IO ()
 
-data HandleWorkspaceActions = RenameWorkspaceAction  Text
+type WorkOnWorkspaces = Clients -> Byline IO ()
+
+data WorkspaceActions = RenameWorkspaceAction  Text
                             | SetNewGoalAction  Text
                             | ListGoals  Text
                             | ListCommandsReceived Text
                             | ListCommandResponseProduced Text
                             | ListEventsGenerated Text
                             | ListValidationStateHistory Text
-                            | HandleWorkspaces Text
+                            | WorkOnWorkspaces Text
                             | Quit Text deriving Show
 
 
-displayHandleWorkspaceAction :: HandleWorkspaceActions -> Stylized
-displayHandleWorkspaceAction (RenameWorkspaceAction description) = fg cyan <> text description
-displayHandleWorkspaceAction (SetNewGoalAction description) = fg cyan <> text description
-displayHandleWorkspaceAction (ListGoals description) = fg cyan <> text description
-displayHandleWorkspaceAction (ListCommandsReceived description) = fg cyan <> text description
-displayHandleWorkspaceAction (ListCommandResponseProduced description) = fg cyan <> text description
-displayHandleWorkspaceAction (ListEventsGenerated description) = fg cyan <> text description
-displayHandleWorkspaceAction (ListValidationStateHistory description) = fg cyan <> text description
-displayHandleWorkspaceAction (HandleWorkspaces description) = fg cyan <> text description
-displayHandleWorkspaceAction (Quit description) = fg cyan <> text description
-
-
-
-handleWorkspaceActions :: [HandleWorkspaceActions]
-handleWorkspaceActions =
-  [ RenameWorkspaceAction  "Rename Workspace" ,
-    SetNewGoalAction       "Set A New Goal",
-    ListGoals              "List Goals",
-    HandleWorkspaces       "Work On Another Workspace",
-    ListCommandsReceived        "Infra-Monitoring - List Commands Received",
-    ListCommandResponseProduced "Infra-Monitoring - List Command Responses Produced",
-    ListEventsGenerated         "Infra-Monitoring - List Events Generated",
-    ListValidationStateHistory  "Infra-Monitoring - List Validation State History",
-    Quit                   "Quit"]
-
-
-handleWorkspace :: Clients -> WorkspaceId -> WorkspaceName ->  HandleWorkspaces -> Byline IO ()
-handleWorkspace clients @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl} workspaceIdSelected workspaceNameSelected handleWorkspaces = do
-  let menuConfig = banner ("Available actions on the selected workspace : " <> fg green <> ((text . pack .show) $ workspaceNameSelected)) $ menu handleWorkspaceActions displayHandleWorkspaceAction
+workOnWorkspace :: Clients -> WorkspaceId -> WorkspaceName ->  WorkOnWorkspaces -> Byline IO ()
+workOnWorkspace clients @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl} workspaceIdSelected workspaceNameSelected workOnWorkspaces = do
+  let menuConfig = banner ("Available actions on the selected workspace : " <> fg green <> ((text . pack .show) $ workspaceNameSelected)) $ menu workspaceActions stylizeAction
       prompt     = "please choose an action (provide the index) : "
       onError    = "please enter a valid index..."
 
@@ -84,11 +59,11 @@ handleWorkspace clients @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl
           Left err -> do
             sayLn $ fg red <> "Error: " <>  (text . pack . show) err
             sayLn $ ""
-            handleWorkspaces clients
+            workOnWorkspaces clients
           Right persistenceResult -> do
             sayLn $ fg green <> "Rename Workspace Command successfully sent !"
             sayLn $ ""
-      handleWorkspace clients workspaceIdSelected workspaceNewName handleWorkspaces
+      workOnWorkspace clients workspaceIdSelected workspaceNewName workOnWorkspaces
     Match (SetNewGoalAction description) -> do
           commandId <- liftIO $ nextRandom
           sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
@@ -101,84 +76,108 @@ handleWorkspace clients @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl
               Left err -> do
                 sayLn $ fg red <> "Error: " <>  (text . pack . show) err
                 sayLn $ ""
-                handleWorkspaces clients
+                workOnWorkspaces clients
               Right persistenceResult -> do
                 sayLn $ fg green <> "Set Goal Command successfully sent !"
                 sayLn $ ""
-          handleWorkspace clients workspaceIdSelected workspaceNameSelected handleWorkspaces
+          workOnWorkspace clients workspaceIdSelected workspaceNameSelected workOnWorkspaces
     Match (ListGoals description) -> do
-          sayLn $ fg green <> "Listing goals created : "
+          sayLn $ fg green <> "Listing goals set : "
           manager <- liftIO $ newManager defaultManagerSettings
           liftIO $ S.withClientM (streamGoal workspaceIdSelected)(S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
               Left err -> void $ runByline $ do
                 sayLn $ fg red <> "Error: " <>  (text . pack . show) err
                 sayLn $ ""
-                handleWorkspaces clients
+                workOnWorkspaces clients
               Right stream -> do
                   runStream $ stream
                       & Streamly.Prelude.mapM (\goal -> void $ runByline $ do
                         sayLn $ fg green <> (text . pack . show) goal)
-                  void $ runByline $ handleWorkspace clients workspaceIdSelected workspaceNameSelected handleWorkspaces
+                  void $ runByline $ workOnWorkspace clients workspaceIdSelected workspaceNameSelected workOnWorkspaces
     Match (ListCommandsReceived description) -> do
       manager <- liftIO $ newManager defaultManagerSettings
       liftIO $ S.withClientM (streamGsdCommandByWorkspaceId workspaceIdSelected) (S.mkClientEnv manager gsdMonitoringApiUrl) $ \e -> case e of
          Left err -> void $ runByline $ do
            sayLn $ fg red <> "Error: " <>  (text . pack . show) err
            sayLn $ ""
-           handleWorkspaces clients
+           workOnWorkspaces clients
          Right streamGsdCommandByWorkspaceId -> do
            runStream $ streamGsdCommandByWorkspaceId
                  & Streamly.Prelude.mapM (\persistedGsdCommand -> void $ runByline $ do
                    sayLn $ fg green <> (text . pack . show) persistedGsdCommand)
-      handleWorkspace clients workspaceIdSelected workspaceNameSelected handleWorkspaces
+      workOnWorkspace clients workspaceIdSelected workspaceNameSelected workOnWorkspaces
     Match (ListCommandResponseProduced description) -> do
       manager <- liftIO $ newManager defaultManagerSettings
       liftIO $ S.withClientM (streamGsdCommandResponseByWorkspaceId workspaceIdSelected) (S.mkClientEnv manager gsdMonitoringApiUrl) $ \e -> case e of
          Left err -> void $ runByline $ do
            sayLn $ fg red <> "Error: " <>  (text . pack . show) err
            sayLn $ ""
-           handleWorkspaces clients
+           workOnWorkspaces clients
          Right streamGsdCommandResponseByWorkspaceId -> do
            runStream $ streamGsdCommandResponseByWorkspaceId
                  & Streamly.Prelude.mapM (\persistedGsdCommandResponse -> void $ runByline $ do
                    sayLn $ fg green <> (text . pack . show) persistedGsdCommandResponse)
-      handleWorkspace clients workspaceIdSelected workspaceNameSelected handleWorkspaces
+      workOnWorkspace clients workspaceIdSelected workspaceNameSelected workOnWorkspaces
     Match (ListEventsGenerated description) -> do
       manager <- liftIO $ newManager defaultManagerSettings
       liftIO $ S.withClientM (streamGsdEventByWorkspaceId workspaceIdSelected) (S.mkClientEnv manager gsdMonitoringApiUrl) $ \e -> case e of
          Left err -> void $ runByline $ do
            sayLn $ fg red <> "Error: " <>  (text . pack . show) err
            sayLn $ ""
-           handleWorkspaces clients
+           workOnWorkspaces clients
          Right streamGsdEventsByWorkspaceId -> do
            runStream $ streamGsdEventsByWorkspaceId
                  & Streamly.Prelude.mapM (\persistedGsdEvent -> void $ runByline $ do
                    sayLn $ fg green <> (text . pack . show) persistedGsdEvent)
-      handleWorkspace clients workspaceIdSelected workspaceNameSelected handleWorkspaces
+      workOnWorkspace clients workspaceIdSelected workspaceNameSelected workOnWorkspaces
     Match (ListValidationStateHistory description) -> do
           manager <- liftIO $ newManager defaultManagerSettings
           liftIO $ S.withClientM (streamGsdValidationStateByWorkspaceId workspaceIdSelected) (S.mkClientEnv manager gsdMonitoringApiUrl) $ \e -> case e of
              Left err -> void $ runByline $ do
                sayLn $ fg red <> "Error: " <>  (text . pack . show) err
                sayLn $ ""
-               handleWorkspaces clients
+               workOnWorkspaces clients
              Right streamGsdEventsByWorkspaceId -> do
                runStream $ streamGsdEventsByWorkspaceId
                      & Streamly.Prelude.mapM (\persistedValidationState -> void $ runByline $ do
                        sayLn $ fg green <> (text . pack . show) persistedValidationState)
-          handleWorkspace clients workspaceIdSelected workspaceNameSelected handleWorkspaces
-    Match (HandleWorkspaces description) -> do
+          workOnWorkspace clients workspaceIdSelected workspaceNameSelected workOnWorkspaces
+    Match (WorkOnWorkspaces description) -> do
       sayLn $ fg green <> (text . pack .show) description <> "selected "
-      handleWorkspaces clients
+      workOnWorkspaces clients
     Match (Quit description) -> do
       sayLn $ fg green <> "See you soon !! "
       liftIO $ exitSuccess
     NoItems -> sayLn $ "unexpected answer"
     Other x -> sayLn $ "unexpected answer"
+  where
+
+    workspaceActions :: [WorkspaceActions]
+    workspaceActions =
+      [ RenameWorkspaceAction       "Rename Workspace" ,
+        SetNewGoalAction            "Set A New Goal",
+        ListGoals                   "List Goals",
+        WorkOnWorkspaces            "Work On Another Workspace",
+        ListCommandsReceived        "Infra-Monitoring - List Commands Received",
+        ListCommandResponseProduced "Infra-Monitoring - List Command Responses Produced",
+        ListEventsGenerated         "Infra-Monitoring - List Events Generated",
+        ListValidationStateHistory  "Infra-Monitoring - List Validation State History",
+        Quit                        "Quit"]
+
+    stylizeAction :: WorkspaceActions -> Stylized
+    stylizeAction (RenameWorkspaceAction description) = fg cyan <> text description
+    stylizeAction (SetNewGoalAction description) = fg cyan <> text description
+    stylizeAction (ListGoals description) = fg cyan <> text description
+    stylizeAction (ListCommandsReceived description) = fg cyan <> text description
+    stylizeAction (ListCommandResponseProduced description) = fg cyan <> text description
+    stylizeAction (ListEventsGenerated description) = fg cyan <> text description
+    stylizeAction (ListValidationStateHistory description) = fg cyan <> text description
+    stylizeAction (WorkOnWorkspaces description) = fg cyan <> text description
+    stylizeAction (Quit description) = fg cyan <> text description
 
 
-atLeastThreeChars :: Text -> IO (Either Stylized Text)
-atLeastThreeChars input = return $
-  if length input < 3
-    then Left "3 characters minimum for a workspace please..."
-    else Right input
+    atLeastThreeChars :: Text -> IO (Either Stylized Text)
+    atLeastThreeChars input = return $
+      if length input < 3
+        then Left "3 characters minimum for a workspace please..."
+        else Right input
