@@ -23,11 +23,11 @@ data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::Work
                  | SetGoal  { commandId :: CommandId ,
                               workspaceId ::WorkspaceId ,
                               goalId :: GoalId ,
-                              goalDescription :: Text} deriving (Show,Generic,Eq)
---                 | RefineGoalDescription { commandId :: CommandId ,
---                                               workspaceId ::WorkspaceId ,
---                                               goalId :: GoalId ,
---                                               refinedGoalDescription :: Text}
+                              goalDescription :: Text}
+                 | RefineGoalDescription { commandId :: CommandId ,
+                                           workspaceId ::WorkspaceId ,
+                                           goalId :: GoalId ,
+                                           refinedGoalDescription :: Text} deriving (Show,Generic,Eq)
 --                 | NotifyGoalAccomplishment {commandId :: CommandId ,
 --                                                workspaceId ::WorkspaceId ,
 --                                                goalId :: GoalId }
@@ -62,6 +62,9 @@ renameWorkspaceCommandName = "renameWorkspace"
 setGoalCommandName :: String
 setGoalCommandName = "setGoal"
 
+refineGoalDescriptionCommandName :: String
+refineGoalDescriptionCommandName = "refineGoalDescription"
+
 isCreateWorkspaceCommand :: Command -> Bool
 isCreateWorkspaceCommand command = (commandName $ commandHeader command) == createWorkspaceCommandName
 
@@ -71,6 +74,8 @@ isRenameWorkspaceCommand command = (commandName $ commandHeader command) == rena
 isGoalSetCommand :: Command -> Bool
 isGoalSetCommand command = (commandName $ commandHeader command) == setGoalCommandName
 
+isRefineGoalDescriptionCommand :: Command -> Bool
+isRefineGoalDescriptionCommand command = (commandName $ commandHeader command) == refineGoalDescriptionCommandName
 
 toCommand :: GsdCommand -> Command
 toCommand  CreateWorkspace {commandId, workspaceId, workspaceName} =
@@ -84,6 +89,11 @@ toCommand  SetGoal {commandId, workspaceId, goalId,goalDescription } =
             payload = Map.fromList [
               ("goalId",  String $ (pack.toString) goalId ),
               ("goalDescription",  String goalDescription ) ] }
+toCommand  RefineGoalDescription {commandId, workspaceId, goalId,refinedGoalDescription } =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = refineGoalDescriptionCommandName } ,
+            payload = Map.fromList [
+              ("goalId",  String $ (pack.toString) goalId ),
+              ("refinedGoalDescription",  String refinedGoalDescription ) ] }
 
 fromCommand :: Command -> GsdCommand
 fromCommand Command { payload , commandHeader = CommandHeader {commandName,commandId,aggregateId = workspaceId}} =
@@ -94,8 +104,11 @@ fromCommand Command { payload , commandHeader = CommandHeader {commandName,comma
                           workspaceId,
                           goalId =  extractPayloadUUIDValue payload "goalId" ,
                           goalDescription =  extractPayloadTextValue payload "goalDescription"   }
+    "refineGoalDescription" -> RefineGoalDescription {commandId,
+                               workspaceId,
+                               goalId =  extractPayloadUUIDValue payload "goalId" ,
+                               refinedGoalDescription =  extractPayloadTextValue payload "refinedGoalDescription"   }
     _ -> error "error from event"
-
 
 
 extractPayloadTextValue :: CommandPayload -> String -> Text

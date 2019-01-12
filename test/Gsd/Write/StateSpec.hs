@@ -7,7 +7,6 @@ import Test.QuickCheck
 import Generic.Random
 import Data.Aeson
 import Gsd.Write.State
-import Gsd.Read.Goal
 import Test.QuickCheck.Instances.UUID ()
 import Test.QuickCheck.Instances.UnorderedContainers ()
 import Test.QuickCheck.Instances.Vector ()

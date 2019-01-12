@@ -14,8 +14,8 @@ import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import Data.Set (fromList)
 
-handle :: Offset -> CommandId -> WorkspaceId -> Text  -> CommandDirective GsdState
-handle offset commandId workspaceId workspaceNewName =
+handle :: Offset -> ValidationState GsdState -> CommandId -> WorkspaceId -> Text  -> CommandDirective GsdState
+handle offset validationState commandId workspaceId workspaceNewName =
   Validate $ do
      now <- getCurrentTime
      eventId <- getNewEventID
@@ -23,4 +23,4 @@ handle offset commandId workspaceId workspaceNewName =
      updateValidationState ValidationState {lastOffsetConsumed = offset ,
                                                          commandsProcessed = fromList [commandId] ,
                                                          aggregateId = workspaceId,
-                                                         state = Nothing}
+                                                         state = state $ validationState}

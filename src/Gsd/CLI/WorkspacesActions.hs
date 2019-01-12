@@ -1,125 +1,133 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Gsd.CLI.WorkspacesActions (workOnWorkspaces)where
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
+module Gsd.CLI.WorkspacesActions (run)where
 
 import Prelude hiding (length)
-import System.Console.Byline
+import System.Console.Byline hiding (askWithMenuRepeatedly)
+import Gsd.CLI.ByLineWrapper (askWithMenuRepeatedly)
+
 import Data.Text
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.Client (sendCommand)
 import Gsd.Write.Commands.Command
-import System.Exit (exitSuccess)
 import Gsd.Read.Client (streamWorkspace)
 import Gsd.Clients
 import Network.HTTP.Client (newManager, defaultManagerSettings)
-
+import Gsd.CLI.Steps
 import Servant.Client
 import Data.Function ((&))
 import Control.Monad (void)
-
+import Gsd.CLI.QuitCLI (runQuitCLI)
 import Streamly
 import qualified Streamly.Prelude as Streamly.Prelude
 import qualified Servant.Client.Streaming as S
 
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
-import Gsd.CLI.WorkspaceActions (workOnWorkspace)
+import qualified Gsd.CLI.WorkspaceActions as WorkspaceActions (run)
 
-data WorkspacesActions = CreateWorkspaceRequest  Text
+data WorkspacesAction = CreateWorkspaceRequest  Text
                        | ListWorkspaces Text
-                       | WorkOnAWorkspace Text
+                       | GotoWorkOnAWorkspace Text
                        | Quit Text deriving Show
 
 
-workOnWorkspaces :: Clients -> Byline IO ()
-workOnWorkspaces clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
+run :: WorkOnWorkspacesStepHandle
+run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
+
   let menuConfig = banner "Available actions on the workspace set :" $ menu workspacesActions stylizeAction
       prompt     = "please choose an action (provide the index) : "
       onError    = "please enter a valid index..."
+      currentStep = WorkOnWorkspacesStep run clients
 
   answer <- askWithMenuRepeatedly menuConfig prompt onError
   case answer of
-    Match (CreateWorkspaceRequest description) -> do
-        workspaceId <- liftIO $ nextRandom
-        commandId <- liftIO $ nextRandom
-        sayLn $ fg green <> "generating a new Workspace Id (" <> text (toText workspaceId) <> ") "
-        sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
-        workspaceName <- askUntil "Enter a workspace name : " Nothing atLeastThreeChars
-        manager <- liftIO $ newManager defaultManagerSettings
-        queryResult <- liftIO $ runClientM (sendCommand CreateWorkspace {commandId , workspaceId , workspaceName}) (mkClientEnv manager writeApiUrl)
-        case queryResult of
-          Left err -> do
-            sayLn $ fg red <> "Error: " <>  (text . pack . show) err
-            sayLn $ ""
-            workOnWorkspaces clients
-          Right persistenceResult -> do
-            sayLn $ fg green <> "Workpace "<> (text . toText) workspaceId <> " successfully created !"
-            sayLn $ ""
-            workOnWorkspaces clients
-    Match (ListWorkspaces description) -> do
+    Right (CreateWorkspaceRequest description) -> (runCreateWorkspaceRequest currentStep) >>= runNextStep
+    Right (ListWorkspaces description) -> (runListWorkspaces currentStep) >>= runNextStep
+    Right (GotoWorkOnAWorkspace description) -> (runWorkOnAWorkspace currentStep) >>= runNextStep
+    Right (Quit description) -> runQuitCLI
+    Left  error -> (return $ Left StepError {currentStep, errorDescription = show error }) >>= runNextStep
+
+  where
+    workspacesActions :: [WorkspacesAction]
+    workspacesActions = [ CreateWorkspaceRequest "Create A Workspace" ,
+                          ListWorkspaces         "List Workspaces",
+                          GotoWorkOnAWorkspace       "Work On A Workspace",
+                          Quit                   "Quit" ]
+
+    stylizeAction :: WorkspacesAction -> Stylized
+    stylizeAction workspacesAction = case workspacesAction of
+      CreateWorkspaceRequest description ->  fg cyan <> text description
+      ListWorkspaces description ->  fg cyan <> text description
+      GotoWorkOnAWorkspace description ->  fg cyan <> text description
+      Quit description ->  fg cyan <> text description
+
+
+    runCreateWorkspaceRequest :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnWorkspaces))
+    runCreateWorkspaceRequest currentStep = do
+      workspaceId <- liftIO $ nextRandom
+      commandId <- liftIO $ nextRandom
+      sayLn $ fg green <> "generating a new Workspace Id (" <> text (toText workspaceId) <> ") "
+      sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
+      workspaceName <- askUntil "Enter a workspace name : " Nothing atLeastThreeChars
+      manager <- liftIO $ newManager defaultManagerSettings
+      queryResult <- liftIO $ runClientM (sendCommand CreateWorkspace {commandId , workspaceId , workspaceName}) (mkClientEnv manager writeApiUrl)
+      case queryResult of
+        Left errorDescription -> return $ Left $ StepError {currentStep, errorDescription = show errorDescription }
+        Right persistenceResult -> do
+          sayLn $ fg green <> "Workpace "<> (text . toText) workspaceId <> " successfully created !"
+          sayLn $ ""
+          return $ Right currentStep
+
+    runWorkOnAWorkspace :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnAWorkspace))
+    runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep workOnWorkspaces clients)  = do
+      manager <- liftIO $ newManager defaultManagerSettings
+      result <- liftIO $ S.withClientM streamWorkspace (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
+        Left err -> return $ Left $ show err
+        Right streamWorkspace -> do
+            workspaces <- streamWorkspace & Streamly.Prelude.toList
+            return $ Right workspaces
+
+      case result of
+        Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription}
+        Right workspaces -> do
+            let menuConfig = banner "Available workspaces :" $ menu workspaces stylizePersistedWorkspace
+                prompt     = "please choose an action (provide the index) : "
+                onError    = "please enter a valid index..."
+            result <- askWithMenuRepeatedly menuConfig prompt onError
+            case result of
+               Right (PersistedItem {item = workspace @ Workspace {workspaceId , workspaceName}}) -> do
+                   sayLn $ fg green <> (text . pack . show) workspace <> " selected !"
+                   sayLn $ ""
+                   return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clients workspace workOnWorkspaces
+               Left errorDescription -> return $ Left $ StepError {currentStep, errorDescription}
+
+    runListWorkspaces :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnWorkspaces))
+    runListWorkspaces currentStep = do
       sayLn $ fg green <> "Listing all workspaces created : "
       manager <- liftIO $ newManager defaultManagerSettings
       liftIO $ S.withClientM streamWorkspace (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-          Left err -> void $ runByline $ do
-            sayLn $ fg red <> "Error: " <>  (text . pack . show) err
-            sayLn $ ""
-            workOnWorkspaces clients
+          Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
           Right stream -> do
-              runStream $ stream
-                  & Streamly.Prelude.mapM (\PersistedItem { offset = offset, item = workspace} -> void $ runByline $ do
-                    sayLn $ fg green <> (text . pack . show) workspace)
-              void $ runByline $ workOnWorkspaces clients
-    Match (WorkOnAWorkspace description) -> do
-       manager <- liftIO $ newManager defaultManagerSettings
-       liftIO $ S.withClientM streamWorkspace (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                 Left err -> void $ runByline $ do
-                   sayLn $ fg red <> "Error: " <>  (text . pack . show) err
-                   sayLn $ ""
-                   workOnWorkspaces clients
-                 Right stream -> void $ runByline $ do
-                   workspaces <- liftIO $ stream & Streamly.Prelude.toList
-                   let menuConfig = banner "Available workspaces :" $ menu workspaces stylizePersistedWorkspace
-                       prompt     = "please choose an action (provide the index) : "
-                       onError    = "please enter a valid index..."
-                   workspaceSelectedMatch <- askWithMenuRepeatedly menuConfig prompt onError
-                   case workspaceSelectedMatch of
-                    Match PersistedItem {item = workspaceSelected @ Workspace {workspaceId , workspaceName}} -> do
-                      sayLn $ fg green <> (text . pack . show) workspaceSelected <> " selected !"
-                      sayLn $ ""
-                      workOnWorkspace clients workspaceId workspaceName   workOnWorkspaces
-                    NoItems -> sayLn $ "unexpected answer"
-                    Other x -> sayLn $ "unexpected answer"
-    Match (Quit description) -> do
-      sayLn $ fg green <> "See you soon !! "
-      liftIO $ exitSuccess
-    NoItems -> sayLn $ "unexpected answer"
-    Other x -> sayLn $ "unexpected answer"
+            runStream $ stream
+                & Streamly.Prelude.mapM (\PersistedItem { offset = offset, item = workspace} -> void $ runByline $ do
+                  sayLn $ fg green <> (text . pack . show) workspace)
+            return $ Right currentStep
 
-  where
-        workspacesActions :: [WorkspacesActions]
-        workspacesActions = [  CreateWorkspaceRequest "Create A Workspace" ,
-                              ListWorkspaces         "List Workspaces",
-                              WorkOnAWorkspace       "Work On A Workspace",
-                              Quit                   "Quit" ]
-
-        stylizeAction :: WorkspacesActions -> Stylized
-        stylizeAction (CreateWorkspaceRequest description) = fg cyan <> text description
-        stylizeAction (ListWorkspaces description) = fg cyan <> text description
-        stylizeAction (WorkOnAWorkspace description) = fg cyan <> text description
-        stylizeAction (Quit description) = fg cyan <> text description
+    stylizePersistedWorkspace :: Persisted Workspace -> Stylized
+    stylizePersistedWorkspace PersistedItem {item = Workspace {workspaceId,workspaceName}} =
+      fg cyan <> "Workspace (" <> (text $ toText workspaceId) <> " , " <> text workspaceName <> " )"
 
 
-        stylizePersistedWorkspace :: Persisted Workspace -> Stylized
-        stylizePersistedWorkspace PersistedItem {item = Workspace {workspaceId,workspaceName}} =
-          fg cyan <> "Workspace (" <> (text $ toText workspaceId) <> " , " <> text workspaceName <> " )"
-
-
-        atLeastThreeChars :: Text -> IO (Either Stylized Text)
-        atLeastThreeChars input = return $
-          if length input < 3
-            then Left "3 characters minimum for a workspace please..."
-            else Right input
+    atLeastThreeChars :: Text -> IO (Either Stylized Text)
+    atLeastThreeChars input = return $
+      if length input < 3
+        then Left "3 characters minimum for a workspace please..."
+        else Right input
 

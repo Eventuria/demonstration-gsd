@@ -25,6 +25,12 @@ instance ToJSON GsdCommand where
               "goalId" .= goalId,
               "goalDescription" .= goalDescription,
               "commandName" .= setGoalCommandName]
+  toJSON (RefineGoalDescription {commandId , workspaceId ,goalId , refinedGoalDescription } ) = object [
+              "commandId" .= commandId,
+              "workspaceId" .= workspaceId,
+              "goalId" .= goalId,
+              "refinedGoalDescription" .= refinedGoalDescription,
+              "commandName" .= refineGoalDescriptionCommandName]
 
 
 instance FromJSON GsdCommand where
@@ -48,6 +54,12 @@ instance FromJSON GsdCommand where
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "goalId"
                           <*> jsonObject .: "goalDescription"
+                    Just (String commandName) | (Text.unpack commandName) == refineGoalDescriptionCommandName ->
+                        RefineGoalDescription
+                            <$> jsonObject .: "commandId"
+                            <*> jsonObject .: "workspaceId"
+                            <*> jsonObject .: "goalId"
+                            <*> jsonObject .: "refinedGoalDescription"
                     Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
                     _ -> error $ "Command name not provided"
   parseJSON _ =  error $ "Json format not expected"
