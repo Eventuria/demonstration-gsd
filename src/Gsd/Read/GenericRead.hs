@@ -10,11 +10,11 @@ import Streamly hiding (Streaming)
 import Data.Function ((&))
 import qualified Streamly.Prelude as S
 import Data.Maybe
-
+import Data.Text hiding (map)
 import PersistedStreamEngine.Interface.Streamable
 import Cqrs.Write.StreamRepository
 import PersistedStreamEngine.Interface.PersistedItem
-
+import Control.Monad.IO.Class (MonadIO(liftIO))
 
 import PersistedStreamEngine.Interface.Read.Reading
 import Gsd.Read.Workspace
@@ -22,7 +22,7 @@ import Gsd.Read.Goal
 import Gsd.Write.Core
 import Gsd.Write.Events.Event
 import Cqrs.Write.Aggregate.Events.Event
-
+import Cqrs.Write.Serialization.Event ()
 
 data WorkspaceBuilder = WorkspaceBuilder { workspaceIdMaybe :: Maybe WorkspaceId , workspaceNameMaybe :: Maybe WorkspaceName } deriving Show
 
@@ -57,15 +57,36 @@ streamWorkspace aggregateIdStream getEventStream Streaming {streamAll} =
 
 
 
-streamGoal :: (Streamable stream monad Event) => GetEventStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad Goal
-streamGoal getEventStream Streaming {streamAll} workspaceId =
-  (streamAll $ getEventStream workspaceId)
-      & S.map (\PersistedItem{item = event} -> fromEvent event)
-      & S.filter (\gsdEvent ->
-        case gsdEvent of
-            GoalSet {..} -> True
-            _ -> False)
-      & S.map (\GoalSet {workspaceId, goalId, goalDescription} -> Goal { workspaceId, goalId, description = goalDescription})
+streamGoal :: Streamable stream monad Event => GetEventStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad Goal
+streamGoal getEventStream streaming workspaceId = do
+    goals <- liftIO $ S.foldx
+      folding
+      []
+      id
+      (streamingGoalRelatedEvents getEventStream streaming workspaceId)
+    S.fromList goals
+  where
+    streamingGoalRelatedEvents :: (Streamable stream monad Event) => GetEventStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad GsdEvent
+    streamingGoalRelatedEvents getEventStream Streaming {streamAll} workspaceId =
+      (streamAll $ getEventStream workspaceId)
+            & S.map (\PersistedItem{item = event} -> fromEvent event)
+            & S.filter (\gsdEvent ->
+              case gsdEvent of
+                  GoalSet {..} -> True
+                  GoalDescriptionRefined {..} -> True
+                  _ -> False)
+
+    folding :: [Goal] -> GsdEvent -> [Goal]
+    folding goals GoalSet {workspaceId, goalId, goalDescription} = goals ++ [Goal { workspaceId, goalId, description = goalDescription}]
+    folding goals GoalDescriptionRefined {workspaceId, goalId, refinedGoalDescription} = updateGoals goalId refinedGoalDescription goals
+      where
+        updateGoals :: GoalId -> Text -> [Goal] -> [Goal]
+        updateGoals goalIdToUpdate refinedGoalDescription goals =
+          map (\goal@Goal{workspaceId,goalId} -> case (goalIdToUpdate == goalId) of
+            True -> Goal{workspaceId,goalId, description = refinedGoalDescription}
+            False -> goal
+          ) $ goals
+    folding goals gsdEvent = goals
 
 
 

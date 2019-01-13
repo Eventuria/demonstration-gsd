@@ -46,6 +46,7 @@ extra-deps :
   - byline-0.3.2.0
   - terminfo-hs-0.2.1.1
   - servant-pipes-0.15
+  - streamly-0.6.0
 
 # Dependency packages to be pulled from upstream that are not in the resolver
 # using the same syntax as the packages field.

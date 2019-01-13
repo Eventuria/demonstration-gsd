@@ -32,7 +32,7 @@ dependencies:
   - hslogger == 1.2.12
   - bytestring == 0.10.8.2
   - foundation == 0.0.21
-  - streamly == 0.5.2
+  - streamly == 0.6.0
   - random == 1.1
   - free == 5.1
   - transformers == 0.5.5.0
