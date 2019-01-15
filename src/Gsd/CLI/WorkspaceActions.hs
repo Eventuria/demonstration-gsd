@@ -61,17 +61,16 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
 
   answer <- askWithMenuRepeatedly menuConfig prompt onError
   case answer of
-      Right (RenameWorkspaceAction description) -> (runRenameWorkspace currentStep) >>= runNextStep
-      Right (SetNewGoalAction description) -> (runSetNewGoal currentStep) >>= runNextStep
-      Right (ListGoals description) -> (runListGoals currentStep) >>= runNextStep
-      Right (GotoWorkOnAGoal description) -> (runWorkOnAGoal currentStep) >>= runNextStep
-      Right (ListCommandsReceived description) -> (runListCommandReceived currentStep gsdMonitoringApiUrl workspace) >>= runNextStep 
-      Right (ListCommandResponseProduced description) -> (runListCommandResponseReceived currentStep gsdMonitoringApiUrl workspace) >>= runNextStep
-      Right (ListEventsGenerated description) ->         (runListEventsGenerated currentStep gsdMonitoringApiUrl workspace        ) >>= runNextStep
-      Right (ListValidationStateHistory description) ->  (runListValidationStateHistory currentStep gsdMonitoringApiUrl workspace ) >>= runNextStep
-      Right (GotoWorkOnWorkspaces description) -> runWorkOnWorkspaces description currentStep >>= runNextStep
-      Right (Quit description) -> runQuitCLI
-      Left  error -> (return $ Left StepError {currentStep, errorDescription = show error }) >>= runNextStep
+    RenameWorkspaceAction description -> (runRenameWorkspace currentStep) >>= runNextStep
+    SetNewGoalAction description -> (runSetNewGoal currentStep) >>= runNextStep
+    ListGoals description -> (runListGoals currentStep) >>= runNextStep
+    GotoWorkOnAGoal description -> (runWorkOnAGoal currentStep) >>= runNextStep
+    ListCommandsReceived description -> (runListCommandReceived currentStep gsdMonitoringApiUrl workspace) >>= runNextStep
+    ListCommandResponseProduced description -> (runListCommandResponseReceived currentStep gsdMonitoringApiUrl workspace) >>= runNextStep
+    ListEventsGenerated description ->         (runListEventsGenerated currentStep gsdMonitoringApiUrl workspace        ) >>= runNextStep
+    ListValidationStateHistory description ->  (runListValidationStateHistory currentStep gsdMonitoringApiUrl workspace ) >>= runNextStep
+    GotoWorkOnWorkspaces description -> runWorkOnWorkspaces description currentStep >>= runNextStep
+    Quit description -> runQuitCLI
 
   where
     workspaceActions :: [WorkspaceAction]
@@ -158,12 +157,9 @@ runWorkOnAGoal currentStep @ (WorkOnAWorkspaceStep workOnAWorkspace (clients @ C
      let menuConfig = banner "Available Goals :" $ menu goals stylizeGoal
          prompt     = "please choose an action (provide the index) : "
          onError    = "please enter a valid index..."
-     result <- askWithMenuRepeatedly menuConfig prompt onError
-     case result of
-       Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
-       Right goal -> do
-         sayLn $ fg green <> (text . pack . show) goal <> " selected !"
-         return $ Right $ WorkOnAGoalStep GoalActions.run clients workspace goal workOnAWorkspace workOnWorkspaces
+     goal <- askWithMenuRepeatedly menuConfig prompt onError
+     sayLn $ fg green <> (text . pack . show) goal <> " selected !"
+     return $ Right $ WorkOnAGoalStep GoalActions.run clients workspace goal workOnAWorkspace workOnWorkspaces
 
 runWorkOnWorkspaces :: Text -> Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnWorkspaces))
 runWorkOnWorkspaces description (WorkOnAWorkspaceStep workOnAWorkspace clients  workspace workOnWorkspaces) = do

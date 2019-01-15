@@ -27,25 +27,20 @@ data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::Work
                  | RefineGoalDescription { commandId :: CommandId ,
                                            workspaceId ::WorkspaceId ,
                                            goalId :: GoalId ,
-                                           refinedGoalDescription :: Text} deriving (Show,Generic,Eq)
---                 | NotifyGoalAccomplishment {commandId :: CommandId ,
---                                                workspaceId ::WorkspaceId ,
---                                                goalId :: GoalId }
---                 | GiveUpOnAGoal { commandId :: CommandId ,
---                                 workspaceId ::WorkspaceId ,
---                                 goalId :: GoalId ,
---                                 reason :: Text}
---                 | QuestionGoal {  commandId :: CommandId ,
---                                   workspaceId ::WorkspaceId ,
---                                   goalId :: GoalId ,
---                                   questionId :: QuestionId ,
---                                   questionDetails :: String}
---                 | ActionizeOnQuestion {
---                                       commandId :: CommandId ,
---                                       workspaceId ::WorkspaceId ,
---                                       questionId :: QuestionId ,
---                                       actionId :: ActionId ,
---                                       actionDetails :: String}
+                                           refinedGoalDescription :: Text}
+                 | StartWorkingOnGoal {commandId :: CommandId ,
+                                       workspaceId ::WorkspaceId ,
+                                       goalId :: GoalId }
+                 | PauseWorkingOnGoal {commandId :: CommandId ,
+                                       workspaceId ::WorkspaceId ,
+                                       goalId :: GoalId }
+                 | NotifyGoalAccomplishment {commandId :: CommandId ,
+                                             workspaceId ::WorkspaceId ,
+                                             goalId :: GoalId }
+                 | GiveUpOnGoal { commandId :: CommandId ,
+                                 workspaceId ::WorkspaceId ,
+                                 goalId :: GoalId ,
+                                 reason :: Text} deriving (Show,Generic,Eq)
 --                 | ActionizeOnTheGoalDirectly {
 --                                       commandId :: CommandId ,
 --                                       workspaceId ::WorkspaceId ,
@@ -54,28 +49,42 @@ data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::Work
 --                                       actionDetails :: String}
 
 createWorkspaceCommandName :: String
-createWorkspaceCommandName = "createWorkspace"
-
 renameWorkspaceCommandName :: String
-renameWorkspaceCommandName = "renameWorkspace"
-
 setGoalCommandName :: String
-setGoalCommandName = "setGoal"
-
 refineGoalDescriptionCommandName :: String
+startWorkingOnGoalCommandName :: String
+pauseWorkingOnGoalCommandName :: String
+notifyGoalAccomplishmentCommandName :: String
+giveUpOnGoalCommandName :: String
+
+createWorkspaceCommandName = "createWorkspace"
+renameWorkspaceCommandName = "renameWorkspace"
+setGoalCommandName = "setGoal"
 refineGoalDescriptionCommandName = "refineGoalDescription"
+startWorkingOnGoalCommandName = "startWorkingOnGoal"
+pauseWorkingOnGoalCommandName = "pauseWorkingOnGoal"
+notifyGoalAccomplishmentCommandName = "notifyGoalAccomplishment"
+giveUpOnGoalCommandName = "giveUpOnGoal"
 
 isCreateWorkspaceCommand :: Command -> Bool
-isCreateWorkspaceCommand command = (commandName $ commandHeader command) == createWorkspaceCommandName
-
 isRenameWorkspaceCommand :: Command -> Bool
-isRenameWorkspaceCommand command = (commandName $ commandHeader command) == renameWorkspaceCommandName
-
 isGoalSetCommand :: Command -> Bool
-isGoalSetCommand command = (commandName $ commandHeader command) == setGoalCommandName
-
 isRefineGoalDescriptionCommand :: Command -> Bool
+isStartWorkingOnGoalCommand :: Command -> Bool
+isPauseWorkingOnGoalCommand :: Command -> Bool
+isNotifyGoalAccomplishmentCommand :: Command -> Bool
+isGiveUpOnGoalCommand :: Command -> Bool
+
+isCreateWorkspaceCommand command = (commandName $ commandHeader command) == createWorkspaceCommandName
+isRenameWorkspaceCommand command = (commandName $ commandHeader command) == renameWorkspaceCommandName
+isGoalSetCommand command = (commandName $ commandHeader command) == setGoalCommandName
 isRefineGoalDescriptionCommand command = (commandName $ commandHeader command) == refineGoalDescriptionCommandName
+isStartWorkingOnGoalCommand command = (commandName $ commandHeader command) == startWorkingOnGoalCommandName
+isPauseWorkingOnGoalCommand command = (commandName $ commandHeader command) == pauseWorkingOnGoalCommandName
+isNotifyGoalAccomplishmentCommand command = (commandName $ commandHeader command) == notifyGoalAccomplishmentCommandName
+isGiveUpOnGoalCommand command = (commandName $ commandHeader command) == giveUpOnGoalCommandName
+
+
 
 toCommand :: GsdCommand -> Command
 toCommand  CreateWorkspace {commandId, workspaceId, workspaceName} =
@@ -94,6 +103,23 @@ toCommand  RefineGoalDescription {commandId, workspaceId, goalId,refinedGoalDesc
             payload = Map.fromList [
               ("goalId",  String $ (pack.toString) goalId ),
               ("refinedGoalDescription",  String refinedGoalDescription ) ] }
+toCommand  StartWorkingOnGoal {commandId, workspaceId, goalId } =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = startWorkingOnGoalCommandName } ,
+            payload = Map.fromList [
+              ("goalId",  String $ (pack.toString) goalId )] }
+toCommand  PauseWorkingOnGoal {commandId, workspaceId, goalId } =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = pauseWorkingOnGoalCommandName } ,
+            payload = Map.fromList [
+              ("goalId",  String $ (pack.toString) goalId )] }
+toCommand  NotifyGoalAccomplishment {commandId, workspaceId, goalId } =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = notifyGoalAccomplishmentCommandName } ,
+            payload = Map.fromList [
+              ("goalId",  String $ (pack.toString) goalId )] }
+toCommand  GiveUpOnGoal {commandId, workspaceId, goalId,reason } =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = giveUpOnGoalCommandName } ,
+            payload = Map.fromList [
+              ("goalId",  String $ (pack.toString) goalId ),
+              ("reason",  String reason ) ] }
 
 fromCommand :: Command -> GsdCommand
 fromCommand Command { payload , commandHeader = CommandHeader {commandName,commandId,aggregateId = workspaceId}} =
@@ -108,6 +134,19 @@ fromCommand Command { payload , commandHeader = CommandHeader {commandName,comma
                                workspaceId,
                                goalId =  extractPayloadUUIDValue payload "goalId" ,
                                refinedGoalDescription =  extractPayloadTextValue payload "refinedGoalDescription"   }
+    "startWorkingOnGoal" -> StartWorkingOnGoal {commandId,
+                              workspaceId,
+                              goalId =  extractPayloadUUIDValue payload "goalId"}
+    "pauseWorkingOnGoal" -> PauseWorkingOnGoal {commandId,
+                              workspaceId,
+                              goalId =  extractPayloadUUIDValue payload "goalId"}
+    "notifyGoalAccomplishment" -> NotifyGoalAccomplishment {commandId,
+                              workspaceId,
+                              goalId =  extractPayloadUUIDValue payload "goalId"}
+    "giveUpOnGoal" -> GiveUpOnGoal {commandId,
+                          workspaceId,
+                          goalId =  extractPayloadUUIDValue payload "goalId" ,
+                          reason =  extractPayloadTextValue payload "reason"   }
     _ -> error "error from event"
 
 

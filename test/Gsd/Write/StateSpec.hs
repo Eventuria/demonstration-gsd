@@ -13,6 +13,11 @@ import Test.QuickCheck.Instances.Vector ()
 import Test.QuickCheck.Instances.Scientific ()
 import Test.QuickCheck.Instances.Text ()
 
+instance Arbitrary GoalStatus where
+  arbitrary :: Gen  GoalStatus
+  arbitrary = genericArbitraryU
+
+
 instance Arbitrary Goal where
   arbitrary :: Gen  Goal
   arbitrary = genericArbitraryU

@@ -48,11 +48,11 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
 
   answer <- askWithMenuRepeatedly menuConfig prompt onError
   case answer of
-    Right (CreateWorkspaceRequest description) -> (runCreateWorkspaceRequest currentStep) >>= runNextStep
-    Right (ListWorkspaces description) -> (runListWorkspaces currentStep) >>= runNextStep
-    Right (GotoWorkOnAWorkspace description) -> (runWorkOnAWorkspace currentStep) >>= runNextStep
-    Right (Quit description) -> runQuitCLI
-    Left  error -> (return $ Left StepError {currentStep, errorDescription = show error }) >>= runNextStep
+    CreateWorkspaceRequest description -> (runCreateWorkspaceRequest currentStep) >>= runNextStep
+    ListWorkspaces description -> (runListWorkspaces currentStep) >>= runNextStep
+    GotoWorkOnAWorkspace description -> (runWorkOnAWorkspace currentStep) >>= runNextStep
+    Quit description -> runQuitCLI
+
 
   where
     workspacesActions :: [WorkspacesAction]
@@ -100,13 +100,11 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
             let menuConfig = banner "Available workspaces :" $ menu workspaces stylizePersistedWorkspace
                 prompt     = "please choose an action (provide the index) : "
                 onError    = "please enter a valid index..."
-            result <- askWithMenuRepeatedly menuConfig prompt onError
-            case result of
-               Right (PersistedItem {item = workspace @ Workspace {workspaceId , workspaceName}}) -> do
-                   sayLn $ fg green <> (text . pack . show) workspace <> " selected !"
-                   sayLn $ ""
-                   return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clients workspace workOnWorkspaces
-               Left errorDescription -> return $ Left $ StepError {currentStep, errorDescription}
+            (PersistedItem {item = workspace @ Workspace {workspaceId , workspaceName}}) <- askWithMenuRepeatedly menuConfig prompt onError
+            sayLn $ fg green <> (text . pack . show) workspace <> " selected !"
+            sayLn $ ""
+            return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clients workspace workOnWorkspaces
+
 
     runListWorkspaces :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnWorkspaces))
     runListWorkspaces currentStep = do

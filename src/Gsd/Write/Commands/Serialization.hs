@@ -31,6 +31,27 @@ instance ToJSON GsdCommand where
               "goalId" .= goalId,
               "refinedGoalDescription" .= refinedGoalDescription,
               "commandName" .= refineGoalDescriptionCommandName]
+  toJSON (StartWorkingOnGoal {commandId , workspaceId ,goalId  } ) = object [
+                "commandId" .= commandId,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "commandName" .= startWorkingOnGoalCommandName]
+  toJSON (PauseWorkingOnGoal {commandId , workspaceId ,goalId  } ) = object [
+                "commandId" .= commandId,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "commandName" .= pauseWorkingOnGoalCommandName]
+  toJSON (NotifyGoalAccomplishment {commandId , workspaceId ,goalId  } ) = object [
+                "commandId" .= commandId,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "commandName" .= notifyGoalAccomplishmentCommandName]
+  toJSON (GiveUpOnGoal {commandId , workspaceId ,goalId,reason  } ) = object [
+                "commandId" .= commandId,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "reason" .= reason,
+                "commandName" .= giveUpOnGoalCommandName]
 
 
 instance FromJSON GsdCommand where
@@ -60,6 +81,27 @@ instance FromJSON GsdCommand where
                             <*> jsonObject .: "workspaceId"
                             <*> jsonObject .: "goalId"
                             <*> jsonObject .: "refinedGoalDescription"
+                    Just (String commandName) | (Text.unpack commandName) == startWorkingOnGoalCommandName ->
+                        StartWorkingOnGoal
+                            <$> jsonObject .: "commandId"
+                            <*> jsonObject .: "workspaceId"
+                            <*> jsonObject .: "goalId"
+                    Just (String commandName) | (Text.unpack commandName) == pauseWorkingOnGoalCommandName ->
+                        PauseWorkingOnGoal
+                            <$> jsonObject .: "commandId"
+                            <*> jsonObject .: "workspaceId"
+                            <*> jsonObject .: "goalId"
+                    Just (String commandName) | (Text.unpack commandName) == notifyGoalAccomplishmentCommandName ->
+                        NotifyGoalAccomplishment
+                            <$> jsonObject .: "commandId"
+                            <*> jsonObject .: "workspaceId"
+                            <*> jsonObject .: "goalId"
+                    Just (String commandName) | (Text.unpack commandName) == giveUpOnGoalCommandName ->
+                        GiveUpOnGoal
+                            <$> jsonObject .: "commandId"
+                            <*> jsonObject .: "workspaceId"
+                            <*> jsonObject .: "goalId"
+                            <*> jsonObject .: "reason"
                     Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
                     _ -> error $ "Command name not provided"
   parseJSON _ =  error $ "Json format not expected"

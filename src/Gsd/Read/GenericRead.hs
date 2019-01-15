@@ -68,26 +68,29 @@ streamGoal getEventStream streaming workspaceId = do
   where
     streamingGoalRelatedEvents :: (Streamable stream monad Event) => GetEventStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad GsdEvent
     streamingGoalRelatedEvents getEventStream Streaming {streamAll} workspaceId =
-      (streamAll $ getEventStream workspaceId)
-            & S.map (\PersistedItem{item = event} -> fromEvent event)
-            & S.filter (\gsdEvent ->
-              case gsdEvent of
-                  GoalSet {..} -> True
-                  GoalDescriptionRefined {..} -> True
-                  _ -> False)
+      (streamAll $ getEventStream workspaceId) & S.map (\PersistedItem{item = event} -> fromEvent event)
 
     folding :: [Goal] -> GsdEvent -> [Goal]
-    folding goals GoalSet {workspaceId, goalId, goalDescription} = goals ++ [Goal { workspaceId, goalId, description = goalDescription}]
-    folding goals GoalDescriptionRefined {workspaceId, goalId, refinedGoalDescription} = updateGoals goalId refinedGoalDescription goals
+    folding goals GoalSet {workspaceId, goalId, goalDescription} = goals ++ [Goal { workspaceId, goalId, description = goalDescription, status = Created}]
+    folding goals GoalDescriptionRefined {goalId, refinedGoalDescription} = updateGoals goalId refinedGoalDescription goals
       where
         updateGoals :: GoalId -> Text -> [Goal] -> [Goal]
         updateGoals goalIdToUpdate refinedGoalDescription goals =
-          map (\goal@Goal{workspaceId,goalId} -> case (goalIdToUpdate == goalId) of
-            True -> Goal{workspaceId,goalId, description = refinedGoalDescription}
+          map (\goal@Goal{workspaceId,goalId,status} -> case (goalIdToUpdate == goalId) of
+            True -> Goal{workspaceId,goalId, description = refinedGoalDescription, status}
             False -> goal
           ) $ goals
+    folding goals GoalStarted {goalId} = updateGoalStatus goalId InProgress goals
+    folding goals GoalPaused {goalId} = updateGoalStatus goalId Paused goals
+    folding goals GoalAccomplished {goalId} = updateGoalStatus goalId Accomplished goals
+    folding goals GoalGivenUp {goalId} = updateGoalStatus goalId GivenUp goals
     folding goals gsdEvent = goals
 
-
+    updateGoalStatus :: GoalId -> GoalStatus -> [Goal] -> [Goal]
+    updateGoalStatus goalIdToUpdate newGoalStatus goals =
+      map (\goal@Goal{workspaceId,goalId,description} -> case (goalIdToUpdate == goalId) of
+        True -> Goal{workspaceId,goalId, description, status = newGoalStatus}
+        False -> goal
+      ) $ goals
 
 

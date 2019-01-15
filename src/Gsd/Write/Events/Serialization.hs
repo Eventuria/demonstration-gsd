@@ -13,33 +13,58 @@ instance ToJSON GsdEvent where
             "eventId" .= eventId,
             "createdOn" .= createdOn,
             "workspaceId" .= workspaceId,
-            "eventName" .= eventNameForWorkspaceCreated]
+            "eventName" .= workspaceCreatedEventName]
   toJSON (WorkspaceNamed {eventId, createdOn, workspaceId,workspaceName  } ) = object [
               "eventId" .= eventId,
               "createdOn" .= createdOn,
               "workspaceId" .= workspaceId,
               "workspaceName" .= workspaceName,
-              "eventName" .= eventNameForWorkspaceNamed]
+              "eventName" .= workspaceNamedEventName]
   toJSON (WorkspaceRenamed {eventId, createdOn, workspaceId,workspaceNewName  } ) = object [
               "eventId" .= eventId,
               "createdOn" .= createdOn,
               "workspaceId" .= workspaceId,
               "workspaceNewName" .= workspaceNewName,
-              "eventName" .= eventNameForWorkspaceRenamed]
+              "eventName" .= workspaceRenamedEventName]
   toJSON (GoalSet {eventId, createdOn, workspaceId,goalId,goalDescription  } ) = object [
                 "eventId" .= eventId,
                 "createdOn" .= createdOn,
                 "workspaceId" .= workspaceId,
                 "goalId" .= goalId,
                 "goalDescription" .= goalDescription,
-                "eventName" .= eventNameForGoalSet]
+                "eventName" .= goalSetEventName]
   toJSON (GoalDescriptionRefined {eventId, createdOn, workspaceId,goalId,refinedGoalDescription  } ) = object [
                 "eventId" .= eventId,
                 "createdOn" .= createdOn,
                 "workspaceId" .= workspaceId,
                 "goalId" .= goalId,
                 "refinedGoalDescription" .= refinedGoalDescription,
-                "eventName" .= eventNameForGoalDescriptionRefined]
+                "eventName" .= goalDescriptionRefinedEventName]
+  toJSON (GoalStarted {eventId, createdOn, workspaceId,goalId  } ) = object [
+                "eventId" .= eventId,
+                "createdOn" .= createdOn,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "eventName" .= goalStartedEventName]
+  toJSON (GoalPaused {eventId, createdOn, workspaceId,goalId  } ) = object [
+                "eventId" .= eventId,
+                "createdOn" .= createdOn,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "eventName" .= goalPausedEventName]
+  toJSON (GoalAccomplished {eventId, createdOn, workspaceId,goalId  } ) = object [
+                "eventId" .= eventId,
+                "createdOn" .= createdOn,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "eventName" .= goalAccomplishedEventName]
+  toJSON (GoalGivenUp {eventId, createdOn, workspaceId,goalId,reason  } ) = object [
+                "eventId" .= eventId,
+                "createdOn" .= createdOn,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "reason" .= reason,
+                "eventName" .= goalGivenUpEventName]
 
 
 
@@ -48,37 +73,62 @@ instance FromJSON GsdEvent where
   parseJSON (Object jsonObject) = do
                commandNameMaybe <- jsonObject .: "eventName"
                case commandNameMaybe of
-                    Just (String commandName) | (Text.unpack commandName) == eventNameForWorkspaceCreated ->
+                    Just (String commandName) | (Text.unpack commandName) == workspaceCreatedEventName ->
                       WorkspaceCreated
                           <$> jsonObject .: "eventId"
                           <*> jsonObject .: "createdOn"
                           <*> jsonObject .: "workspaceId"
-                    Just (String commandName) | (Text.unpack commandName) == eventNameForWorkspaceNamed ->
+                    Just (String commandName) | (Text.unpack commandName) == workspaceNamedEventName ->
                       WorkspaceNamed
                           <$> jsonObject .: "eventId"
                           <*> jsonObject .: "createdOn"
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "workspaceName"
-                    Just (String commandName) | (Text.unpack commandName) == eventNameForWorkspaceRenamed ->
+                    Just (String commandName) | (Text.unpack commandName) == workspaceRenamedEventName ->
                       WorkspaceRenamed
                           <$> jsonObject .: "eventId"
                           <*> jsonObject .: "createdOn"
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "workspaceNewName"
-                    Just (String commandName) | (Text.unpack commandName) == eventNameForGoalSet ->
+                    Just (String commandName) | (Text.unpack commandName) == goalSetEventName ->
                       GoalSet
                           <$> jsonObject .: "eventId"
                           <*> jsonObject .: "createdOn"
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "goalId"
                           <*> jsonObject .: "goalDescription"
-                    Just (String commandName) | (Text.unpack commandName) == eventNameForGoalDescriptionRefined ->
+                    Just (String commandName) | (Text.unpack commandName) == goalDescriptionRefinedEventName ->
                       GoalDescriptionRefined
                           <$> jsonObject .: "eventId"
                           <*> jsonObject .: "createdOn"
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "goalId"
                           <*> jsonObject .: "refinedGoalDescription"
+                    Just (String commandName) | (Text.unpack commandName) == goalStartedEventName ->
+                      GoalStarted
+                          <$> jsonObject .: "eventId"
+                          <*> jsonObject .: "createdOn"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "goalId"
+                    Just (String commandName) | (Text.unpack commandName) == goalPausedEventName ->
+                      GoalPaused
+                          <$> jsonObject .: "eventId"
+                          <*> jsonObject .: "createdOn"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "goalId"
+                    Just (String commandName) | (Text.unpack commandName) == goalAccomplishedEventName ->
+                      GoalAccomplished
+                          <$> jsonObject .: "eventId"
+                          <*> jsonObject .: "createdOn"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "goalId"
+                    Just (String commandName) | (Text.unpack commandName) == goalGivenUpEventName ->
+                      GoalGivenUp
+                          <$> jsonObject .: "eventId"
+                          <*> jsonObject .: "createdOn"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "goalId"
+                          <*> jsonObject .: "reason"
                     Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
                     _ -> error $ "Command name not provided"
   parseJSON _ =  error $ "Json format not expected"

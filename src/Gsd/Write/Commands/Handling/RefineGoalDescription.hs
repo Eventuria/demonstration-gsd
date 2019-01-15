@@ -12,11 +12,11 @@ import Gsd.Write.Core
 import Data.Text hiding (find,map)
 import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
-import Data.Set (fromList)
-import Data.List
+import Data.Set hiding (map)
+import Data.List (find)
 
 handle :: Offset -> ValidationState GsdState -> CommandId -> WorkspaceId -> GoalId -> Text  -> CommandDirective GsdState
-handle offset ValidationState {state = state} commandId workspaceId goalId refinedGoalDescription =
+handle offset ValidationState {commandsProcessed, aggregateId, state} commandId workspaceId goalId refinedGoalDescription =
   case state of
     Nothing -> Reject "Refining a goal description for a goal that does not exist."
     Just GsdState {goals} -> case (isGoalFound goalId goals) of
@@ -26,8 +26,8 @@ handle offset ValidationState {state = state} commandId workspaceId goalId refin
         eventId <- getNewEventID
         persistEvent $ toEvent $ GoalDescriptionRefined {  eventId , createdOn = now, workspaceId , goalId , refinedGoalDescription}
         updateValidationState ValidationState {lastOffsetConsumed = offset ,
-                                               commandsProcessed = fromList [commandId] ,
-                                               aggregateId = workspaceId,
+                                               commandsProcessed = union commandsProcessed (fromList [commandId]) ,
+                                               aggregateId,
                                                state = Just $ GsdState {goals = updateGoals goalId refinedGoalDescription goals }}
 
   where
@@ -38,7 +38,7 @@ handle offset ValidationState {state = state} commandId workspaceId goalId refin
 
     updateGoals :: GoalId -> Text -> [Goal] -> [Goal]
     updateGoals goalIdToUpdate refinedGoalDescription goals =
-      map (\goal@Goal{workspaceId,goalId} -> case (goalIdToUpdate == goalId) of
-        True -> Goal{workspaceId,goalId, description = refinedGoalDescription}
+      map (\goal@Goal{workspaceId,goalId,status} -> case (goalIdToUpdate == goalId) of
+        True -> Goal{workspaceId,goalId, description = refinedGoalDescription,status}
         False -> goal
       ) $ goals

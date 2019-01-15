@@ -11,10 +11,10 @@ askWithMenuRepeatedly :: (MonadIO m)
            => Menu availableActions            -- ^ The 'Menu' to display.
            -> Stylized          -- ^ The prompt.
            -> Stylized          -- ^ Error message.
-           -> Byline m (Either ErrorDescription availableActions)
+           -> Byline m availableActions
 askWithMenuRepeatedly m prompt errprompt = do
   answer <- ByLine.askWithMenuRepeatedly m prompt errprompt
   case answer of
-          Match action -> return $ Right action
-          NoItems ->      return $ Left $ "unexpected NoItems returned"
-          Other x ->      return $ Left $ "unexpected Other returned"
+          Match action -> return action
+          NoItems ->      error "unexpected NoItems returned"
+          Other x ->      error "unexpected Other returned"

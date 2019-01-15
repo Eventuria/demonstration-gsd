@@ -12,20 +12,21 @@ import Gsd.Write.Core
 import Data.Text hiding (map,find)
 import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
-import Data.Set (fromList)
-import Data.List
+import Data.Set (fromList,union)
+import Data.List hiding (union)
+
 
 handle :: Offset -> ValidationState GsdState -> CommandId -> WorkspaceId -> GoalId -> Text  -> CommandDirective GsdState
-handle offset ValidationState {state} commandId workspaceId goalId goalDescription = case (state) of
+handle offset ValidationState {commandsProcessed, aggregateId,state} commandId workspaceId goalId goalDescription = case (state) of
   Nothing ->
     Validate $ do
         now <- getCurrentTime
         eventId <- getNewEventID
         persistEvent $ toEvent $ GoalSet {  eventId , createdOn = now, workspaceId , goalId , goalDescription}
         updateValidationState ValidationState {lastOffsetConsumed = offset ,
-                                               commandsProcessed = fromList [commandId] ,
-                                               aggregateId = workspaceId,
-                                               state = Just $ GsdState {goals = [Goal{workspaceId,goalId,description = goalDescription}]}}
+                                               commandsProcessed = union commandsProcessed (fromList [commandId]) ,
+                                               aggregateId,
+                                               state = Just $ GsdState {goals = [Goal{workspaceId,goalId,description = goalDescription, status = Created}]}}
   Just GsdState {goals} -> case (isGoalFound goalId goals) of
     True ->  Reject "You can't set the same goal more than once"
     False -> Validate $ do
@@ -33,19 +34,12 @@ handle offset ValidationState {state} commandId workspaceId goalId goalDescripti
         eventId <- getNewEventID
         persistEvent $ toEvent $ GoalSet {  eventId , createdOn = now, workspaceId , goalId , goalDescription}
         updateValidationState ValidationState {lastOffsetConsumed = offset ,
-                                               commandsProcessed = fromList [commandId] ,
-                                               aggregateId = workspaceId,
-                                               state = Just $ GsdState {goals = (goals ++ [Goal{workspaceId,goalId,description = goalDescription}])}}
+                                               commandsProcessed = union commandsProcessed (fromList [commandId]) ,
+                                               aggregateId,
+                                               state = Just $ GsdState {goals = (goals ++ [Goal{workspaceId,goalId,description = goalDescription,status = Created}])}}
 
   where
       isGoalFound :: GoalId -> [Goal] -> Bool
       isGoalFound  goalIdToRefine goals = case (find (\Goal{goalId} -> goalIdToRefine == goalId ) goals) of
                                     Just goal -> True
                                     Nothing -> False
-
-      updateGoals :: GoalId -> Text -> [Goal] -> [Goal]
-      updateGoals goalIdToUpdate refinedGoalDescription goals =
-        map (\goal@Goal{workspaceId,goalId} -> case (goalIdToUpdate == goalId) of
-          True -> Goal{workspaceId,goalId, description = refinedGoalDescription}
-          False -> goal
-        ) $ goals

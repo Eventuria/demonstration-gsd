@@ -12,15 +12,16 @@ import Gsd.Write.Core
 import Data.Text
 import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
-import Data.Set (fromList)
+import Data.Set
+
 
 handle :: Offset -> ValidationState GsdState -> CommandId -> WorkspaceId -> Text  -> CommandDirective GsdState
-handle offset validationState commandId workspaceId workspaceNewName =
+handle offset (ValidationState {commandsProcessed, aggregateId, state}) commandId workspaceId workspaceNewName =
   Validate $ do
      now <- getCurrentTime
      eventId <- getNewEventID
      persistEvent $ toEvent $ WorkspaceRenamed   {  eventId , createdOn = now, workspaceId , workspaceNewName}
      updateValidationState ValidationState {lastOffsetConsumed = offset ,
-                                                         commandsProcessed = fromList [commandId] ,
-                                                         aggregateId = workspaceId,
-                                                         state = state $ validationState}
+                                             commandsProcessed = union commandsProcessed (fromList [commandId]) ,
+                                             aggregateId,
+                                             state }
