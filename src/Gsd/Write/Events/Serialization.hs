@@ -65,6 +65,22 @@ instance ToJSON GsdEvent where
                 "goalId" .= goalId,
                 "reason" .= reason,
                 "eventName" .= goalGivenUpEventName]
+  toJSON (ActionRevealed {eventId, createdOn, workspaceId,goalId,actionId,actionDetails  } ) = object [
+                "eventId" .= eventId,
+                "createdOn" .= createdOn,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "actionId" .= actionId,
+                "actionDetails" .= actionDetails,
+                "eventName" .= actionRevealedEventName]
+  toJSON (ActionCompleted {eventId, createdOn, workspaceId,goalId,actionId  } ) = object [
+                "eventId" .= eventId,
+                "createdOn" .= createdOn,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "actionId" .= actionId,
+                "eventName" .= actionCompletedEventName]
+
 
 
 
@@ -129,6 +145,21 @@ instance FromJSON GsdEvent where
                           <*> jsonObject .: "workspaceId"
                           <*> jsonObject .: "goalId"
                           <*> jsonObject .: "reason"
+                    Just (String commandName) | (Text.unpack commandName) == actionRevealedEventName ->
+                      ActionRevealed
+                          <$> jsonObject .: "eventId"
+                          <*> jsonObject .: "createdOn"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "goalId"
+                          <*> jsonObject .: "actionId"
+                          <*> jsonObject .: "actionDetails"
+                    Just (String commandName) | (Text.unpack commandName) == actionCompletedEventName ->
+                      ActionCompleted
+                          <$> jsonObject .: "eventId"
+                          <*> jsonObject .: "createdOn"
+                          <*> jsonObject .: "workspaceId"
+                          <*> jsonObject .: "goalId"
+                          <*> jsonObject .: "actionId"
                     Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
                     _ -> error $ "Command name not provided"
   parseJSON _ =  error $ "Json format not expected"

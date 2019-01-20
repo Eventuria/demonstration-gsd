@@ -38,7 +38,7 @@ handle offset ValidationState {commandsProcessed, aggregateId, state} commandId 
 
     updateGoals :: GoalId -> Text -> [Goal] -> [Goal]
     updateGoals goalIdToUpdate refinedGoalDescription goals =
-      map (\goal@Goal{workspaceId,goalId,status} -> case (goalIdToUpdate == goalId) of
-        True -> Goal{workspaceId,goalId, description = refinedGoalDescription,status}
+      map (\goal@Goal{workspaceId,goalId,actions,status} -> case (goalIdToUpdate == goalId) of
+        True -> Goal{workspaceId,goalId, actions,description = refinedGoalDescription,status}
         False -> goal
       ) $ goals

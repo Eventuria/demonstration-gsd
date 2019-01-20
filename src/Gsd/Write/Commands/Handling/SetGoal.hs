@@ -9,10 +9,10 @@ import Gsd.Write.Events.Event
 import Gsd.Write.State
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Gsd.Write.Core
-import Data.Text hiding (map,find)
+import Data.Text hiding (map,find,empty)
 import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
-import Data.Set (fromList,union)
+import Data.Set (fromList,union,empty)
 import Data.List hiding (union)
 
 
@@ -26,7 +26,7 @@ handle offset ValidationState {commandsProcessed, aggregateId,state} commandId w
         updateValidationState ValidationState {lastOffsetConsumed = offset ,
                                                commandsProcessed = union commandsProcessed (fromList [commandId]) ,
                                                aggregateId,
-                                               state = Just $ GsdState {goals = [Goal{workspaceId,goalId,description = goalDescription, status = Created}]}}
+                                               state = Just $ GsdState {goals = [Goal{workspaceId,goalId,description = goalDescription, actions = empty , status = Created}]}}
   Just GsdState {goals} -> case (isGoalFound goalId goals) of
     True ->  Reject "You can't set the same goal more than once"
     False -> Validate $ do
@@ -36,7 +36,7 @@ handle offset ValidationState {commandsProcessed, aggregateId,state} commandId w
         updateValidationState ValidationState {lastOffsetConsumed = offset ,
                                                commandsProcessed = union commandsProcessed (fromList [commandId]) ,
                                                aggregateId,
-                                               state = Just $ GsdState {goals = (goals ++ [Goal{workspaceId,goalId,description = goalDescription,status = Created}])}}
+                                               state = Just $ GsdState {goals = (goals ++ [Goal{workspaceId,goalId,description = goalDescription,actions = empty ,status = Created}])}}
 
   where
       isGoalFound :: GoalId -> [Goal] -> Bool

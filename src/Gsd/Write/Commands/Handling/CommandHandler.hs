@@ -19,6 +19,8 @@ import qualified Gsd.Write.Commands.Handling.StartWorkingOnGoal as StartWorkingO
 import qualified Gsd.Write.Commands.Handling.PauseWorkingOnGoal as PauseWorkingOnGoal
 import qualified Gsd.Write.Commands.Handling.NotifyGoalAccomplishment as NotifyGoalAccomplishment
 import qualified Gsd.Write.Commands.Handling.GiveUpOnGoal as GiveUpOnGoal
+import qualified Gsd.Write.Commands.Handling.ActionizeOnGoal as ActionizeOnGoal
+import qualified Gsd.Write.Commands.Handling.NotifyActionCompleted as NotifyActionCompleted
 
 import PersistedStreamEngine.Interface.Offset
 
@@ -43,6 +45,8 @@ gsdCommandHandler
           (Just snapshot,PauseWorkingOnGoal {commandId, workspaceId, goalId}) -> PauseWorkingOnGoal.handle offset snapshot commandId workspaceId goalId
           (Just snapshot,NotifyGoalAccomplishment {commandId, workspaceId, goalId}) -> NotifyGoalAccomplishment.handle offset snapshot commandId workspaceId goalId
           (Just snapshot,GiveUpOnGoal {commandId, workspaceId, goalId, reason}) -> GiveUpOnGoal.handle offset snapshot commandId workspaceId goalId reason
+          (Just snapshot,ActionizeOnGoal {commandId, workspaceId, goalId, actionId, actionDetails}) -> ActionizeOnGoal.handle offset snapshot commandId workspaceId goalId actionId actionDetails
+          (Just snapshot,NotifyActionCompleted {commandId, workspaceId, goalId, actionId}) -> NotifyActionCompleted.handle offset snapshot commandId workspaceId goalId actionId
           (_,_) -> Reject "Scenario not handle"
 
 

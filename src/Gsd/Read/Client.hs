@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Gsd.Read.Client (streamWorkspace,streamGoal) where
+module Gsd.Read.Client (streamWorkspace,streamGoal,streamAction) where
 
 import Data.Proxy
 import Servant
@@ -13,6 +13,7 @@ import Gsd.Read.WebStreamingApi
 import qualified Servant.Client.Streaming as S
 import Gsd.Write.Core
 import Gsd.Read.Goal
+import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 
 import Servant.Pipes ()
@@ -24,10 +25,15 @@ gsdReadStreamingApi = Proxy
 
 streamWorkspaceOnPipe :: S.ClientM (P.Producer (Persisted Workspace) IO () )
 streamGoalOnPipe :: WorkspaceId -> S.ClientM (P.Producer Goal IO () )
-streamWorkspaceOnPipe :<|> streamGoalOnPipe  = S.client gsdReadStreamingApi
+streamActionOnPipe :: WorkspaceId -> GoalId -> S.ClientM (P.Producer Action IO () )
+streamWorkspaceOnPipe :<|> streamGoalOnPipe :<|> streamActionOnPipe = S.client gsdReadStreamingApi
+
 
 streamWorkspace :: IsStream stream => S.ClientM (stream IO (Persisted Workspace) )
 streamWorkspace = fromPipes <$> streamWorkspaceOnPipe
 
 streamGoal :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Goal) )
 streamGoal workspaceId = fromPipes <$> (streamGoalOnPipe workspaceId)
+
+streamAction :: IsStream stream => WorkspaceId -> GoalId -> S.ClientM (stream IO (Action) )
+streamAction workspaceId goalId = fromPipes <$> (streamActionOnPipe workspaceId goalId)

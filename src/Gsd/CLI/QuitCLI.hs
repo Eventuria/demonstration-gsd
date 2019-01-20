@@ -7,5 +7,7 @@ import System.Exit (exitSuccess)
 
 runQuitCLI :: Byline IO ()
 runQuitCLI = do
-  sayLn $ fg green <> "See you soon !! "
+  sayLn $ fg green <> "###############################################"
+  sayLn $ fg green <> "You're leaving gsd, See you soon !! "
+  sayLn $ fg green <> "###############################################"
   liftIO $ exitSuccess

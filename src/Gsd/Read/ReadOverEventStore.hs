@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Gsd.Read.ReadOverEventStore (streamWorkspace,streamGoal) where
+module Gsd.Read.ReadOverEventStore (streamWorkspace,streamGoal,streamAction) where
 
 import qualified Gsd.Read.GenericRead  as GenericRead
 import PersistedStreamEngine.Interface.Streamable
@@ -12,6 +12,7 @@ import Gsd.Write.EventStoreStreamRepository
 import Gsd.Write.Core
 import Gsd.Read.Workspace
 import Gsd.Read.Goal
+import Gsd.Read.Action
 import Cqrs.Write.StreamRepository
 import Cqrs.Write.Aggregate.Events.Event
 import Streamly (SerialT)
@@ -29,3 +30,11 @@ streamGoal settings workspaceId =
       (getEventStream $ getEventStoreStreamRepository settings)
       getEventStoreStreaming
       workspaceId
+
+streamAction :: Streamable stream monad Event => EventStoreSettings -> WorkspaceId -> GoalId -> stream monad Action
+streamAction settings workspaceId goalId =
+    GenericRead.streamAction
+      (getEventStream $ getEventStoreStreamRepository settings)
+      getEventStoreStreaming
+      workspaceId
+      goalId

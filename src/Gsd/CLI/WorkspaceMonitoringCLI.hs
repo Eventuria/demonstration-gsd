@@ -3,7 +3,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE Rank2Types #-}
-module Gsd.CLI.WorkspaceMonitoringActions
+module Gsd.CLI.WorkspaceMonitoringCLI
 (runListCommandReceived,
  runListCommandResponseReceived,
  runListEventsGenerated,

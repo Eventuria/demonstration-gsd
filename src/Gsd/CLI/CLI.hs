@@ -4,7 +4,7 @@ import System.Console.Byline
 import Control.Monad (void)
 
 
-import qualified Gsd.CLI.WorkspacesActions as WorkspacesActions (run)
+import qualified Gsd.CLI.WorkspacesCLI as WorkspacesCLI (run)
 import Gsd.CLI.Greetings (greetings)
 import Gsd.Clients
 
@@ -12,7 +12,7 @@ import Gsd.Clients
 execute :: Clients -> IO ()
 execute clients = void $ runByline $ do
   greetings
-  WorkspacesActions.run clients
+  WorkspacesCLI.run clients
 
 
 

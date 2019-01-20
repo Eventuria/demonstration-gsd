@@ -33,6 +33,7 @@ import qualified Gsd.Read.ReadOverEventStore as GsdRead
 
 import Gsd.Write.Core
 import Gsd.Read.Goal
+import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
 import Gsd.Read.WebStreamingApiDefinition
@@ -59,13 +60,16 @@ gsdReadStreamingApi :: Proxy GSDReadStreamingApi
 gsdReadStreamingApi = Proxy
 
 gsdReadStreamingServer :: EventStoreSettings  -> Server GSDReadStreamingApi
-gsdReadStreamingServer eventStoreSettings = streamWorkspace :<|> streamGoal
+gsdReadStreamingServer eventStoreSettings = streamWorkspace :<|> streamGoal :<|> streamAction
   where
         streamWorkspace :: Handler (P.Producer (Persisted Workspace) IO ())
         streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace eventStoreSettings
 
         streamGoal :: WorkspaceId -> Handler (P.Producer Goal IO ())
         streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal eventStoreSettings workspaceId
+
+        streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer Action IO ())
+        streamAction workspaceId goalId = (return . toPipes) $ GsdRead.streamAction eventStoreSettings workspaceId goalId
 
 
 

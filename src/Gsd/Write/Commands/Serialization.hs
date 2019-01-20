@@ -52,6 +52,19 @@ instance ToJSON GsdCommand where
                 "goalId" .= goalId,
                 "reason" .= reason,
                 "commandName" .= giveUpOnGoalCommandName]
+  toJSON (ActionizeOnGoal {commandId , workspaceId ,goalId,actionId, actionDetails } ) = object [
+                "commandId" .= commandId,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "actionId" .= actionId,
+                "actionDetails" .= actionDetails,
+                "commandName" .= actionizeOnGoalCommandName]
+  toJSON (NotifyActionCompleted {commandId , workspaceId ,goalId,actionId  } ) = object [
+                "commandId" .= commandId,
+                "workspaceId" .= workspaceId,
+                "goalId" .= goalId,
+                "actionId" .= actionId,
+                "commandName" .= notifyActionCompletedCommandName]
 
 
 instance FromJSON GsdCommand where
@@ -102,6 +115,19 @@ instance FromJSON GsdCommand where
                             <*> jsonObject .: "workspaceId"
                             <*> jsonObject .: "goalId"
                             <*> jsonObject .: "reason"
+                    Just (String commandName) | (Text.unpack commandName) == actionizeOnGoalCommandName ->
+                        ActionizeOnGoal
+                            <$> jsonObject .: "commandId"
+                            <*> jsonObject .: "workspaceId"
+                            <*> jsonObject .: "goalId"
+                            <*> jsonObject .: "actionId"
+                            <*> jsonObject .: "actionDetails"
+                    Just (String commandName) | (Text.unpack commandName) == notifyActionCompletedCommandName ->
+                        NotifyActionCompleted
+                            <$> jsonObject .: "commandId"
+                            <*> jsonObject .: "workspaceId"
+                            <*> jsonObject .: "goalId"
+                            <*> jsonObject .: "actionId"
                     Just (String unknownCommandName) -> error $ "Command unknown : " ++ Text.unpack unknownCommandName
                     _ -> error $ "Command name not provided"
   parseJSON _ =  error $ "Json format not expected"

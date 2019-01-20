@@ -28,6 +28,8 @@ data GsdEvent = WorkspaceCreated { eventId :: EventId , createdOn :: UTCTime , w
               | GoalPaused { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId , goalId :: GoalId }
               | GoalAccomplished { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId , goalId :: GoalId }
               | GoalGivenUp { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId , goalId :: GoalId,reason ::Text }
+              | ActionRevealed  { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId , goalId :: GoalId, actionId :: ActionId, actionDetails ::Text }
+              | ActionCompleted { eventId :: EventId , createdOn :: UTCTime , workspaceId ::WorkspaceId , goalId :: GoalId, actionId :: ActionId }
 
     deriving (Eq,Show,Generic)
 
@@ -40,6 +42,8 @@ goalStartedEventName ::String
 goalPausedEventName ::String
 goalAccomplishedEventName ::String
 goalGivenUpEventName ::String
+actionRevealedEventName ::String
+actionCompletedEventName ::String
 
 workspaceCreatedEventName = "workspaceCreated"
 workspaceNamedEventName = "workspaceNamed"
@@ -50,6 +54,8 @@ goalStartedEventName = "goalStarted"
 goalPausedEventName = "goalPaused"
 goalAccomplishedEventName = "goalAccomplished"
 goalGivenUpEventName = "goalGivenUp"
+actionRevealedEventName = "actionRevealed"
+actionCompletedEventName = "actionCompleted"
 
 toEvent :: GsdEvent -> Event
 toEvent  WorkspaceCreated {eventId, workspaceId, createdOn} =
@@ -75,13 +81,15 @@ toEvent  GoalSet {eventId, workspaceId, goalId, goalDescription, createdOn} =
                                       aggregateId = workspaceId ,
                                       createdOn,
                                       eventName = goalSetEventName } ,
-            payload = Map.fromList [("goalId",  String $ toText goalId ),("goalDescription",  String goalDescription ) ]}
+            payload = Map.fromList [("goalId",  String $ toText goalId ),
+                                    ("goalDescription",  String goalDescription ) ]}
 toEvent  GoalDescriptionRefined {eventId, workspaceId, goalId, refinedGoalDescription, createdOn} =
   Event { eventHeader = EventHeader { eventId,
                                       aggregateId = workspaceId ,
                                       createdOn,
                                       eventName = goalDescriptionRefinedEventName } ,
-            payload = Map.fromList [("goalId",  String $ toText goalId ),("refinedGoalDescription",  String refinedGoalDescription ) ]}
+            payload = Map.fromList [("goalId",  String $ toText goalId ),
+                                    ("refinedGoalDescription",  String refinedGoalDescription ) ]}
 toEvent  GoalStarted {eventId, workspaceId, goalId, createdOn} =
   Event { eventHeader = EventHeader { eventId,
                                       aggregateId = workspaceId ,
@@ -105,49 +113,76 @@ toEvent  GoalGivenUp {eventId, workspaceId, goalId, createdOn,reason} =
                                       aggregateId = workspaceId ,
                                       createdOn,
                                       eventName = goalGivenUpEventName } ,
-            payload = Map.fromList [("goalId",  String $ toText goalId ),("reason",  String reason ) ]}
+            payload = Map.fromList [("goalId",  String $ toText goalId ),
+                                    ("reason",  String reason ) ]}
+toEvent  ActionRevealed {eventId, workspaceId, goalId, actionId, actionDetails,createdOn} =
+  Event { eventHeader = EventHeader { eventId,
+                                      aggregateId = workspaceId ,
+                                      createdOn,
+                                      eventName = actionRevealedEventName } ,
+            payload = Map.fromList [("goalId",  String $ toText goalId ),
+                                    ("actionId",  String $ toText actionId ),
+                                    ("actionDetails",  String actionDetails ) ]}
+toEvent  ActionCompleted {eventId, workspaceId, goalId, actionId, createdOn} =
+  Event { eventHeader = EventHeader { eventId,
+                                      aggregateId = workspaceId ,
+                                      createdOn,
+                                      eventName = actionCompletedEventName } ,
+            payload = Map.fromList [("goalId",  String $ toText goalId ),
+                                    ("actionId",  String $ toText actionId ) ]}
 
 fromEvent :: Event -> GsdEvent
 fromEvent event =
   case (eventName $ eventHeader event) of
-    "workspaceCreated" -> WorkspaceCreated {eventId = CoreEvent.eventId $ eventHeader event,
-                                                 workspaceId = aggregateId $ eventHeader event,
-                                                 createdOn = CoreEvent.createdOn $ eventHeader event }
-    "workspaceNamed" -> WorkspaceNamed {eventId = CoreEvent.eventId $ eventHeader event,
+    "workspaceCreated" -> WorkspaceCreated { eventId = CoreEvent.eventId $ eventHeader event,
+                                             workspaceId = aggregateId $ eventHeader event,
+                                             createdOn = CoreEvent.createdOn $ eventHeader event }
+    "workspaceNamed" -> WorkspaceNamed { eventId = CoreEvent.eventId $ eventHeader event,
+                                         workspaceId = aggregateId $ eventHeader event,
+                                         createdOn = CoreEvent.createdOn $ eventHeader event,
+                                         workspaceName =  extractPayloadTextValue event "workspaceName"  }
+    "workspaceRenamed" -> WorkspaceRenamed { eventId = CoreEvent.eventId $ eventHeader event,
                                              workspaceId = aggregateId $ eventHeader event,
                                              createdOn = CoreEvent.createdOn $ eventHeader event,
-                                             workspaceName =  extractPayloadTextValue event "workspaceName"  }
-    "workspaceRenamed" -> WorkspaceRenamed {eventId = CoreEvent.eventId $ eventHeader event,
+                                             workspaceNewName =  extractPayloadTextValue event "workspaceNewName"  }
+    "goalSet" -> GoalSet { eventId = CoreEvent.eventId $ eventHeader event,
+                           workspaceId = aggregateId $ eventHeader event,
+                           createdOn = CoreEvent.createdOn $ eventHeader event,
+                           goalId =  extractPayloadUUIDValue event "goalId",
+                           goalDescription = extractPayloadTextValue event "goalDescription" }
+    "goalDescriptionRefined" -> GoalDescriptionRefined { eventId = CoreEvent.eventId $ eventHeader event,
+                                                         workspaceId = aggregateId $ eventHeader event,
+                                                         createdOn = CoreEvent.createdOn $ eventHeader event,
+                                                         goalId =  extractPayloadUUIDValue event "goalId",
+                                                         refinedGoalDescription = extractPayloadTextValue event "refinedGoalDescription" }
+    "goalStarted" -> GoalStarted { eventId = CoreEvent.eventId $ eventHeader event,
+                                   workspaceId = aggregateId $ eventHeader event,
+                                   createdOn = CoreEvent.createdOn $ eventHeader event,
+                                   goalId =  extractPayloadUUIDValue event "goalId"}
+    "goalPaused" -> GoalPaused { eventId = CoreEvent.eventId $ eventHeader event,
+                                 workspaceId = aggregateId $ eventHeader event,
+                                 createdOn = CoreEvent.createdOn $ eventHeader event,
+                                 goalId =  extractPayloadUUIDValue event "goalId"}
+    "goalAccomplished" -> GoalAccomplished {eventId = CoreEvent.eventId $ eventHeader event,
+                                            workspaceId = aggregateId $ eventHeader event,
+                                            createdOn = CoreEvent.createdOn $ eventHeader event,
+                                            goalId =  extractPayloadUUIDValue event "goalId"}
+    "goalGivenUp" -> GoalGivenUp { eventId = CoreEvent.eventId $ eventHeader event,
+                                   workspaceId = aggregateId $ eventHeader event,
+                                   createdOn = CoreEvent.createdOn $ eventHeader event,
+                                   goalId =  extractPayloadUUIDValue event "goalId",
+                                   reason = extractPayloadTextValue event "reason" }
+    "actionRevealed" -> ActionRevealed { eventId = CoreEvent.eventId $ eventHeader event,
+                                         workspaceId = aggregateId $ eventHeader event,
+                                         createdOn = CoreEvent.createdOn $ eventHeader event,
+                                         goalId =  extractPayloadUUIDValue event "goalId",
+                                         actionId =  extractPayloadUUIDValue event "actionId",
+                                         actionDetails = extractPayloadTextValue event "actionDetails" }
+    "actionCompleted" -> ActionCompleted { eventId = CoreEvent.eventId $ eventHeader event,
                                            workspaceId = aggregateId $ eventHeader event,
                                            createdOn = CoreEvent.createdOn $ eventHeader event,
-                                           workspaceNewName =  extractPayloadTextValue event "workspaceNewName"  }
-    "goalSet" -> GoalSet {eventId = CoreEvent.eventId $ eventHeader event,
-                                               workspaceId = aggregateId $ eventHeader event,
-                                               createdOn = CoreEvent.createdOn $ eventHeader event,
-                                               goalId =  extractPayloadUUIDValue event "goalId",
-                                               goalDescription = extractPayloadTextValue event "goalDescription" }
-    "goalDescriptionRefined" -> GoalDescriptionRefined {eventId = CoreEvent.eventId $ eventHeader event,
-                                               workspaceId = aggregateId $ eventHeader event,
-                                               createdOn = CoreEvent.createdOn $ eventHeader event,
-                                               goalId =  extractPayloadUUIDValue event "goalId",
-                                               refinedGoalDescription = extractPayloadTextValue event "refinedGoalDescription" }
-    "goalStarted" -> GoalStarted {eventId = CoreEvent.eventId $ eventHeader event,
-                                               workspaceId = aggregateId $ eventHeader event,
-                                               createdOn = CoreEvent.createdOn $ eventHeader event,
-                                               goalId =  extractPayloadUUIDValue event "goalId"}
-    "goalPaused" -> GoalPaused {eventId = CoreEvent.eventId $ eventHeader event,
-                                                   workspaceId = aggregateId $ eventHeader event,
-                                                   createdOn = CoreEvent.createdOn $ eventHeader event,
-                                                   goalId =  extractPayloadUUIDValue event "goalId"}
-    "goalAccomplished" -> GoalAccomplished {eventId = CoreEvent.eventId $ eventHeader event,
-                                                  workspaceId = aggregateId $ eventHeader event,
-                                                  createdOn = CoreEvent.createdOn $ eventHeader event,
-                                                  goalId =  extractPayloadUUIDValue event "goalId"}
-    "goalGivenUp" -> GoalGivenUp {eventId = CoreEvent.eventId $ eventHeader event,
-                                                   workspaceId = aggregateId $ eventHeader event,
-                                                   createdOn = CoreEvent.createdOn $ eventHeader event,
-                                                   goalId =  extractPayloadUUIDValue event "goalId",
-                                                   reason = extractPayloadTextValue event "reason" }
+                                           goalId =  extractPayloadUUIDValue event "goalId",
+                                           actionId =  extractPayloadUUIDValue event "actionId" }
     _ -> error "error from event"
 
 

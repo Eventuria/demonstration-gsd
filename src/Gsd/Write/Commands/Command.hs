@@ -18,6 +18,7 @@ import Control.Lens
 import Data.Aeson.Lens
 import Control.Monad
 import GHC.Generics
+
 data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId , workspaceName :: Text }
                  | RenameWorkspace { commandId :: CommandId , workspaceId ::WorkspaceId , workspaceNewName :: Text }
                  | SetGoal  { commandId :: CommandId ,
@@ -40,13 +41,18 @@ data GsdCommand =  CreateWorkspace { commandId :: CommandId , workspaceId ::Work
                  | GiveUpOnGoal { commandId :: CommandId ,
                                  workspaceId ::WorkspaceId ,
                                  goalId :: GoalId ,
-                                 reason :: Text} deriving (Show,Generic,Eq)
---                 | ActionizeOnTheGoalDirectly {
---                                       commandId :: CommandId ,
---                                       workspaceId ::WorkspaceId ,
---                                       goalId :: GoalId ,
---                                       actionId :: ActionId ,
---                                       actionDetails :: String}
+                                 reason :: Text}
+                 | ActionizeOnGoal {
+                                 commandId :: CommandId ,
+                                 workspaceId ::WorkspaceId ,
+                                 goalId :: GoalId ,
+                                 actionId :: ActionId ,
+                                 actionDetails :: Text}
+                 | NotifyActionCompleted {
+                                  commandId :: CommandId ,
+                                  workspaceId ::WorkspaceId ,
+                                  goalId :: GoalId ,
+                                  actionId :: ActionId } deriving (Show,Generic,Eq)
 
 createWorkspaceCommandName :: String
 renameWorkspaceCommandName :: String
@@ -56,6 +62,8 @@ startWorkingOnGoalCommandName :: String
 pauseWorkingOnGoalCommandName :: String
 notifyGoalAccomplishmentCommandName :: String
 giveUpOnGoalCommandName :: String
+actionizeOnGoalCommandName :: String
+notifyActionCompletedCommandName :: String
 
 createWorkspaceCommandName = "createWorkspace"
 renameWorkspaceCommandName = "renameWorkspace"
@@ -65,6 +73,9 @@ startWorkingOnGoalCommandName = "startWorkingOnGoal"
 pauseWorkingOnGoalCommandName = "pauseWorkingOnGoal"
 notifyGoalAccomplishmentCommandName = "notifyGoalAccomplishment"
 giveUpOnGoalCommandName = "giveUpOnGoal"
+actionizeOnGoalCommandName = "actionizeOnGoal"
+notifyActionCompletedCommandName = "notifyActionCompleted"
+
 
 isCreateWorkspaceCommand :: Command -> Bool
 isRenameWorkspaceCommand :: Command -> Bool
@@ -74,6 +85,9 @@ isStartWorkingOnGoalCommand :: Command -> Bool
 isPauseWorkingOnGoalCommand :: Command -> Bool
 isNotifyGoalAccomplishmentCommand :: Command -> Bool
 isGiveUpOnGoalCommand :: Command -> Bool
+isActionizeOnGoalCommand :: Command -> Bool
+isNotifyActionCompletedCommand :: Command -> Bool
+
 
 isCreateWorkspaceCommand command = (commandName $ commandHeader command) == createWorkspaceCommandName
 isRenameWorkspaceCommand command = (commandName $ commandHeader command) == renameWorkspaceCommandName
@@ -83,8 +97,8 @@ isStartWorkingOnGoalCommand command = (commandName $ commandHeader command) == s
 isPauseWorkingOnGoalCommand command = (commandName $ commandHeader command) == pauseWorkingOnGoalCommandName
 isNotifyGoalAccomplishmentCommand command = (commandName $ commandHeader command) == notifyGoalAccomplishmentCommandName
 isGiveUpOnGoalCommand command = (commandName $ commandHeader command) == giveUpOnGoalCommandName
-
-
+isActionizeOnGoalCommand command = (commandName $ commandHeader command) == actionizeOnGoalCommandName
+isNotifyActionCompletedCommand command = (commandName $ commandHeader command) == notifyActionCompletedCommandName
 
 toCommand :: GsdCommand -> Command
 toCommand  CreateWorkspace {commandId, workspaceId, workspaceName} =
@@ -120,6 +134,17 @@ toCommand  GiveUpOnGoal {commandId, workspaceId, goalId,reason } =
             payload = Map.fromList [
               ("goalId",  String $ (pack.toString) goalId ),
               ("reason",  String reason ) ] }
+toCommand  ActionizeOnGoal {commandId, workspaceId, goalId,actionId,actionDetails } =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = actionizeOnGoalCommandName } ,
+            payload = Map.fromList [
+              ("goalId",  String $ (pack.toString) goalId ),
+              ("actionId",  String $ (pack.toString) actionId ),
+              ("actionDetails",  String actionDetails ) ] }
+toCommand  NotifyActionCompleted {commandId, workspaceId, goalId,actionId } =
+  Command { commandHeader = CommandHeader { commandId, aggregateId = workspaceId , commandName = notifyActionCompletedCommandName } ,
+            payload = Map.fromList [
+              ("goalId",  String $ (pack.toString) goalId ),
+              ("actionId",  String $ (pack.toString) actionId ) ] }
 
 fromCommand :: Command -> GsdCommand
 fromCommand Command { payload , commandHeader = CommandHeader {commandName,commandId,aggregateId = workspaceId}} =
@@ -147,6 +172,15 @@ fromCommand Command { payload , commandHeader = CommandHeader {commandName,comma
                           workspaceId,
                           goalId =  extractPayloadUUIDValue payload "goalId" ,
                           reason =  extractPayloadTextValue payload "reason"   }
+    "actionizeOnGoal" -> ActionizeOnGoal {commandId,
+                          workspaceId,
+                          goalId =  extractPayloadUUIDValue payload "goalId" ,
+                          actionId =  extractPayloadUUIDValue payload "actionId" ,
+                          actionDetails =  extractPayloadTextValue payload "actionDetails"   }
+    "notifyActionCompleted" -> NotifyActionCompleted {commandId,
+                          workspaceId,
+                          goalId =  extractPayloadUUIDValue payload "goalId" ,
+                          actionId =  extractPayloadUUIDValue payload "actionId" }
     _ -> error "error from event"
 
 

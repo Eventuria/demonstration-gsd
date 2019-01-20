@@ -4,12 +4,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
-
-module Gsd.CLI.WorkspaceActions (run)where
+{-# LANGUAGE RecordWildCards #-}
+module Gsd.CLI.WorkspaceCLI (run)where
 
 import Prelude hiding (length)
 import System.Console.Byline hiding (askWithMenuRepeatedly)
-import Gsd.CLI.ByLineWrapper (askWithMenuRepeatedly)
+import Gsd.CLI.ByLineWrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
 
 import Data.Text
 import Data.UUID.V4
@@ -18,8 +18,8 @@ import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.Client (sendCommand)
 
-import qualified Gsd.CLI.GoalActions as GoalActions (run)
-import Gsd.CLI.WorkspaceMonitoringActions (runListCommandReceived,
+import qualified Gsd.CLI.GoalCLI as GoalCLI (run)
+import Gsd.CLI.WorkspaceMonitoringCLI (runListCommandReceived,
                                            runListCommandResponseReceived,
                                            runListEventsGenerated,
                                            runListValidationStateHistory)
@@ -38,10 +38,10 @@ import Gsd.Read.Goal
 import Gsd.CLI.Steps
 
 
-data WorkspaceAction =  RenameWorkspaceAction       Text
-                      | SetNewGoalAction            Text
+data WorkspaceCommand = RenameWorkspaceCommand       Text
+                      | SetNewGoalCommand            Text
                       | ListGoals                   Text
-                      | GotoWorkOnAGoal                 Text
+                      | GotoWorkOnAGoal             Text
                       | ListCommandsReceived        Text
                       | ListCommandResponseProduced Text
                       | ListEventsGenerated         Text
@@ -54,15 +54,15 @@ run :: WorkOnAWorkspaceStepHandle
 run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
                 workspace @ Workspace {workspaceId,workspaceName}
                 workOnWorkspaces =  do
-  let menuConfig = banner ("Available actions on the selected workspace : " <> fg green <> ((text . pack .show) $ workspaceName)) $ menu workspaceActions stylizeAction
-      prompt     = "please choose an action (provide the index) : "
-      onError    = "please enter a valid index..."
+  let menuConfig = banner "> Available actions on the workspace " $ menu workspaceActions stylizeAction
+      prompt     = "> please choose an action (provide the index) : "
+      onError    = "> please enter a valid index..."
       currentStep = WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
 
   answer <- askWithMenuRepeatedly menuConfig prompt onError
   case answer of
-    RenameWorkspaceAction description -> (runRenameWorkspace currentStep) >>= runNextStep
-    SetNewGoalAction description -> (runSetNewGoal currentStep) >>= runNextStep
+    RenameWorkspaceCommand description -> (runRenameWorkspace currentStep) >>= runNextStep
+    SetNewGoalCommand description -> (runSetNewGoal currentStep) >>= runNextStep
     ListGoals description -> (runListGoals currentStep) >>= runNextStep
     GotoWorkOnAGoal description -> (runWorkOnAGoal currentStep) >>= runNextStep
     ListCommandsReceived description -> (runListCommandReceived currentStep gsdMonitoringApiUrl workspace) >>= runNextStep
@@ -73,34 +73,34 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
     Quit description -> runQuitCLI
 
   where
-    workspaceActions :: [WorkspaceAction]
+    workspaceActions :: [WorkspaceCommand]
     workspaceActions =
-      [ RenameWorkspaceAction       "Rename Workspace" ,
-        SetNewGoalAction            "Set A New Goal",
+      [ RenameWorkspaceCommand       "Rename Workspace" ,
+        SetNewGoalCommand            "Set A New Goal",
         ListGoals                   "List Goals",
         GotoWorkOnAGoal                 "Work On A Goal",
+        ListCommandsReceived        "List Commands Received",
+        ListCommandResponseProduced "List Command Responses Produced",
+        ListEventsGenerated         "List Events Generated",
+        ListValidationStateHistory  "List Validation State History",
         GotoWorkOnWorkspaces            "Work On Another Workspace",
-        ListCommandsReceived        "Infra-Monitoring - List Commands Received",
-        ListCommandResponseProduced "Infra-Monitoring - List Command Responses Produced",
-        ListEventsGenerated         "Infra-Monitoring - List Events Generated",
-        ListValidationStateHistory  "Infra-Monitoring - List Validation State History",
         Quit                        "Quit"]
 
-    stylizeAction :: WorkspaceAction -> Stylized
+    stylizeAction :: WorkspaceCommand -> Stylized
     stylizeAction workspaceAction = case workspaceAction of
-      RenameWorkspaceAction description -> fg cyan <> text description
-      SetNewGoalAction description -> fg cyan <> text description
-      ListGoals description -> fg cyan <> text description
-      GotoWorkOnAGoal description -> fg cyan <> text description
-      ListCommandsReceived description -> fg cyan <> text description
-      ListCommandResponseProduced description -> fg cyan <> text description
-      ListEventsGenerated description -> fg cyan <> text description
-      ListValidationStateHistory description -> fg cyan <> text description
-      GotoWorkOnWorkspaces description -> fg cyan <> text description
-      Quit description -> fg cyan <> text description
+      RenameWorkspaceCommand description -> fg white <> text description
+      SetNewGoalCommand description -> fg white <> text description
+      ListGoals description -> fg white <> text description
+      GotoWorkOnAGoal description -> fg white <> text description <> "\n\n> Infra-Monitoring \n"
+      ListCommandsReceived description -> fg white <> text description
+      ListCommandResponseProduced description -> fg white <> text description
+      ListEventsGenerated description -> fg white <> text description
+      ListValidationStateHistory description -> fg white <> text description <> "\n\n> Navigation \n"
+      GotoWorkOnWorkspaces description -> fg white <> text description
+      Quit description -> fg white <> text description
 
 runRenameWorkspace :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
-runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep workOnAWorkspace (clients @ Clients {writeApiUrl}) (workspace @ Workspace {workspaceId}) workOnWorkspaces) = do
+runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep workOnAWorkspace (clients @ Clients {writeApiUrl}) (workspace @ Workspace {workspaceId,..}) workOnWorkspaces) = do
   commandId <- liftIO $ nextRandom
   sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
   workspaceNewName <- askUntil "Enter a new workspace name : " Nothing atLeastThreeChars
@@ -111,7 +111,7 @@ runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep workOnAWorkspace (clients
       Right persistenceResult -> do
         sayLn $ fg green <> "Rename Workspace Command successfully sent !"
         sayLn $ ""
-        return $ Right $ WorkOnAWorkspaceStep workOnAWorkspace clients Workspace {workspaceId,workspaceName = workspaceNewName} workOnWorkspaces
+        return $ Right $ WorkOnAWorkspaceStep workOnAWorkspace clients Workspace {workspaceId,workspaceName = workspaceNewName, ..} workOnWorkspaces
 
 
 runSetNewGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
@@ -154,12 +154,12 @@ runWorkOnAGoal currentStep @ (WorkOnAWorkspaceStep workOnAWorkspace (clients @ C
  case result of
   Left stepError -> return $ Left stepError
   Right goals -> do
-     let menuConfig = banner "Available Goals :" $ menu goals stylizeGoal
-         prompt     = "please choose an action (provide the index) : "
-         onError    = "please enter a valid index..."
+     let menuConfig = banner "> available Goals " $ renderPrefixAndSuffixForDynamicGsdMenu (menu goals stylizeGoal)
+         prompt     = "> please choose an action (provide the index) : "
+         onError    = "> please enter a valid index..."
      goal <- askWithMenuRepeatedly menuConfig prompt onError
-     sayLn $ fg green <> (text . pack . show) goal <> " selected !"
-     return $ Right $ WorkOnAGoalStep GoalActions.run clients workspace goal workOnAWorkspace workOnWorkspaces
+
+     return $ Right $ WorkOnAGoalStep GoalCLI.run clients workspace goal workOnAWorkspace workOnWorkspaces
 
 runWorkOnWorkspaces :: Text -> Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnWorkspaces))
 runWorkOnWorkspaces description (WorkOnAWorkspaceStep workOnAWorkspace clients  workspace workOnWorkspaces) = do

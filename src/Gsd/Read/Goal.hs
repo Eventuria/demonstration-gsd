@@ -37,22 +37,20 @@ instance FromJSON Goal  where
 
 
 instance ToJSON GoalStatus where
-    toJSON (Created) = object ["value" .= String "created"]
-    toJSON (InProgress) = object ["value" .= String "inProgress"]
-    toJSON (Paused) = object ["value" .= String "paused"]
-    toJSON (Accomplished) = object ["value" .= String "accomplished"]
-    toJSON (GivenUp) = object ["value" .= String "givenUp"]
+    toJSON (Created) = String "created"
+    toJSON (InProgress) = String "inProgress"
+    toJSON (Paused) = String "paused"
+    toJSON (Accomplished) = String "accomplished"
+    toJSON (GivenUp) = String "givenUp"
 
 
 instance FromJSON GoalStatus  where
 
-  parseJSON (Object o) = do
-     value <- o .: "value"
-     case value of
-          String status | (unpack status) == "created" -> return Created
-          String status | (unpack status) == "inProgress" -> return InProgress
-          String status | (unpack status) == "paused" -> return Paused
-          String status | (unpack status) == "accomplished" -> return Accomplished
-          String status | (unpack status) == "givenUp" -> return GivenUp
-          _ -> error $ "Json format not expected"
-  parseJSON _ =  error $ "Json format not expected"
+  parseJSON (String s) = case unpack s of
+          "created" -> return Created
+          "inProgress" -> return InProgress
+          "paused" -> return Paused
+          "accomplished" -> return Accomplished
+          "givenUp" -> return GivenUp
+          _ -> error $ "FromJSON GoalStatus : Json format not expected"
+  parseJSON _ =  error $ "FromJSON GoalStatus : Json format not expected"
