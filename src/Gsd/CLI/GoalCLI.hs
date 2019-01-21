@@ -19,7 +19,7 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Console.Byline hiding (askWithMenuRepeatedly)
 import Gsd.CLI.ByLineWrapper (askWithMenuRepeatedly)
 import Network.HTTP.Client (newManager, defaultManagerSettings)
-import Gsd.Write.Client (sendCommand)
+import Gsd.Write.Client
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Servant.Client
 import Gsd.Clients
@@ -31,6 +31,8 @@ import Gsd.CLI.Steps
 import Gsd.Write.Commands.Command
 import Cqrs.Write.Aggregate.Commands.CommandId
 import Gsd.Write.Core
+import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import Gsd.CLI.Greetings
 
 data GoalCommands =  RefineGoalDescriptionCommand Text
                   | ChangeGoalStatus              Text
@@ -115,13 +117,21 @@ runNotifyGoalAccomplishmentCommand currentStep @ (WorkOnAGoalStep workOnAGoalSte
        Action {actionId} <- askWithMenuRepeatedly menuConfig prompt onError
        commandId <- liftIO $ nextRandom
        sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
-       queryResult <- liftIO $ runClientM (sendCommand (NotifyActionCompleted {commandId , workspaceId , goalId, actionId})) (mkClientEnv manager writeApiUrl)
+       queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse (NotifyActionCompleted {commandId , workspaceId , goalId, actionId})) (mkClientEnv manager writeApiUrl)
        case queryResult of
-           Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
-           Right persistenceResult -> do
-             sayLn $ fg green <> "Command successfully sent !"
-             sayLn $ ""
-             return $ Right $ currentStep
+            Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+            Right RequestFailed {reason} ->  do
+              sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+              displayEndOfACommand
+              return $ Right currentStep
+            Right (CommandResponseProduced CommandFailed {reason}) ->  do
+              sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+              displayEndOfACommand
+              return $ Right currentStep
+            Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+              sayLn $ fg green <> "> The command has been successfully processed... "
+              displayEndOfACommand
+              return $ Right currentStep
     where
       stylizeAction :: Action -> Stylized
       stylizeAction Action {indexation,details} =
@@ -140,13 +150,21 @@ runRefineGoalDescriptionCommand currentStep @ (WorkOnAGoalStep workOnAGoalStepHa
   sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
   refinedGoalDescription <- askUntil "Enter a new goal description : " Nothing atLeastThreeChars
   manager  <- liftIO $ newManager defaultManagerSettings
-  queryResult <- liftIO $ runClientM (sendCommand RefineGoalDescription {commandId , workspaceId , goalId, refinedGoalDescription}) (mkClientEnv manager writeApiUrl)
+  queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse RefineGoalDescription {commandId , workspaceId , goalId, refinedGoalDescription}) (mkClientEnv manager writeApiUrl)
   case queryResult of
       Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
-      Right persistenceResult -> do
-        sayLn $ fg green <> "Command successfully sent !"
-        sayLn $ ""
-        return $ Right $ WorkOnAGoalStep run clients workspace Goal {workspaceId,goalId, description = refinedGoalDescription,status} workOnWorkspace workOnWorkspaces
+      Right RequestFailed {reason} ->  do
+        sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+        displayEndOfACommand
+        return $ Right currentStep
+      Right (CommandResponseProduced CommandFailed {reason}) ->  do
+        sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+        displayEndOfACommand
+        return $ Right currentStep
+      Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+        sayLn $ fg green <> "> The command has been successfully processed... "
+        displayEndOfACommand
+        return $ Right currentStep
 
 
 runActionizeOnGoalCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
@@ -157,12 +175,20 @@ runActionizeOnGoalCommand currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle c
   sayLn $ fg green <> "generated a new Action Id (" <> text (toText commandId) <>") "
   actionDetails <- askUntil "Enter the details of the action : " Nothing atLeastThreeChars
   manager  <- liftIO $ newManager defaultManagerSettings
-  queryResult <- liftIO $ runClientM (sendCommand ActionizeOnGoal {commandId , workspaceId , goalId, actionId , actionDetails}) (mkClientEnv manager writeApiUrl)
+  queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse ActionizeOnGoal {commandId , workspaceId , goalId, actionId , actionDetails}) (mkClientEnv manager writeApiUrl)
   case queryResult of
       Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
-      Right persistenceResult -> do
-        sayLn $ fg green <> "Command successfully sent !"
-        sayLn $ ""
+      Right RequestFailed {reason} ->  do
+        sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+        displayEndOfACommand
+        return $ Right currentStep
+      Right (CommandResponseProduced CommandFailed {reason}) ->  do
+        sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+        displayEndOfACommand
+        return $ Right currentStep
+      Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+        sayLn $ fg green <> "> The command has been successfully processed... "
+        displayEndOfACommand
         return $ Right currentStep
 
 runListGoalActions :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
@@ -200,13 +226,21 @@ runChangeGoalStatus currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients
         commandToSent <- getCommandToSend nextStatus commandId goalId workspaceId
 
         manager <- liftIO $ newManager defaultManagerSettings
-        queryResult <- liftIO $ runClientM (sendCommand commandToSent) (mkClientEnv manager writeApiUrl)
+        queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse commandToSent) (mkClientEnv manager writeApiUrl)
         case queryResult of
-            Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
-            Right persistenceResult -> do
-              sayLn $ fg green <> "Command successfully sent !"
-              sayLn $ ""
-              return $ Right (WorkOnAGoalStep workOnAGoalStepHandle clients workspace Goal {workspaceId,goalId,status = nextStatus, description} workOnWorkspace workOnWorkspaces)
+            Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+            Right RequestFailed {reason} ->  do
+              sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+              displayEndOfACommand
+              return $ Right currentStep
+            Right (CommandResponseProduced CommandFailed {reason}) ->  do
+              sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+              displayEndOfACommand
+              return $ Right currentStep
+            Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+              sayLn $ fg green <> "> The command has been successfully processed... "
+              displayEndOfACommand
+              return $ Right currentStep
 
   where
       getCommandToSend :: GoalStatus -> CommandId -> GoalId -> WorkspaceId -> Byline IO (GsdCommand)

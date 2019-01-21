@@ -23,6 +23,15 @@ type GSDReadStreamingApi =   StreamWorkspace
                       :<|>   StreamGoal
                       :<|>   StreamAction
 
-type StreamWorkspace =   "gsd" :> "read" :> "stream" :> "workspaces" :> StreamGet NewlineFraming JSON (P.Producer (Persisted Workspace) IO () )
-type StreamGoal =        "gsd" :> "read" :> "stream" :> Capture "workspaceId" WorkspaceId :> "goals" :> StreamGet NewlineFraming JSON (P.Producer (Goal) IO () )
-type StreamAction =      "gsd" :> "read" :> "stream" :> Capture "workspaceId" WorkspaceId :> "goals" :> Capture "goalId" GoalId :> StreamGet NewlineFraming JSON (P.Producer (Action) IO () )
+type StreamWorkspace =   "gsd" :> "read" :> "stream" :> "workspaces"
+                                         :> StreamGet NewlineFraming JSON (P.Producer (Persisted Workspace) IO () )
+
+type StreamGoal =        "gsd" :> "read" :> "stream"
+                                         :> Capture "workspaceId" WorkspaceId
+                                         :> "goals" :> StreamGet NewlineFraming JSON (P.Producer (Goal) IO () )
+
+type StreamAction =      "gsd" :> "read" :> "stream"
+                                         :> Capture "workspaceId" WorkspaceId
+                                         :> "goals"
+                                         :> Capture "goalId" GoalId
+                                         :> StreamGet NewlineFraming JSON (P.Producer (Action) IO () )

@@ -20,7 +20,9 @@ getEventStoreQuerying = Querying  {
                   isStreamNotFound = EventStoreQuerying.isStreamNotFound}
 
 getEventStoreSubscribing :: Subscribing EventStoreStream
-getEventStoreSubscribing = Subscribing { subscribe = EventStoreSubscribing.subscribe}
+getEventStoreSubscribing = Subscribing {
+                            subscribe = EventStoreSubscribing.subscribe,
+                            subscribeOnOffset = EventStoreSubscribing.subscribeOnOffset}
 
 
 getEventStoreReading :: Reading EventStoreStream

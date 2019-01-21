@@ -16,8 +16,17 @@ import Data.Set hiding (map)
 import Data.List hiding (union)
 
 
-handle :: Offset -> ValidationState GsdState -> CommandId -> WorkspaceId -> GoalId -> ActionId -> Text  -> CommandDirective GsdState
-handle offset ValidationState {commandsProcessed, aggregateId,state} commandId workspaceId goalId actionId actionDetails = case (state) of
+handle :: Offset ->
+          ValidationState GsdState ->
+          CommandId ->
+          WorkspaceId ->
+          GoalId ->
+          ActionId ->
+          Text  ->
+          CommandDirective GsdState
+handle offset
+       ValidationState {commandsProcessed, aggregateId,state}
+       commandId workspaceId goalId actionId actionDetails = case (state) of
   Nothing -> Reject "Trying to actionize on a goal but there is no goal in the workspace given"
   Just GsdState {goals} -> case (findGoal goalId goals)  of
     Nothing -> Reject "Trying to actionize on a goal that does not exist"

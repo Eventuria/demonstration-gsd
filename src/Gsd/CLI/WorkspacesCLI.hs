@@ -14,9 +14,9 @@ import Data.Text
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Gsd.Write.Client (sendCommand)
+import Gsd.Write.Client (sendCommandAndWaitResponse,SendCommandAnWaitResponse (..))
 import Gsd.Write.Commands.Command
-import Gsd.Read.Client (streamWorkspace)
+import Gsd.Read.Client (streamWorkspace )
 import Gsd.Clients
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Gsd.CLI.Steps
@@ -30,7 +30,7 @@ import qualified Servant.Client.Streaming as S
 import Gsd.CLI.Greetings
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
-
+import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import qualified Gsd.CLI.WorkspaceCLI as WorkspaceActions (run)
 
 data WorkspacesCommand = CreateWorkspaceRequest  Text
@@ -87,13 +87,22 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
       sayLn $ fg cyan <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceName <- askUntil ("> enter a workspace name : " ) Nothing atLeastThreeChars
       manager <- liftIO $ newManager defaultManagerSettings
-      queryResult <- liftIO $ runClientM (sendCommand CreateWorkspace {commandId , workspaceId , workspaceName}) (mkClientEnv manager writeApiUrl)
+      queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse CreateWorkspace {commandId , workspaceId , workspaceName}) (mkClientEnv manager writeApiUrl)
       case queryResult of
         Left errorDescription -> return $ Left $ StepError {currentStep, errorDescription = show errorDescription }
-        Right persistenceResult -> do
-          sayLn $ fg cyan <> "Workpace "<> (text . toText) workspaceId <> " successfully created !"
+        Right RequestFailed {reason} ->  do
+          sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
           displayEndOfACommand
           return $ Right currentStep
+        Right (CommandResponseProduced CommandFailed {reason}) ->  do
+          sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+          displayEndOfACommand
+          return $ Right currentStep
+        Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+          sayLn $ fg green <> "> The command has been successfully processed... "
+          displayEndOfACommand
+          return $ Right currentStep
+
 
     runWorkOnAWorkspace :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep workOnWorkspaces clients)  = do
@@ -134,7 +143,7 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
     stylizePersistedWorkspace PersistedItem {item = Workspace {workspaceName, workspaceId,
                                                                actionStats = ActionStats {total = totalActions,completed,opened},
                                                                goalStats = GoalStats {total = totalGoals,accomplished,toBeAccomplished }}} =
-      fg cyan <> text  workspaceName <> fg white <>" -> Todo : " <> fg cyan <> (text . pack  .show) opened <> " goal(s) and " <> (text . pack  .show) toBeAccomplished <> " action(s)"
+      fg cyan <> text  workspaceName <> fg white <>" -> Todo : " <> fg cyan <> (text . pack  .show) toBeAccomplished <> " goal(s) and " <> (text . pack  .show) opened <> " action(s)"
 
 
     atLeastThreeChars :: Text -> IO (Either Stylized Text)

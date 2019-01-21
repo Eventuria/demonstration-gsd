@@ -15,6 +15,7 @@ import PersistedStreamEngine.Interface.PersistedItem
 import Data.Maybe
 import Data.Aeson
 import PersistedStreamEngine.Interface.Streamable
+import PersistedStreamEngine.Interface.Offset
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
 subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },
@@ -35,6 +36,23 @@ subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { l
                               resolvedEvent <- liftIO $ EventStore.nextEvent subscription
                               liftIO $ logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
                               (S.yield $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)) <> loopNextEvent subscription
+
+subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (Persisted item)
+subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },
+                                               streamName = streamName} offset = do
+              liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
+
+              subscription <- EventStore.subscribeFrom connection streamName EventStore.NoResolveLink (Just $ EventStore.rawEventNumber (fromInteger offset)) Nothing Nothing
+              result <- (try $ EventStore.waitConfirmation subscription )
+              case result of
+                Left e @ SomeException {} -> do
+                           liftIO $ logInfo logger "subscription to stream failed - retrying..."
+                           liftIO $ threadDelay (5 * 1000000) -- 5 seconds
+                           subscribeOnOffset eventStoreStream offset
+                Right _ -> do
+                        resolvedEvent <- liftIO $ EventStore.nextEvent subscription
+                        liftIO $ logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
+                        return $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)
 
 recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
 recordedEventToPersistedItem recordedEvent =

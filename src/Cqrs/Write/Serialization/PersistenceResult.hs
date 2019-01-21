@@ -23,11 +23,16 @@ instance FromJSON PersistenceResult  where
     parseJSON (Object jsonObject) =  do
                    persistenceResult <- jsonObject .: "persistenceResult"
                    case persistenceResult of
-                        Just (String persistenceResultName) | (Text.unpack persistenceResultName) == persistenceSuccessName -> PersistenceSuccess
-                            <$> jsonObject .: "lastOffsetPersisted"
-                        Just (String persistenceResultName) | (Text.unpack persistenceResultName) == persistenceFailureName -> PersistenceFailure
-                            <$> jsonObject .:  "reason"
-                        Just (String unknownResponseName) -> error $ "Persistence response unknown : " ++ Text.unpack unknownResponseName
+                        Just (String persistenceResultName)
+                          | (Text.unpack persistenceResultName) == persistenceSuccessName ->
+                              PersistenceSuccess
+                                <$> jsonObject .: "lastOffsetPersisted"
+                        Just (String persistenceResultName)
+                          | (Text.unpack persistenceResultName) == persistenceFailureName ->
+                              PersistenceFailure
+                                <$> jsonObject .:  "reason"
+                        Just (String unknownResponseName) ->
+                           error $ "Persistence response unknown : " ++ Text.unpack unknownResponseName
                         Nothing -> error $ "persistenceResult status not provided"
                         _ -> error $ "Json format not expected"
 

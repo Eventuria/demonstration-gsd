@@ -10,15 +10,11 @@ import PersistedStreamEngine.Interface.Write.Writable
 commandResponseNameForCommandSuccessfullyProcessed :: String
 commandResponseNameForCommandSuccessfullyProcessed = "commandSuccessfullyProcessed"
 
-commandResponseNameForCommandSkippedBecauseAlreadyProcessed :: String
-commandResponseNameForCommandSkippedBecauseAlreadyProcessed = "commandSkippedBecauseAlreadyProcessed"
-
 commandResponseNameForCommandFailed :: String
 commandResponseNameForCommandFailed = "commandFailed"
 
 instance Writable CommandResponse where
   getItemName CommandSuccessfullyProcessed {} = commandResponseNameForCommandSuccessfullyProcessed
-  getItemName CommandSkippedBecauseAlreadyProcessed {} = commandResponseNameForCommandSkippedBecauseAlreadyProcessed
   getItemName CommandFailed {} = commandResponseNameForCommandFailed
 
 
@@ -26,9 +22,6 @@ instance ToJSON CommandResponse where
    toJSON (commandResponse @ (CommandSuccessfullyProcessed commandHeaderProcessed)) = object [
           "commandHeaderProcessed" .= commandHeaderProcessed,
           "commandResponseName" .= commandResponseNameForCommandSuccessfullyProcessed]
-   toJSON (commandResponse @ (CommandSkippedBecauseAlreadyProcessed commandHeaderProcessed)) = object [
-         "commandHeaderProcessed" .= commandHeaderProcessed,
-         "commandResponseName" .= commandResponseNameForCommandSkippedBecauseAlreadyProcessed]
    toJSON (commandResponse @ (CommandFailed commandHeaderProcessed reason)) = object [
          "commandHeaderProcessed" .= commandHeaderProcessed,
          "commandResponseName" .= commandResponseNameForCommandFailed,
@@ -41,8 +34,6 @@ instance FromJSON CommandResponse  where
                case commandResponseNameMaybe of
                     Just (String commandResponseName) | (Text.unpack commandResponseName) == commandResponseNameForCommandSuccessfullyProcessed -> CommandSuccessfullyProcessed
                         <$> jsonObject .: "commandHeaderProcessed"
-                    Just (String commandResponseName) | (Text.unpack commandResponseName) == commandResponseNameForCommandSkippedBecauseAlreadyProcessed -> CommandSkippedBecauseAlreadyProcessed
-                                            <$> jsonObject .: "commandHeaderProcessed"
                     Just (String commandResponseName) | (Text.unpack commandResponseName) == commandResponseNameForCommandFailed -> CommandFailed
                         <$> jsonObject .: "commandHeaderProcessed"
                         <*> jsonObject .: "reason"

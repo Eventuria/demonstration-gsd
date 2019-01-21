@@ -48,9 +48,7 @@ validateCommandTransaction  commandHeaderProcessed transaction  = do
 
 
 skipCommandTransaction :: CommandHeader -> WritePersistenceStreamLanguage applicationState ()
-skipCommandTransaction  commandHeaderProcessed  = persistCommandResponse CommandSkippedBecauseAlreadyProcessed {commandHeaderProcessed}
-
-
+skipCommandTransaction  commandHeaderProcessed  = return ()
 
 rejectCommandTransaction :: Maybe (ValidationState applicationState) -> CommandHeader -> RejectionReason -> WritePersistenceStreamLanguage applicationState ()
 rejectCommandTransaction (Just snapshot) commandHeaderProcessed@CommandHeader{aggregateId, commandId} rejectionReason = do

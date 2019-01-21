@@ -16,7 +16,7 @@ import Data.UUID.V4
 import Data.UUID
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Gsd.Write.Client (sendCommand)
+import Gsd.Write.Client
 
 import qualified Gsd.CLI.GoalCLI as GoalCLI (run)
 import Gsd.CLI.WorkspaceMonitoringCLI (runListCommandReceived,
@@ -36,7 +36,8 @@ import Control.Monad (void)
 import Gsd.Read.Client (streamGoal)
 import Gsd.Read.Goal
 import Gsd.CLI.Steps
-
+import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import Gsd.CLI.Greetings
 
 data WorkspaceCommand = RenameWorkspaceCommand       Text
                       | SetNewGoalCommand            Text
@@ -105,13 +106,21 @@ runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep workOnAWorkspace (clients
   sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
   workspaceNewName <- askUntil "Enter a new workspace name : " Nothing atLeastThreeChars
   manager <- liftIO $ newManager defaultManagerSettings
-  queryResult <- liftIO $ runClientM (sendCommand RenameWorkspace {commandId , workspaceId = workspaceId , workspaceNewName}) (mkClientEnv manager writeApiUrl)
+  queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse RenameWorkspace {commandId , workspaceId = workspaceId , workspaceNewName}) (mkClientEnv manager writeApiUrl)
   case queryResult of
       Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
-      Right persistenceResult -> do
-        sayLn $ fg green <> "Rename Workspace Command successfully sent !"
-        sayLn $ ""
-        return $ Right $ WorkOnAWorkspaceStep workOnAWorkspace clients Workspace {workspaceId,workspaceName = workspaceNewName, ..} workOnWorkspaces
+      Right RequestFailed {reason} ->  do
+        sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+        displayEndOfACommand
+        return $ Right currentStep
+      Right (CommandResponseProduced CommandFailed {reason}) ->  do
+        sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+        displayEndOfACommand
+        return $ Right currentStep
+      Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+        sayLn $ fg green <> "> The command has been successfully processed... "
+        displayEndOfACommand
+        return $ Right currentStep
 
 
 runSetNewGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
@@ -122,12 +131,20 @@ runSetNewGoal currentStep @ (WorkOnAWorkspaceStep workOnAWorkspace (clients @ Cl
     sayLn $ fg green <> "generating a new goal Id (" <> text (toText goalId) <>") "
     goalDescription <- askUntil "Enter a goal description : " Nothing atLeastThreeChars
     manager <- liftIO $ newManager defaultManagerSettings
-    queryResult <- liftIO $ runClientM (sendCommand SetGoal {commandId , workspaceId = workspaceId , goalId, goalDescription}) (mkClientEnv manager writeApiUrl)
+    queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse SetGoal {commandId , workspaceId = workspaceId , goalId, goalDescription}) (mkClientEnv manager writeApiUrl)
     case queryResult of
-        Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
-        Right persistenceResult -> do
-          sayLn $ fg green <> "Set Goal Command successfully sent !"
-          sayLn $ ""
+        Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+        Right RequestFailed {reason} ->  do
+          sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+          displayEndOfACommand
+          return $ Right currentStep
+        Right (CommandResponseProduced CommandFailed {reason}) ->  do
+          sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+          displayEndOfACommand
+          return $ Right currentStep
+        Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+          sayLn $ fg green <> "> The command has been successfully processed... "
+          displayEndOfACommand
           return $ Right currentStep
 
 

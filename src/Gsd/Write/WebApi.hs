@@ -18,24 +18,25 @@ import Logger.Core
 import qualified Database.EventStore as EventStore
 import Control.Exception hiding (Handler)
 
+import Servant.Pipes ()
+
 import Control.Monad.IO.Class (MonadIO(..))
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Write.GsdOverEventStore as Gsd.Write
+import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import Cqrs.Write.Aggregate.Ids.AggregateId
 
-import PersistedStreamEngine.Interface.Write.PersistenceResult
 import Cqrs.Write.Serialization.PersistenceResult ()
-
+import Gsd.Write.WebApiDefinition
 import Servant
 import Network.Wai.Handler.Warp
 import Gsd.Write.Commands.Command
 import Gsd.Write.Commands.Serialization ()
-
+import Cqrs.Write.PersistCommandResult
+import PersistedStreamEngine.Interface.PersistedItem
+import Cqrs.Write.Aggregate.Commands.CommandId
+import PersistedStreamEngine.Interface.Offset
 type ApiPort = Int
-
-type GsdWriteApi =   SendGsdCommand
-
-type SendGsdCommand = "gsd" :> "write" :> "sendCommand" :> ReqBody '[JSON] GsdCommand :> PostAccepted '[JSON] PersistenceResult
-
 
 execute ::  ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
 execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
@@ -52,10 +53,13 @@ gsdWriteApi :: Proxy GsdWriteApi
 gsdWriteApi = Proxy
 
 gsdWriteServer :: EventStoreSettings  -> Server GsdWriteApi
-gsdWriteServer eventStoreSettings = sendGsdCommand
+gsdWriteServer eventStoreSettings = sendGsdCommand :<|> waitTillCommandResponseProduced
   where
-        sendGsdCommand :: GsdCommand -> Handler PersistenceResult
-        sendGsdCommand gsdCommand = do
-            result <- (liftIO $ Gsd.Write.persistCommand eventStoreSettings gsdCommand )
-            return result
+        sendGsdCommand :: GsdCommand -> Handler PersistCommandResult
+        sendGsdCommand gsdCommand = (liftIO $ Gsd.Write.persistCommand eventStoreSettings gsdCommand )
+
+
+        waitTillCommandResponseProduced :: AggregateId -> Offset -> CommandId -> Handler (Persisted CommandResponse)
+        waitTillCommandResponseProduced aggregateId offset commandId =
+          liftIO $ Gsd.Write.waitTillCommandResponseProduced eventStoreSettings aggregateId offset commandId
 
