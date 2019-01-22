@@ -11,7 +11,7 @@ import Control.Monad (void)
 import qualified Servant.Client.Streaming as S
 import qualified Streamly.Prelude as Streamly.Prelude
 import Streamly
-import Gsd.CLI.BreadCrumbs (breadCrumb)
+import Gsd.CLI.BreadCrumbs
 import Data.Text
 import Data.UUID.V4
 import Data.UUID
@@ -48,16 +48,16 @@ data GoalCommands =  RefineGoalDescriptionCommand Text
 
 run :: WorkOnAGoalStepHandle
 run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
-           workspace @ Workspace {workspaceId,workspaceName}
+           workspaceId
            goal      @ Goal {goalId,description,status = currentStatus}
            workOnWorkspace
            workOnWorkspaces = do
-  sayLn $ breadCrumb workspace goal
+--  sayLn $ breadCrumb workspace goal
   sayLn $ fg white <> "Current Status : " <> fg green <> (text . pack .show) currentStatus
   let menuConfig = banner ("Available actions on the selected goal : " <> fg green <> ((text . pack .show) $ description)) $ menu workspaceActions stylizeAction
       prompt     = "please choose a command (provide the index) : "
       onError    = "please enter a valid index..."
-      currentStep = WorkOnAGoalStep run clients workspace goal workOnWorkspace workOnWorkspaces
+      currentStep = WorkOnAGoalStep run clients workspaceId goal workOnWorkspace workOnWorkspaces
 
   answer <- askWithMenuRepeatedly menuConfig prompt onError
   case answer of

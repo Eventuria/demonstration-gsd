@@ -12,7 +12,7 @@ import Settings
 import Gsd.Write.CommandConsumptionStreamer
 import Gsd.Write.WebApi
 import Gsd.Monitoring.WebStreamingApi
-import Gsd.Read.WebStreamingApi
+import Gsd.Read.WebApi
 import Gsd.CLI.CLI
 import Servant.Client
 import Gsd.Clients
@@ -60,18 +60,18 @@ gsdCommandConsumptionStreamer = Gsd.Write.CommandConsumptionStreamer.execute
 --------------------------------------------------------------------------------
 
 -- | Gsd Web Read Api : Web Api readings events and returning an in memory specific read model for gsd
-gsdReadStreamingApi :: IO ()
-gsdReadStreamingApi = Gsd.Read.WebStreamingApi.execute
+gsdReadApi :: IO ()
+gsdReadApi = Gsd.Read.WebApi.execute
   getGsdReadStreamingApiPort
   getEventStoreSettings
   getConnectionType
   getCredentials
 
 
--- | Monitoring Streaming Api : Tool to read directly what the Write Channel stored in the EventStore
+-- | Monitoring Api : Tool to read directly what the Write Channel stored in the EventStore
 -- (example of a second useful read model in CQRS applications)
-gsdMonitoringStreamingApi :: IO ()
-gsdMonitoringStreamingApi = Gsd.Monitoring.WebStreamingApi.execute
+gsdMonitoringApi :: IO ()
+gsdMonitoringApi = Gsd.Monitoring.WebStreamingApi.execute
   getGsdMonitoringStreamingApiPort
   getEventStoreSettings
   getConnectionType

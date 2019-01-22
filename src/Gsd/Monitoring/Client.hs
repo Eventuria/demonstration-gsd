@@ -56,8 +56,8 @@ streamInfinitelyGsdEventByWorkspaceId workspaceId = fromPipes <$> (streamInfinit
 streamGsdValidationStateByWorkspaceId :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Persisted (ValidationState GsdState)) )
 streamGsdValidationStateByWorkspaceId workspaceId = fromPipes <$> (streamGsdValidationStateByWorkspaceIdOnPipe workspaceId)
 
-gsdMonitoringStreamingApi :: Proxy GSDMonitoringStreamingApi
-gsdMonitoringStreamingApi = Proxy
+gsdMonitoringApi :: Proxy GSDMonitoringStreamingApi
+gsdMonitoringApi = Proxy
 
 streamWorkspaceIdOnPipe :: S.ClientM (P.Producer (Persisted WorkspaceId) IO () )
 streamGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand) IO () )
@@ -72,5 +72,5 @@ streamWorkspaceIdOnPipe
   :<|> streamGsdCommandResponseByWorkspaceIdOnPipe
   :<|> streamGsdEventByWorkspaceIdOnPipe
   :<|> streamInfinitelyGsdEventByWorkspaceIdOnPipe
-  :<|> streamGsdValidationStateByWorkspaceIdOnPipe = S.client gsdMonitoringStreamingApi
+  :<|> streamGsdValidationStateByWorkspaceIdOnPipe = S.client gsdMonitoringApi
 

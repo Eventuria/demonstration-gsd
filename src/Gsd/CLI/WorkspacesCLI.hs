@@ -47,7 +47,8 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
     Left err -> return $ ()
     Right streamWorkspace -> void $ runByline $ do
         workspaces <- liftIO $ streamWorkspace & Streamly.Prelude.toList
-        let menuConfig = banner "> Available actions on the workspace set " $ menu (workspacesActions workspaces) stylizeAction
+        let menuConfig = banner "> Available actions on the workspace set " $
+                          menu (workspacesActions workspaces) stylizeAction
             prompt     = "> please choose an action (provide the index) : "
             onError    = "> please enter a valid index..."
             currentStep = WorkOnWorkspacesStep run clients
@@ -87,7 +88,9 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
       sayLn $ fg cyan <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceName <- askUntil ("> enter a workspace name : " ) Nothing atLeastThreeChars
       manager <- liftIO $ newManager defaultManagerSettings
-      queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse CreateWorkspace {commandId , workspaceId , workspaceName}) (mkClientEnv manager writeApiUrl)
+      queryResult <- liftIO $ runClientM
+                                (sendCommandAndWaitResponse CreateWorkspace {commandId , workspaceId , workspaceName})
+                                (mkClientEnv manager writeApiUrl)
       case queryResult of
         Left errorDescription -> return $ Left $ StepError {currentStep, errorDescription = show errorDescription }
         Right RequestFailed {reason} ->  do
@@ -117,13 +120,17 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
       case result of
         Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription}
         Right workspaces -> do
-            let menuConfig = banner (fg cyan <> "> available Workspaces ") $ renderPrefixAndSuffixForDynamicGsdMenu (menu workspaces stylizePersistedWorkspace)
+            let menuConfig = banner
+                                (fg cyan <> "> available Workspaces ") $
+                                renderPrefixAndSuffixForDynamicGsdMenu (menu workspaces stylizePersistedWorkspace)
                 prompt     = "> please choose an action (provide the index) : "
                 onError    = "> please enter a valid index..."
-            (PersistedItem {item = workspace @ Workspace {workspaceId , workspaceName}}) <- askWithMenuRepeatedly menuConfig prompt onError
+            (PersistedItem {item = workspace @Workspace{workspaceId}  }) <- askWithMenuRepeatedly
+                                                                              menuConfig
+                                                                              prompt
+                                                                              onError
             displayEndOfACommand
-            greetingOnWorkspace workspaceName
-            return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clients workspace workOnWorkspaces
+            return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clients workspaceId workOnWorkspaces
 
 
     runListWorkspaces :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnWorkspaces))
@@ -135,15 +142,23 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
           Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
           Right stream -> do
             runStream $ stream
-                & Streamly.Prelude.mapM (\persistedItem -> void $ runByline $ do sayLn $ fg white <> "  - " <> stylizePersistedWorkspace persistedItem )
+                & Streamly.Prelude.mapM (\persistedItem -> void $ runByline $ do
+                  sayLn $ fg white <> "  - " <> stylizePersistedWorkspace persistedItem )
             void $ runByline $ do displayEndOfACommand
             return $ Right currentStep
 
     stylizePersistedWorkspace :: Persisted Workspace -> Stylized
     stylizePersistedWorkspace PersistedItem {item = Workspace {workspaceName, workspaceId,
-                                                               actionStats = ActionStats {total = totalActions,completed,opened},
-                                                               goalStats = GoalStats {total = totalGoals,accomplished,toBeAccomplished }}} =
-      fg cyan <> text  workspaceName <> fg white <>" -> Todo : " <> fg cyan <> (text . pack  .show) toBeAccomplished <> " goal(s) and " <> (text . pack  .show) opened <> " action(s)"
+                                                               actionStats = ActionStats {total = totalActions,
+                                                                                          completed,
+                                                                                          opened},
+                                                               goalStats = GoalStats {total = totalGoals,
+                                                                                      accomplished,
+                                                                                      toBeAccomplished }}} =
+      fg cyan <> text  workspaceName
+              <> fg white <>" -> Todo : "
+              <> fg cyan <> (text . pack  .show) toBeAccomplished <> " goal(s) and "
+              <> (text . pack  .show) opened <> " action(s)"
 
 
     atLeastThreeChars :: Text -> IO (Either Stylized Text)

@@ -2,14 +2,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Gsd.Read.Client (streamWorkspace,streamGoal,streamAction) where
+module Gsd.Read.Client (streamWorkspace,streamGoal,streamAction,fetchWorkspace) where
 
 import Data.Proxy
 import Servant
 import Gsd.Read.Workspace
 import qualified Pipes as P
 import Streamly.Adapters
-import Gsd.Read.WebStreamingApi
+import Gsd.Read.WebApi
 import qualified Servant.Client.Streaming as S
 import Gsd.Write.Core
 import Gsd.Read.Goal
@@ -20,13 +20,14 @@ import Servant.Pipes ()
 
 import Streamly
 
-gsdReadStreamingApi :: Proxy GSDReadStreamingApi
-gsdReadStreamingApi = Proxy
+gsdReadApi :: Proxy GSDReadApi
+gsdReadApi = Proxy
 
 streamWorkspaceOnPipe :: S.ClientM (P.Producer (Persisted Workspace) IO () )
+fetchWorkspace :: WorkspaceId -> S.ClientM (Maybe Workspace)
 streamGoalOnPipe :: WorkspaceId -> S.ClientM (P.Producer Goal IO () )
 streamActionOnPipe :: WorkspaceId -> GoalId -> S.ClientM (P.Producer Action IO () )
-streamWorkspaceOnPipe :<|> streamGoalOnPipe :<|> streamActionOnPipe = S.client gsdReadStreamingApi
+streamWorkspaceOnPipe :<|> streamGoalOnPipe :<|> streamActionOnPipe :<|> fetchWorkspace = S.client gsdReadApi
 
 
 streamWorkspace :: IsStream stream => S.ClientM (stream IO (Persisted Workspace) )

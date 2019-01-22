@@ -9,7 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Gsd.Read.WebStreamingApiDefinition where
+module Gsd.Read.WebApiDefinition where
 
 import Servant
 import qualified Pipes as P
@@ -19,19 +19,25 @@ import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Core
 
-type GSDReadStreamingApi =   StreamWorkspace
+type GSDReadApi =   StreamWorkspace
                       :<|>   StreamGoal
                       :<|>   StreamAction
+                      :<|>   FetchWorkspace
 
-type StreamWorkspace =   "gsd" :> "read" :> "stream" :> "workspaces"
+type StreamWorkspace =   "gsd" :> "read" :> "streamWorkspace"
                                          :> StreamGet NewlineFraming JSON (P.Producer (Persisted Workspace) IO () )
 
-type StreamGoal =        "gsd" :> "read" :> "stream"
+type FetchWorkspace =   "gsd" :> "read" :> "fetchWorkspace"
+                                        :> Capture "workspaceId" WorkspaceId
+                                        :> Get '[JSON] (Maybe Workspace)
+
+type StreamGoal =        "gsd" :> "read" :> "streamGoal"
                                          :> Capture "workspaceId" WorkspaceId
                                          :> "goals" :> StreamGet NewlineFraming JSON (P.Producer (Goal) IO () )
 
-type StreamAction =      "gsd" :> "read" :> "stream"
+type StreamAction =      "gsd" :> "read" :> "streamAction"
                                          :> Capture "workspaceId" WorkspaceId
                                          :> "goals"
                                          :> Capture "goalId" GoalId
                                          :> StreamGet NewlineFraming JSON (P.Producer (Action) IO () )
+

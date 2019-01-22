@@ -59,11 +59,11 @@ execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
   bracket (EventStore.connect eventStoreSettings eventStoreConnectionType)
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
-         (\connection -> run apiPort $ serve gsdMonitoringStreamingApi $ gsdMonitoringStreamingServer EventStoreSettings {logger, credentials, connection})
+         (\connection -> run apiPort $ serve gsdMonitoringApi $ gsdMonitoringStreamingServer EventStoreSettings {logger, credentials, connection})
 
 
-gsdMonitoringStreamingApi :: Proxy GSDMonitoringStreamingApi
-gsdMonitoringStreamingApi = Proxy
+gsdMonitoringApi :: Proxy GSDMonitoringStreamingApi
+gsdMonitoringApi = Proxy
 
 gsdMonitoringStreamingServer :: EventStoreSettings  -> Server GSDMonitoringStreamingApi
 gsdMonitoringStreamingServer eventStoreSettings = streamWorkspaceId

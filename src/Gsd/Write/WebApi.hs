@@ -47,7 +47,11 @@ execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
   bracket (EventStore.connect eventStoreSettings eventStoreConnectionType )
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
-         (\connection -> run apiPort $ serve gsdWriteApi $ gsdWriteServer $ EventStoreSettings {logger, credentials, connection})
+         (\connection -> run
+                          apiPort $
+                          serve gsdWriteApi $
+                          gsdWriteServer $
+                          EventStoreSettings {logger, credentials, connection})
 
 gsdWriteApi :: Proxy GsdWriteApi
 gsdWriteApi = Proxy

@@ -4,7 +4,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Gsd.Read.GenericRead (streamWorkspace,streamGoal,streamAction) where
+module Gsd.Read.GenericRead where
 
 import Streamly hiding (Streaming)
 import Data.Function ((&))
@@ -40,26 +40,36 @@ streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT mon
 streamWorkspace aggregateIdStream getEventStream streaming @ Streaming {streamAll} =
     (streamAll $ aggregateIdStream)
       & S.mapM (\PersistedItem { offset = offset, item = workspaceId} ->
-        S.foldx
-         foldEvent
-         WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing,
-                            goalStats = GoalStats {total = 0, accomplished = 0, toBeAccomplished = 0 },
-                            actionStats = ActionStats {total = 0, completed = 0, opened = 0 } }
-         (\WorkspaceBuilder{workspaceIdMaybe,workspaceNameMaybe, goalStats, actionStats} ->
-            case (workspaceIdMaybe, workspaceNameMaybe) of
-              (Just workspaceId, Just workspaceName) ->
-                 Just PersistedItem {
-                    offset = offset,
-                    item = Workspace {
-                         workspaceId = fromJust $ workspaceIdMaybe,
-                         workspaceName = fromJust $ workspaceNameMaybe,
-                         goalStats,actionStats}}
-              otherwise -> Nothing)
-         (streamingEvent getEventStream streaming workspaceId))
+          (fmap . fmap ) (\workspace -> PersistedItem {offset, item = workspace })
+            $ fetchWorkspace
+                getEventStream
+                streaming
+                workspaceId)
       & S.filter (\maybePersistedWorkspace -> case maybePersistedWorkspace of
         Just persistedWorkspace -> True
         Nothing -> False )
       & S.map (\maybePersistedWorkspace -> fromJust $ maybePersistedWorkspace)
+
+fetchWorkspace :: Streamable SerialT monad Event =>
+                     GetEventStream persistedStream ->
+                     Streaming persistedStream ->
+                     WorkspaceId ->
+                     monad (Maybe Workspace)
+fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
+    S.foldx
+     foldEvent
+     WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing,
+                        goalStats = GoalStats {total = 0, accomplished = 0, toBeAccomplished = 0 },
+                        actionStats = ActionStats {total = 0, completed = 0, opened = 0 } }
+     (\WorkspaceBuilder{workspaceIdMaybe,workspaceNameMaybe, goalStats, actionStats} ->
+        case (workspaceIdMaybe, workspaceNameMaybe) of
+          (Just workspaceId, Just workspaceName) ->
+             Just Workspace {
+                     workspaceId = fromJust $ workspaceIdMaybe,
+                     workspaceName = fromJust $ workspaceNameMaybe,
+                     goalStats,actionStats}
+          otherwise -> Nothing)
+     (streamingEvent getEventStream streaming workspaceId)
   where
 
     streamingEvent :: (Streamable stream monad Event) =>
@@ -102,8 +112,6 @@ streamWorkspace aggregateIdStream getEventStream streaming @ Streaming {streamAl
                                                 opened = opened -1,
                                                 completed = completed +1} , ..}
          (workspaceBuilder , _ ) -> workspaceBuilder
-
-
 
 streamGoal :: Streamable stream monad Event =>
                 GetEventStream persistedStream ->

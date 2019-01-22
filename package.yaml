@@ -58,21 +58,21 @@ ghc-options:
 
 
 executables:
-  gsd-read-streaming-api:
+  gsd-read-api:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdReadStreamingApi
+    - -main-is Executables.gsdReadApi
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  gsd-monitoring-streaming-api:
+  gsd-monitoring-api:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdMonitoringStreamingApi
+    - -main-is Executables.gsdMonitoringApi
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N

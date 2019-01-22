@@ -11,7 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Gsd.Read.WebStreamingApi  (execute , GSDReadStreamingApi, StreamWorkspace) where
+module Gsd.Read.WebApi  (execute , GSDReadApi, StreamWorkspace) where
 
 
 import Servant
@@ -23,7 +23,7 @@ import qualified Pipes as P
 
 import Prelude hiding (foldr)
 import Logger.Core
-
+import Control.Monad.IO.Class (MonadIO(liftIO))
 import qualified Database.EventStore as EventStore
 import Control.Exception hiding (Handler)
 
@@ -36,14 +36,9 @@ import Gsd.Read.Goal
 import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
-import Gsd.Read.WebStreamingApiDefinition
-
--- Issue with Streamly, we should not need to import CQRS Event Serialization here (to investigate)
-import Cqrs.Write.Serialization.Event ()
-
+import Gsd.Read.WebApiDefinition
 
 type ApiPort = Int
-
 
 execute :: ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
 execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
@@ -53,23 +48,29 @@ execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
   bracket (EventStore.connect eventStoreSettings eventStoreConnectionType)
          (\connection -> do EventStore.shutdown connection
                             EventStore.waitTillClosed connection)
-         (\connection -> run apiPort $ serve gsdReadStreamingApi $ gsdReadStreamingServer EventStoreSettings {logger, credentials, connection})
+         (\connection -> run
+                          apiPort $
+                          serve gsdReadApi $
+                          gsdReadStreamingServer EventStoreSettings {logger, credentials, connection})
 
 
-gsdReadStreamingApi :: Proxy GSDReadStreamingApi
-gsdReadStreamingApi = Proxy
+gsdReadApi :: Proxy GSDReadApi
+gsdReadApi = Proxy
 
-gsdReadStreamingServer :: EventStoreSettings  -> Server GSDReadStreamingApi
-gsdReadStreamingServer eventStoreSettings = streamWorkspace :<|> streamGoal :<|> streamAction
+gsdReadStreamingServer :: EventStoreSettings  -> Server GSDReadApi
+gsdReadStreamingServer eventStoreSettings = streamWorkspace :<|> streamGoal :<|> streamAction :<|> fetchWorkspace
   where
-        streamWorkspace :: Handler (P.Producer (Persisted Workspace) IO ())
-        streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace eventStoreSettings
+    streamWorkspace :: Handler (P.Producer (Persisted Workspace) IO ())
+    streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace eventStoreSettings
 
-        streamGoal :: WorkspaceId -> Handler (P.Producer Goal IO ())
-        streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal eventStoreSettings workspaceId
+    fetchWorkspace :: WorkspaceId -> Handler (Maybe Workspace)
+    fetchWorkspace workspaceId = (liftIO $ GsdRead.fetchWorkspace eventStoreSettings workspaceId)
 
-        streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer Action IO ())
-        streamAction workspaceId goalId = (return . toPipes) $ GsdRead.streamAction eventStoreSettings workspaceId goalId
+    streamGoal :: WorkspaceId -> Handler (P.Producer Goal IO ())
+    streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal eventStoreSettings workspaceId
+
+    streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer Action IO ())
+    streamAction workspaceId goalId = (return . toPipes) $ GsdRead.streamAction eventStoreSettings workspaceId goalId
 
 
 
