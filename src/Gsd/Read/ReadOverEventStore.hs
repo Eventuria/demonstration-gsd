@@ -38,6 +38,14 @@ streamGoal settings workspaceId =
       getEventStoreStreaming
       workspaceId
 
+fetchGoal :: EventStoreSettings -> WorkspaceId -> GoalId -> IO (Maybe Goal)
+fetchGoal settings workspaceId goalId =
+    GenericRead.fetchGoal
+      (getEventStream $ getEventStoreStreamRepository settings)
+      getEventStoreStreaming
+      workspaceId
+      goalId
+
 streamAction :: Streamable stream monad Event => EventStoreSettings -> WorkspaceId -> GoalId -> stream monad Action
 streamAction settings workspaceId goalId =
     GenericRead.streamAction

@@ -13,20 +13,20 @@ import Data.Text
 
 import Gsd.Clients
 import Gsd.Write.Core
-import Gsd.Read.Goal
+import Gsd.Read.Workspace
 
 type ErrorDescription = String
 type WorkOnWorkspacesStepHandle = Clients -> Byline IO ()
-type WorkOnAWorkspaceStepHandle = Clients -> WorkspaceId ->  WorkOnWorkspacesStepHandle -> Byline IO ()
-type WorkOnAGoalStepHandle      = Clients -> WorkspaceId -> Goal ->  WorkOnAWorkspaceStepHandle -> WorkOnWorkspacesStepHandle -> Byline IO ()
+type WorkOnAWorkspaceStepHandle = Clients -> Workspace ->  WorkOnWorkspacesStepHandle -> Byline IO ()
+type WorkOnAGoalStepHandle      = Clients -> Workspace -> GoalId ->  WorkOnAWorkspaceStepHandle -> WorkOnWorkspacesStepHandle -> Byline IO ()
 
 
 data StepType = WorkOnWorkspaces | WorkOnAWorkspace | WorkOnAGoal
 
 data Step stepType where
   WorkOnWorkspacesStep :: WorkOnWorkspacesStepHandle -> Clients -> Step WorkOnWorkspaces
-  WorkOnAWorkspaceStep :: WorkOnAWorkspaceStepHandle -> Clients -> WorkspaceId -> WorkOnWorkspacesStepHandle -> Step WorkOnAWorkspace
-  WorkOnAGoalStep      :: WorkOnAGoalStepHandle -> Clients -> WorkspaceId -> Goal -> WorkOnAWorkspaceStepHandle -> WorkOnWorkspacesStepHandle -> Step WorkOnAGoal
+  WorkOnAWorkspaceStep :: WorkOnAWorkspaceStepHandle -> Clients -> Workspace -> WorkOnWorkspacesStepHandle -> Step WorkOnAWorkspace
+  WorkOnAGoalStep      :: WorkOnAGoalStepHandle -> Clients -> Workspace -> GoalId -> WorkOnAWorkspaceStepHandle -> WorkOnWorkspacesStepHandle -> Step WorkOnAGoal
 
 
 data StepError = forall stepType. StepError { currentStep :: Step stepType , errorDescription :: ErrorDescription}

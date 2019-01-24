@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Gsd.Read.Client (streamWorkspace,streamGoal,streamAction,fetchWorkspace) where
+module Gsd.Read.Client (streamWorkspace,streamGoal,streamAction,fetchWorkspace,fetchGoal) where
 
 import Data.Proxy
 import Servant
@@ -25,9 +25,10 @@ gsdReadApi = Proxy
 
 streamWorkspaceOnPipe :: S.ClientM (P.Producer (Persisted Workspace) IO () )
 fetchWorkspace :: WorkspaceId -> S.ClientM (Maybe Workspace)
+fetchGoal :: WorkspaceId -> GoalId ->  S.ClientM (Maybe Goal)
 streamGoalOnPipe :: WorkspaceId -> S.ClientM (P.Producer Goal IO () )
 streamActionOnPipe :: WorkspaceId -> GoalId -> S.ClientM (P.Producer Action IO () )
-streamWorkspaceOnPipe :<|> streamGoalOnPipe :<|> streamActionOnPipe :<|> fetchWorkspace = S.client gsdReadApi
+streamWorkspaceOnPipe :<|> streamGoalOnPipe :<|> streamActionOnPipe :<|> fetchWorkspace :<|> fetchGoal = S.client gsdReadApi
 
 
 streamWorkspace :: IsStream stream => S.ClientM (stream IO (Persisted Workspace) )

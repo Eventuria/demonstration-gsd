@@ -13,7 +13,7 @@ greetings = do
 
 
 displayBeginningOfACommand ::  Byline IO ()
-displayBeginningOfACommand = sayLn $ fg green <> "------------------------------------------"
+displayBeginningOfACommand = sayLn $ fg white <> "------------------------------------------"
 
 displayEndOfACommand ::  Byline IO ()
-displayEndOfACommand = sayLn $ fg green <> "------------------------------------------"
+displayEndOfACommand = sayLn $ fg white <> "------------------------------------------"

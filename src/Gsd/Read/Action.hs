@@ -10,9 +10,15 @@ import GHC.Generics
 
 type ActionDetails = Text
 
-data ActionStatus = Initiated | Completed deriving (Show , Eq , Generic )
+data ActionStatus = Initiated
+                  | Completed deriving (Show , Eq , Generic )
 
-data Action = Action {workspaceId ::WorkspaceId , goalId :: GoalId , actionId :: ActionId , indexation :: Int, details :: ActionDetails , status :: ActionStatus} deriving (Show , Eq , Generic )
+data Action = Action {workspaceId :: WorkspaceId ,
+                      goalId :: GoalId ,
+                      actionId :: ActionId ,
+                      indexation :: Int,
+                      details :: ActionDetails ,
+                      status :: ActionStatus} deriving (Show , Eq , Generic )
 
 
 instance ToJSON Action where

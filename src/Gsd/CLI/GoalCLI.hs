@@ -7,11 +7,10 @@ module Gsd.CLI.GoalCLI (run)where
 
 import Prelude hiding (length)
 import Data.Function ((&))
-import Control.Monad (void)
+import Control.Monad
 import qualified Servant.Client.Streaming as S
 import qualified Streamly.Prelude as Streamly.Prelude
 import Streamly
-import Gsd.CLI.BreadCrumbs
 import Data.Text
 import Data.UUID.V4
 import Data.UUID
@@ -23,8 +22,7 @@ import Gsd.Write.Client
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Servant.Client
 import Gsd.Clients
-import Gsd.Read.Client (streamAction)
-import Gsd.Read.Workspace
+import Gsd.Read.Client (streamAction,fetchGoal)
 import Gsd.Read.Goal
 import Gsd.Read.Action
 import Gsd.CLI.Steps
@@ -33,6 +31,7 @@ import Cqrs.Write.Aggregate.Commands.CommandId
 import Gsd.Write.Core
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Gsd.CLI.Greetings
+import Gsd.Read.Workspace
 
 data GoalCommands =  RefineGoalDescriptionCommand Text
                   | ChangeGoalStatus              Text
@@ -48,40 +47,52 @@ data GoalCommands =  RefineGoalDescriptionCommand Text
 
 run :: WorkOnAGoalStepHandle
 run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
-           workspaceId
-           goal      @ Goal {goalId,description,status = currentStatus}
+           workspace @ Workspace {workspaceId}
+           goalId
            workOnWorkspace
            workOnWorkspaces = do
---  sayLn $ breadCrumb workspace goal
-  sayLn $ fg white <> "Current Status : " <> fg green <> (text . pack .show) currentStatus
-  let menuConfig = banner ("Available actions on the selected goal : " <> fg green <> ((text . pack .show) $ description)) $ menu workspaceActions stylizeAction
-      prompt     = "please choose a command (provide the index) : "
-      onError    = "please enter a valid index..."
-      currentStep = WorkOnAGoalStep run clients workspaceId goal workOnWorkspace workOnWorkspaces
+  manager <- liftIO $ newManager defaultManagerSettings
+  liftIO $ S.withClientM
+              (fetchGoal workspaceId goalId)
+              (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
+    Left err -> return $ ()
+    Right Nothing  -> return $ ()
+    Right (Just goal) -> void $ runByline $ do
+      let menuConfig = banner "Goal Commands " $ menu workspaceActions stylizeAction
+          prompt     = "please choose a command (provide the index) : "
+          onError    = "please enter a valid index..."
+          currentStep = WorkOnAGoalStep run clients workspace goalId workOnWorkspace workOnWorkspaces
 
-  answer <- askWithMenuRepeatedly menuConfig prompt onError
-  case answer of
-    RefineGoalDescriptionCommand description -> (runRefineGoalDescriptionCommand currentStep) >>= runNextStep
-    ChangeGoalStatus description -> runChangeGoalStatus currentStep >>= runNextStep
-    ActionizeOnGoalCommand description -> runActionizeOnGoalCommand currentStep >>= runNextStep
-    ListGoalActions description -> runListGoalActions currentStep >>= runNextStep
-    NotifyGoalAccomplishmentCommand description -> runNotifyGoalAccomplishmentCommand currentStep >>= runNextStep
-    GotoWorkOnWorkspace description -> runWorkOnWorkspace description currentStep >>= runNextStep
-    GotoWorkOnWorkspaces description -> runWorkOnWorkspaces description currentStep >>= runNextStep
-    Quit description -> runQuitCLI
+      answer <- askWithMenuRepeatedly menuConfig prompt onError
+      case answer of
+        RefineGoalDescriptionCommand description ->
+          runRefineGoalDescriptionCommand currentStep >>= runNextStep
+        ChangeGoalStatus description ->
+          runChangeGoalStatus currentStep >>= runNextStep
+        ActionizeOnGoalCommand description ->
+          runActionizeOnGoalCommand currentStep >>= runNextStep
+        ListGoalActions description ->
+          runListGoalActions currentStep >>= runNextStep
+        NotifyGoalAccomplishmentCommand description ->
+          runNotifyGoalAccomplishmentCommand currentStep >>= runNextStep
+        GotoWorkOnWorkspace description ->
+          runWorkOnWorkspace description currentStep >>= runNextStep
+        GotoWorkOnWorkspaces description ->
+          runWorkOnWorkspaces description currentStep >>= runNextStep
+        Quit description -> runQuitCLI
 
   where
 
     workspaceActions :: [GoalCommands]
     workspaceActions =
-      [ RefineGoalDescriptionCommand  "Refine The Goal Description" ,
-        ChangeGoalStatus             "Change The Status",
-        ActionizeOnGoalCommand       "Define A New Action On This Goal",
-        ListGoalActions              "List Actions",
+      [ RefineGoalDescriptionCommand    "Refine The Goal Description" ,
+        ChangeGoalStatus                "Change The Status",
+        ActionizeOnGoalCommand          "Define A New Action On This Goal",
+        ListGoalActions                 "List Actions",
         NotifyGoalAccomplishmentCommand "Notify The Accomplishement Of An Action",
-        GotoWorkOnWorkspace          "Come Back To The Workspace  Commands",
-        GotoWorkOnWorkspaces         "Come Back To The Workspaces Commands",
-        Quit                         "Quit"]
+        GotoWorkOnWorkspace             "Work On the Workspace itself",
+        GotoWorkOnWorkspaces            "Work On Another Workspace",
+        Quit                            "Quit"]
 
     stylizeAction :: GoalCommands -> Stylized
     stylizeAction (RefineGoalDescriptionCommand description) = fg cyan <> text description
@@ -95,19 +106,36 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
 
 
 runWorkOnWorkspaces :: Text -> Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnWorkspaces))
-runWorkOnWorkspaces description currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients workspace goal workOnWorkspace workOnWorkspaces) = do
+runWorkOnWorkspaces description currentStep @ (WorkOnAGoalStep
+                                                  workOnAGoalStepHandle
+                                                  clients
+                                                  workspaceId
+                                                  goalId
+                                                  workOnWorkspace
+                                                  workOnWorkspaces) = do
   sayLn $ fg green <> (text . pack .show) description <> "selected "
   return $ Right $ WorkOnWorkspacesStep workOnWorkspaces clients
 
 
 runNotifyGoalAccomplishmentCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
-runNotifyGoalAccomplishmentCommand currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients @ Clients {writeApiUrl,gsdReadApiUrl} workspace goal @Goal {workspaceId,goalId,status = currentStatus,description} workOnWorkspace workOnWorkspaces) = do
+runNotifyGoalAccomplishmentCommand currentStep @ (WorkOnAGoalStep
+                                                   workOnAGoalStepHandle
+                                                   clients @ Clients {gsdReadApiUrl,writeApiUrl}
+                                                   workspace @ Workspace {workspaceId}
+                                                   goalId
+                                                   workOnWorkspace
+                                                   workOnWorkspaces) = do
   manager <- liftIO $ newManager defaultManagerSettings
-  result <-  liftIO $ S.withClientM (streamAction workspaceId goalId) (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-               Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
-               Right stream -> do
-                 actions <- stream & Streamly.Prelude.toList
-                 return $ Right actions
+  result <-  liftIO $ S.withClientM
+                        (streamAction workspaceId goalId)
+                        (S.mkClientEnv manager gsdReadApiUrl)
+                        $ \e -> case e of
+                            Left errorDescription -> return $ Left $ StepError {
+                                                                        currentStep,
+                                                                        errorDescription = show errorDescription }
+                            Right stream -> do
+                             actions <- stream & Streamly.Prelude.toList
+                             return $ Right actions
   case result of
     Left stepError -> return $ Left stepError
     Right actions -> do
@@ -117,7 +145,10 @@ runNotifyGoalAccomplishmentCommand currentStep @ (WorkOnAGoalStep workOnAGoalSte
        Action {actionId} <- askWithMenuRepeatedly menuConfig prompt onError
        commandId <- liftIO $ nextRandom
        sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
-       queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse (NotifyActionCompleted {commandId , workspaceId , goalId, actionId})) (mkClientEnv manager writeApiUrl)
+       queryResult <- liftIO $ runClientM
+                                  (sendCommandAndWaitResponse
+                                      NotifyActionCompleted {commandId , workspaceId , goalId, actionId})
+                                  (mkClientEnv manager writeApiUrl)
        case queryResult of
             Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
             Right RequestFailed {reason} ->  do
@@ -140,17 +171,32 @@ runNotifyGoalAccomplishmentCommand currentStep @ (WorkOnAGoalStep workOnAGoalSte
 
 
 runWorkOnWorkspace :: Text -> Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAWorkspace))
-runWorkOnWorkspace description currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients workspace goal workOnWorkspace workOnWorkspaces) = do
+runWorkOnWorkspace description currentStep @ (WorkOnAGoalStep
+                                                workOnAGoalStepHandle
+                                                clients
+                                                workspace @ Workspace {workspaceId}
+                                                goalId
+                                                workOnWorkspace
+                                                workOnWorkspaces) = do
   sayLn $ fg green <> (text . pack .show) description <> "selected "
   return $ Right $ WorkOnAWorkspaceStep workOnWorkspace  clients workspace workOnWorkspaces
 
 runRefineGoalDescriptionCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
-runRefineGoalDescriptionCommand currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients @ Clients {writeApiUrl} workspace goal @Goal {workspaceId,goalId,status} workOnWorkspace workOnWorkspaces) = do
+runRefineGoalDescriptionCommand currentStep @ (WorkOnAGoalStep
+                                                 workOnAGoalStepHandle
+                                                 clients @ Clients {writeApiUrl}
+                                                 workspace @ Workspace {workspaceId}
+                                                 goalId
+                                                 workOnWorkspace
+                                                 workOnWorkspaces) = do
   commandId <- liftIO $ nextRandom
   sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
   refinedGoalDescription <- askUntil "Enter a new goal description : " Nothing atLeastThreeChars
   manager  <- liftIO $ newManager defaultManagerSettings
-  queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse RefineGoalDescription {commandId , workspaceId , goalId, refinedGoalDescription}) (mkClientEnv manager writeApiUrl)
+  queryResult <- liftIO $ runClientM
+                            (sendCommandAndWaitResponse
+                                RefineGoalDescription {commandId , workspaceId , goalId, refinedGoalDescription})
+                            (mkClientEnv manager writeApiUrl)
   case queryResult of
       Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
       Right RequestFailed {reason} ->  do
@@ -168,14 +214,23 @@ runRefineGoalDescriptionCommand currentStep @ (WorkOnAGoalStep workOnAGoalStepHa
 
 
 runActionizeOnGoalCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
-runActionizeOnGoalCommand currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients @ Clients {writeApiUrl} workspace goal @Goal {workspaceId,goalId,status} workOnWorkspace workOnWorkspaces) = do
+runActionizeOnGoalCommand currentStep @ (WorkOnAGoalStep
+                                            workOnAGoalStepHandle
+                                            clients @ Clients {writeApiUrl}
+                                            workspace @ Workspace {workspaceId}
+                                            goalId
+                                            workOnWorkspace
+                                            workOnWorkspaces) = do
   commandId <- liftIO $ nextRandom
   sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
   actionId <- liftIO $ nextRandom
   sayLn $ fg green <> "generated a new Action Id (" <> text (toText commandId) <>") "
   actionDetails <- askUntil "Enter the details of the action : " Nothing atLeastThreeChars
   manager  <- liftIO $ newManager defaultManagerSettings
-  queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse ActionizeOnGoal {commandId , workspaceId , goalId, actionId , actionDetails}) (mkClientEnv manager writeApiUrl)
+  queryResult <- liftIO $ runClientM
+                            (sendCommandAndWaitResponse
+                                ActionizeOnGoal {commandId , workspaceId , goalId, actionId , actionDetails})
+                            (mkClientEnv manager writeApiUrl)
   case queryResult of
       Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
       Right RequestFailed {reason} ->  do
@@ -192,7 +247,13 @@ runActionizeOnGoalCommand currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle c
         return $ Right currentStep
 
 runListGoalActions :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
-runListGoalActions currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients @ Clients {gsdReadApiUrl} workspace goal @Goal {workspaceId,goalId,status = currentStatus,description} workOnWorkspace workOnWorkspaces) = do
+runListGoalActions currentStep @ (WorkOnAGoalStep
+                                    workOnAGoalStepHandle
+                                    clients @ Clients {gsdReadApiUrl}
+                                    workspace @ Workspace {workspaceId}
+                                    goalId
+                                    workOnWorkspace
+                                    workOnWorkspaces) = do
   sayLn $ fg green <> "Listing actions set : "
   manager <- liftIO $ newManager defaultManagerSettings
   liftIO $ S.withClientM (streamAction workspaceId goalId)(S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
@@ -203,44 +264,67 @@ runListGoalActions currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients 
   where
     displayAction :: Action -> Byline IO ()
     displayAction Action {indexation, details, status} = do
-      sayLn $ fg green <> "\t" <> (text . pack . show) indexation <> ") " <> text details <> "( " <> (text . pack . show) status <> " )"
+      sayLn $
+        fg green <> "\t" <> (text . pack . show) indexation <> ") "
+        <> text details <> "( " <> (text . pack . show) status <> " )"
 
 
 
 runChangeGoalStatus :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
-runChangeGoalStatus currentStep @ (WorkOnAGoalStep workOnAGoalStepHandle clients @ Clients {writeApiUrl} workspace goal @Goal {workspaceId,goalId,status = currentStatus,description} workOnWorkspace workOnWorkspaces) = do
-
-  case (getNextStatusAvailable currentStatus) of
-     [] -> do
-        sayLn $ fg green <> "No status avalaible (final state)"
-        return $ Right currentStep
-     getNextStatusAvailable -> do
-        let menuConfig = banner ("Available status on the selected goal : ") $ menu getNextStatusAvailable (\status -> fg cyan <> (text.pack.show) status)
-            prompt     = "please choose an action (provide the index) : "
-            onError    = "please enter a valid index..."
-
-        nextStatus <- askWithMenuRepeatedly menuConfig prompt onError
-        commandId <- liftIO $ nextRandom
-        sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
-
-        commandToSent <- getCommandToSend nextStatus commandId goalId workspaceId
-
-        manager <- liftIO $ newManager defaultManagerSettings
-        queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse commandToSent) (mkClientEnv manager writeApiUrl)
-        case queryResult of
-            Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
-            Right RequestFailed {reason} ->  do
-              sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
-              displayEndOfACommand
+runChangeGoalStatus currentStep @ (WorkOnAGoalStep
+                                      workOnAGoalStepHandle
+                                      clients @ Clients {writeApiUrl,gsdReadApiUrl}
+                                      workspace @ Workspace {workspaceId}
+                                      goalId
+                                      workOnWorkspace
+                                      workOnWorkspaces) = do
+  manager <- liftIO $ newManager defaultManagerSettings
+  queryResult <- liftIO $ S.withClientM
+                            (fetchGoal workspaceId goalId)
+                            (S.mkClientEnv manager gsdReadApiUrl)
+                            $ \e -> case e of
+                                      Left servantError -> return $ Left servantError
+                                      Right result -> return $ Right result
+  case queryResult of
+    Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
+    Right Nothing  -> return $ Left $ StepError {currentStep , errorDescription = "Goal asked does not exist"}
+    Right (Just goal @ Goal {status}) -> do
+        case (getNextStatusAvailable status) of
+           [] -> do
+              sayLn $ fg green <> "No status avalaible (final state)"
               return $ Right currentStep
-            Right (CommandResponseProduced CommandFailed {reason}) ->  do
-              sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
-              displayEndOfACommand
-              return $ Right currentStep
-            Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
-              sayLn $ fg green <> "> The command has been successfully processed... "
-              displayEndOfACommand
-              return $ Right currentStep
+           getNextStatusAvailable -> do
+              let menuConfig = banner ("Available status on the selected goal : ")
+                                  $ menu getNextStatusAvailable (\status -> fg cyan <> (text.pack.show) status)
+                  prompt     = "please choose an action (provide the index) : "
+                  onError    = "please enter a valid index..."
+
+              nextStatus <- askWithMenuRepeatedly menuConfig prompt onError
+              commandId <- liftIO $ nextRandom
+              sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
+
+              commandToSent <- getCommandToSend nextStatus commandId goalId workspaceId
+
+              manager <- liftIO $ newManager defaultManagerSettings
+              queryResult <- liftIO $ runClientM
+                                        (sendCommandAndWaitResponse commandToSent)
+                                        (mkClientEnv manager writeApiUrl)
+              case queryResult of
+                  Left  errorDescription -> return $ Left $ StepError {
+                                                              currentStep ,
+                                                              errorDescription = show errorDescription}
+                  Right RequestFailed {reason} ->  do
+                    sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+                    displayEndOfACommand
+                    return $ Right currentStep
+                  Right (CommandResponseProduced CommandFailed {reason}) ->  do
+                    sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
+                    displayEndOfACommand
+                    return $ Right currentStep
+                  Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+                    sayLn $ fg green <> "> The command has been successfully processed... "
+                    displayEndOfACommand
+                    return $ Right currentStep
 
   where
       getCommandToSend :: GoalStatus -> CommandId -> GoalId -> WorkspaceId -> Byline IO (GsdCommand)

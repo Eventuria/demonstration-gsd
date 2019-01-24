@@ -58,7 +58,11 @@ gsdReadApi :: Proxy GSDReadApi
 gsdReadApi = Proxy
 
 gsdReadStreamingServer :: EventStoreSettings  -> Server GSDReadApi
-gsdReadStreamingServer eventStoreSettings = streamWorkspace :<|> streamGoal :<|> streamAction :<|> fetchWorkspace
+gsdReadStreamingServer eventStoreSettings = streamWorkspace
+                                        :<|> streamGoal
+                                        :<|> streamAction
+                                        :<|> fetchWorkspace
+                                        :<|> fetchGoal
   where
     streamWorkspace :: Handler (P.Producer (Persisted Workspace) IO ())
     streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace eventStoreSettings
@@ -68,6 +72,9 @@ gsdReadStreamingServer eventStoreSettings = streamWorkspace :<|> streamGoal :<|>
 
     streamGoal :: WorkspaceId -> Handler (P.Producer Goal IO ())
     streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal eventStoreSettings workspaceId
+
+    fetchGoal :: WorkspaceId -> GoalId -> Handler (Maybe Goal)
+    fetchGoal workspaceId goalId = (liftIO $ GsdRead.fetchGoal eventStoreSettings workspaceId goalId)
 
     streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer Action IO ())
     streamAction workspaceId goalId = (return . toPipes) $ GsdRead.streamAction eventStoreSettings workspaceId goalId

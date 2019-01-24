@@ -23,4 +23,6 @@ askWithMenuRepeatedly m prompt errprompt = do
 
 
 renderPrefixAndSuffixForDynamicGsdMenu ::  Menu a -> Menu a
-renderPrefixAndSuffixForDynamicGsdMenu menu = prefix (\menuIndex -> fg cyan <> (text . Text.pack . printf "%2d") menuIndex) $ suffix (fg cyan <> text ") ") menu
+renderPrefixAndSuffixForDynamicGsdMenu menu =
+    prefix (\menuIndex -> fg white <> (text . Text.pack . printf "%2d") menuIndex)
+    $ suffix (fg white <> text "- ") menu
