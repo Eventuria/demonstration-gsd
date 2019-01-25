@@ -32,7 +32,7 @@ import Gsd.Read.Workspace
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import qualified Gsd.CLI.WorkspaceCLI as WorkspaceActions (run)
 import Gsd.Read.GoalStats
-import Gsd.Read.ActionStats
+
 
 data WorkspacesCommand = CreateWorkspaceRequest  Text
                        | GotoWorkOnAWorkspace Text
@@ -143,16 +143,12 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
     displayWorkspaceState :: Workspace -> Stylized
     displayWorkspaceState  Workspace {workspaceName,
                                       workspaceId,
-                                      actionStats = ActionStats {total = totalActions,
-                                                                 completed,
-                                                                 opened},
                                       goalStats = GoalStats {total = totalGoals,
                                                             accomplished,
                                                             toBeAccomplished }} =
       fg green <> text  workspaceName
               <> fg white <>" > Todo : "
-              <> fg green <> (text . pack  .show) toBeAccomplished <> " goal(s) and "
-              <> (text . pack  .show) opened <> " action(s)"
+              <> fg green <> (text . pack  .show) toBeAccomplished <> " goal(s)"
 
 
     atLeastThreeChars :: Text -> IO (Either Stylized Text)

@@ -26,7 +26,7 @@ data Goal = Goal {workspaceId :: WorkspaceId ,
 
 getNextStatusAvailable :: GoalStatus -> [GoalStatus]
 getNextStatusAvailable currentStatus = case currentStatus of
-    Created  -> [InProgress,Paused,Accomplished,GivenUp]
+    Created  -> [InProgress,Accomplished,GivenUp]
     InProgress  -> [Paused,Accomplished,GivenUp]
     Paused ->  [InProgress,Accomplished,GivenUp]
     Accomplished -> []

@@ -42,11 +42,11 @@ import qualified  Data.List as List
 
 data WorkspaceCommand = RenameWorkspaceCommand       Text
                       | SetNewGoalCommand            Text
-                      | GotoWorkOnAGoal             Text
                       | ListCommandsReceived        Text
                       | ListCommandResponseProduced Text
                       | ListEventsGenerated         Text
                       | ListValidationStateHistory  Text
+                      | GotoWorkOnAGoal             Text
                       | GotoWorkOnWorkspaces            Text
                       | Quit                        Text
 
@@ -159,7 +159,7 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
           ListValidationStateHistory description -> fg white  <> text description <> "\nNavigation"
           GotoWorkOnWorkspaces description -> fg white <> text description
           Quit description -> fg white <> text description
-          GotoWorkOnAGoal description -> fg white <> text description
+          _ -> fg red <> "Not handle"
 
     runRenameWorkspace :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep
@@ -258,9 +258,9 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
          let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu goals displayGoalForSelection)
              prompt     = "> please choose an action (provide the index) : "
              onError    = "> please enter a valid index..."
-         Goal {goalId = goalIdSelected} <- askWithMenuRepeatedly menuConfig prompt onError
+         goal <- askWithMenuRepeatedly menuConfig prompt onError
          displayEndOfACommand
-         return $ Right $ WorkOnAGoalStep GoalCLI.run clients workspace goalIdSelected workOnAWorkspace workOnWorkspaces
+         return $ Right $ WorkOnAGoalStep GoalCLI.run clients workspace goal workOnAWorkspace workOnWorkspaces
 
     runWorkOnWorkspaces :: Text -> Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnWorkspaces))
     runWorkOnWorkspaces description (WorkOnAWorkspaceStep workOnAWorkspace clients  workspace workOnWorkspaces) = do
@@ -272,10 +272,7 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
     displayWorkspace workspace @ Workspace {
                                         workspaceId,
                                         workspaceName,
-                                        goalStats = GoalStats {total,toBeAccomplished,accomplished},
-                                        actionStats = ActionStats {total = totalActions,
-                                                                   completed,
-                                                                   opened}}
+                                        goalStats = GoalStats {total,toBeAccomplished,accomplished}}
                               goals =
             fg green <> "Workspaces"
          <> fg white <>" / "
@@ -287,19 +284,16 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
          <> fg white <> "------------------------------------------"
 
     displayWorkspaceSummary :: Workspace -> Stylized
-    displayWorkspaceSummary Workspace { goalStats = GoalStats {total,toBeAccomplished,accomplished},
-                                        actionStats = ActionStats {total = totalActions,
-                                                                   completed,
-                                                                   opened}}
-       | total == 0 = fg white <>"(No goal added in the workspace so far...)\n"
+    displayWorkspaceSummary Workspace { goalStats = GoalStats {total,toBeAccomplished,accomplished}}
+       | total == 0 = fg green <>"Summary : (No goals added in the workspace so far...)\n"
        | otherwise =
               fg white <>"Summary\n"
            <> fg white <>" - Todo : "
-           <> fg green  <> (text . pack  .show) toBeAccomplished <> " goal(s) and "
-           <> fg green  <> (text . pack  .show) opened <> " action(s)\n"
+           <> fg green  <> (text . pack  .show) toBeAccomplished <> " goal(s) \n"
            <> fg white <>" - Done : "
-           <> fg green <> (text . pack  .show) accomplished <> " goal(s) and "
-           <> fg green  <> (text . pack  .show) completed <> " action(s)\n"
+           <> fg green <> (text . pack  .show) accomplished <> " goal(s)\n"
+           <> fg white <>" - Given up : "
+           <> fg green <> (text . pack  .show) (total - (toBeAccomplished + accomplished)) <> " goal(s)\n"
 
     displayGoals :: (Goal -> Stylized) -> [Goal] ->  Stylized
     displayGoals displayGoal goals
@@ -310,9 +304,9 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
 
     displayGoalForWorkspaceSummary :: Goal -> Stylized
     displayGoalForWorkspaceSummary Goal { description , status, actionStats = ActionStats {total,completed,opened}} =
-          fg white <> "  - " <> fg green <> text description <> "\n"
-       <> fg white <> "    - status : " <> fg green <> (text . pack . show) status <> "\n"
-       <> fg white <> "    - todo : " <> fg green <> (text . pack . show) opened <> " action(s)\n"
+         fg white <> "  - "  <> fg green <> text description <> " : "
+      <> fg white <> "status : " <> fg green <> (text . pack . show) status
+      <> fg white <> ", todo : " <> fg green <> (text . pack . show) opened <> " action(s)\n"
 
     displayGoalForSelection :: Goal -> Stylized
     displayGoalForSelection Goal { description , status, actionStats = ActionStats {total,completed,opened}} =

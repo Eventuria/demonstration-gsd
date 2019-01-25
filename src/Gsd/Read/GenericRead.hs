@@ -32,8 +32,7 @@ import Gsd.Read.ActionStats
 
 data WorkspaceBuilder = WorkspaceBuilder {  workspaceIdMaybe :: Maybe WorkspaceId ,
                                             workspaceNameMaybe :: Maybe WorkspaceName ,
-                                            goalStats :: GoalStats,
-                                            actionStats :: ActionStats  } deriving Show
+                                            goalStats :: GoalStats} deriving Show
 
 streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT monad Event) =>
                      AggregateIdStream persistedStream ->
@@ -62,15 +61,14 @@ fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
     S.foldx
      foldEvent
      WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing,
-                        goalStats = GoalStats {total = 0, accomplished = 0, toBeAccomplished = 0 },
-                        actionStats = ActionStats {total = 0, completed = 0, opened = 0 } }
-     (\WorkspaceBuilder{workspaceIdMaybe,workspaceNameMaybe, goalStats, actionStats} ->
+                        goalStats = GoalStats {total = 0, accomplished = 0, toBeAccomplished = 0 }}
+     (\WorkspaceBuilder{workspaceIdMaybe,workspaceNameMaybe, goalStats} ->
         case (workspaceIdMaybe, workspaceNameMaybe) of
           (Just workspaceId, Just workspaceName) ->
              Just Workspace {
                      workspaceId = fromJust $ workspaceIdMaybe,
                      workspaceName = fromJust $ workspaceNameMaybe,
-                     goalStats,actionStats}
+                     goalStats}
           otherwise -> Nothing)
      (streamingEvent getEventStream streaming workspaceId)
   where
@@ -98,22 +96,11 @@ fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
                                                 toBeAccomplished = toBeAccomplished +1 , ..} , ..}
          (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, ..}, .. }, GoalGivenUp {}) ->
             WorkspaceBuilder { goalStats =  GoalStats {
-                                                total = total + 1,
                                                 toBeAccomplished = toBeAccomplished -1 , ..} , ..}
          (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, accomplished}, ..} , GoalAccomplished {}) ->
             WorkspaceBuilder { goalStats =  GoalStats {
-                                                total = total + 1,
                                                 toBeAccomplished = toBeAccomplished -1,
-                                                accomplished = accomplished +1 } , ..}
-         (WorkspaceBuilder {actionStats = ActionStats {total,opened, ..}, .. } , ActionRevealed  {}) ->
-            WorkspaceBuilder { actionStats =  ActionStats {
-                                                total = total + 1,
-                                                opened = opened +1, ..} , ..}
-         (WorkspaceBuilder {actionStats = ActionStats {total,opened, completed}, .. } , ActionCompleted  {}) ->
-            WorkspaceBuilder { actionStats =  ActionStats {
-                                                total = total + 1,
-                                                opened = opened -1,
-                                                completed = completed +1} , ..}
+                                                accomplished = accomplished +1 , .. } , ..}
          (workspaceBuilder , _ ) -> workspaceBuilder
 
 streamGoal :: Streamable stream monad Event =>
@@ -172,8 +159,14 @@ fetchGoals getEventStream streaming @ Streaming {streamAll} workspaceId =
           ) $ goals
     folding goals GoalStarted {goalId} = updateGoalStatus goalId InProgress goals
     folding goals GoalPaused {goalId} = updateGoalStatus goalId Paused goals
-    folding goals GoalAccomplished {goalId} = updateGoalStatus goalId Accomplished goals
-    folding goals GoalGivenUp {goalId} = updateGoalStatus goalId GivenUp goals
+    folding goals GoalAccomplished {goalId = goalIdToUpdate} =
+      map (\goal@Goal{actionStats = ActionStats {total,completed,opened, ..} , ..} -> case (goalIdToUpdate == goalId) of
+                           True -> Goal{actionStats = ActionStats {opened = 0 , completed = total, ..}, ..}
+                           False -> goal) $ updateGoalStatus goalIdToUpdate Accomplished goals
+    folding goals GoalGivenUp {goalId = goalIdToUpdate} =
+      map (\goal@Goal{actionStats = ActionStats {total,completed,opened, ..} , ..} -> case (goalIdToUpdate == goalId) of
+                     True -> Goal{actionStats = ActionStats {opened = 0 , completed = total, ..}, ..}
+                     False -> goal) $ updateGoalStatus goalIdToUpdate GivenUp goals
     folding goals ActionRevealed {goalId = goalIdToUpdate} =
       map (\goal@Goal{actionStats = ActionStats {total,opened, ..} , ..} -> case (goalIdToUpdate == goalId) of
                True -> Goal{actionStats = ActionStats {total = total +1,opened = opened + 1 , ..}, ..}
@@ -200,12 +193,12 @@ streamAction :: Streamable stream monad Event =>
                   WorkspaceId ->
                   GoalId ->
                   stream monad Action
-streamAction getEventStream streaming workspaceId goalId = do
+streamAction getEventStream streaming workspaceId goalIdGiven = do
     actions <- liftIO $ S.foldx
       folding
       []
       id
-      (streamingEvent getEventStream streaming workspaceId goalId)
+      (streamingEvent getEventStream streaming workspaceId goalIdGiven)
 
     S.fromList actions
   where
@@ -216,16 +209,11 @@ streamAction getEventStream streaming workspaceId goalId = do
                         stream monad GsdEvent
     streamingEvent getEventStream Streaming {streamAll} workspaceId goalIdToStream =
       (streamAll $ getEventStream workspaceId) & S.map (\PersistedItem{item = event} -> fromEvent event)
-          & S.filter (\gsdEvent ->
-                                case gsdEvent of
-                                    ActionRevealed {goalId} -> goalId == goalIdToStream
-                                    ActionCompleted {goalId} -> goalId == goalIdToStream
-                                    _ -> False)
-
     folding :: [Action] -> GsdEvent -> [Action]
-    folding actions ActionRevealed {actionDetails, ..} =
+    folding actions ActionRevealed {actionDetails, ..} | goalIdGiven == goalId =
       actions ++ [Action { indexation = (length actions), details = actionDetails, status = Initiated, ..}]
-    folding actions ActionCompleted {workspaceId,goalId,actionId} = updateActions actionId Completed actions
+    folding actions ActionCompleted {workspaceId,goalId,actionId} | goalIdGiven == goalId =
+      updateActions actionId Completed actions
       where
         updateActions :: ActionId -> ActionStatus -> [Action] -> [Action]
         updateActions actionIdToUpdate actionStatus actions =
@@ -233,6 +221,10 @@ streamAction getEventStream streaming workspaceId goalId = do
             True -> Action{status = actionStatus, ..}
             False -> action
           ) $ actions
+    folding actions GoalAccomplished {goalId} | goalIdGiven == goalId =
+      map (\action@Action{..} -> Action{status = Completed, ..}) $ actions
+    folding actions GoalGivenUp {goalId} | goalIdGiven == goalId =
+          map (\action@Action{..} -> Action{status = Completed, ..}) $ actions
     folding actions gsdEvent = actions
 
 
