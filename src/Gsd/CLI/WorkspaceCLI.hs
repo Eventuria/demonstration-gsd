@@ -7,31 +7,24 @@
 {-# LANGUAGE RecordWildCards #-}
 module Gsd.CLI.WorkspaceCLI (run)where
 
-import Prelude hiding (length)
+import Prelude hiding (length,read)
 import System.Console.Byline hiding (askWithMenuRepeatedly)
 import Gsd.CLI.ByLineWrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
 
 import Data.Text hiding (foldr,map)
 import Data.UUID.V4
 import Data.UUID
-import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.Client
 
 import qualified Gsd.CLI.GoalCLI as GoalCLI (run)
-import Gsd.CLI.WorkspaceMonitoringCLI (runListCommandReceived,
-                                           runListCommandResponseReceived,
-                                           runListEventsGenerated,
-                                           runListValidationStateHistory)
+import qualified Gsd.CLI.MonitoringCLI as MonitoringCLI
+import Gsd.CLI.MonitoringCLI (runMonitoringCommand)
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Gsd.Clients
-import Servant.Client
 import Gsd.Write.Commands.Command
 import Gsd.Read.Workspace
-import qualified Servant.Client.Streaming as S
-import qualified Streamly.Prelude as Streamly.Prelude
-import Data.Function ((&))
-import Gsd.Read.Client (streamGoal,fetchWorkspace)
+import Gsd.Read.Client (fetchGoals,fetchWorkspace)
 import Gsd.Read.Goal
 import Gsd.CLI.Steps
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
@@ -39,168 +32,148 @@ import Gsd.CLI.Greetings
 import Gsd.Read.GoalStats
 import Gsd.Read.ActionStats
 import qualified  Data.List as List
+import Data.Functor
 
-data WorkspaceCommand = RenameWorkspaceCommand       Text
+data WorkspaceCommand = -- Workspace Commands
+                        RenameWorkspaceCommand       Text
                       | SetNewGoalCommand            Text
-                      | ListCommandsReceived        Text
-                      | ListCommandResponseProduced Text
-                      | ListEventsGenerated         Text
-                      | ListValidationStateHistory  Text
-                      | GotoWorkOnAGoal             Text
-                      | GotoWorkOnWorkspaces            Text
-                      | Quit                        Text
+                        -- Infra-Monitoring
+                      | ListCommandsReceived         Text
+                      | ListCommandResponsesProduced Text
+                      | ListEventsGenerated          Text
+                      | ListValidationStates         Text
+                        -- Navigation
+                      | GotoWorkOnAGoal              Text
+                      | GotoWorkOnWorkspaces         Text
+                      | QuitCommand                  Text
 
 
 run :: WorkOnAWorkspaceStepHandle
-run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
+run clients   @ ClientsSetting {write,monitoring,read}
                 workspace @ Workspace {workspaceId}
                 workOnWorkspaces =  do
  let currentStep = WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
- manager <- liftIO $ newManager defaultManagerSettings
- result  <- liftIO $ S.withClientM
-                        (streamGoal workspaceId)
-                        (S.mkClientEnv manager gsdReadApiUrl)
-                        $ (\e -> case e of
-                                   Left errorDescription ->
-                                     return $ Left $ StepError {currentStep,
-                                                                errorDescription = show errorDescription }
-                                   Right stream -> do
-                                     goals <- stream & Streamly.Prelude.toList
-                                     return $ Right goals)
- case result of
-  Left stepError -> runNextStep $ Left stepError
+ safeResponse  <- liftIO $ fetchGoals read workspaceId
+ case safeResponse of
+  Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
   Right goals -> do
       sayLn $ displayWorkspace workspace goals
-      askNextStep currentStep
+      proposeAvailableWorkspaceCommands
 
  where
 
-    askNextStep :: Step WorkOnAWorkspace -> Byline IO ()
-    askNextStep currentStep = do
+    proposeAvailableWorkspaceCommands :: Byline IO ()
+    proposeAvailableWorkspaceCommands = do
       sayLn "Workspace Commands"
       let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu $
                           menu (workspaceActions workspace) (stylizeAction workspace)
           prompt     = "> please choose an action (provide the index) : "
           onError    = "> please enter a valid index..."
+          currentStep = WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
 
 
       answer <- askWithMenuRepeatedly menuConfig prompt onError
       case answer of
-        RenameWorkspaceCommand description ->
-          runRenameWorkspace currentStep >>= runNextStep
-        SetNewGoalCommand description ->
-          runSetNewGoal currentStep >>= runNextStep
-        ListCommandsReceived description -> do
-          result <- runListCommandReceived currentStep gsdMonitoringApiUrl workspace
-          case result of
-            Left stepError -> runNextStep $ Left stepError
-            Right currentStep -> askNextStep currentStep
-        ListCommandResponseProduced description -> do
-          result <- runListCommandResponseReceived currentStep gsdMonitoringApiUrl workspace
-          case result of
-            Left stepError -> runNextStep $ Left stepError
-            Right currentStep -> askNextStep currentStep
-        ListEventsGenerated description -> do
-          result <- runListEventsGenerated currentStep gsdMonitoringApiUrl workspace
-          case result of
-            Left stepError -> runNextStep $ Left stepError
-            Right currentStep -> askNextStep currentStep
-        ListValidationStateHistory description -> do
-          result <- runListValidationStateHistory currentStep gsdMonitoringApiUrl workspace
-          case result of
-            Left stepError -> runNextStep $ Left stepError
-            Right currentStep -> askNextStep currentStep
-        GotoWorkOnAGoal description ->
-          runWorkOnAGoal currentStep >>= runNextStep
-        GotoWorkOnWorkspaces description ->
-          runWorkOnWorkspaces description currentStep >>= runNextStep
-        Quit description -> runQuitCLI
+        RenameWorkspaceCommand        _ -> runRenameWorkspace   currentStep >>= runNextStep
+        SetNewGoalCommand             _ -> runSetNewGoal        currentStep >>= runNextStep
+        ListCommandsReceived          _ -> runMonitoringCommand
+                                            currentStep
+                                            MonitoringCLI.ListCommandsReceived
+                                            monitoring
+                                            workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
+        ListCommandResponsesProduced  _ -> runMonitoringCommand currentStep
+                                            MonitoringCLI.ListCommandResponsesProduced
+                                            monitoring
+                                            workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
+        ListEventsGenerated           _ -> runMonitoringCommand currentStep
+                                            MonitoringCLI.ListEventsGenerated
+                                            monitoring
+                                            workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
+        ListValidationStates          _ -> runMonitoringCommand currentStep
+                                            MonitoringCLI.ListValidationStates
+                                            monitoring
+                                            workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
+        GotoWorkOnAGoal               _ -> runWorkOnAGoal      currentStep >>= runNextStep
+        GotoWorkOnWorkspaces          _ -> runWorkOnWorkspaces currentStep >>= runNextStep
+        QuitCommand                   _ -> runQuitCLI                      >>= runNextStep
 
     workspaceActions :: Workspace -> [WorkspaceCommand]
     workspaceActions Workspace {goalStats = GoalStats {toBeAccomplished = goalsToBeAccomplished}}
       | goalsToBeAccomplished > 0 =
-          [ RenameWorkspaceCommand       "Rename" ,
-            SetNewGoalCommand            "Set A New Goal",
-            ListCommandsReceived        "List Commands Received",
-            ListCommandResponseProduced "List Command Responses Produced",
-            ListEventsGenerated         "List Events Generated",
-            ListValidationStateHistory  "List Validation State History",
-            GotoWorkOnAGoal                 "Work On A Goal",
-            GotoWorkOnWorkspaces            "Work On Another Workspace",
-            Quit                        "Quit"]
+          [ RenameWorkspaceCommand        "Rename" ,
+            SetNewGoalCommand             "Set A New Goal",
+            ListCommandsReceived          "List Commands Received",
+            ListCommandResponsesProduced  "List Command Responses Produced",
+            ListEventsGenerated           "List Events Generated",
+            ListValidationStates          "List Validation State History",
+            GotoWorkOnAGoal               "Work On A Goal",
+            GotoWorkOnWorkspaces          "Work On Another Workspace",
+            QuitCommand                   "Quit"]
       | otherwise =
                 [ RenameWorkspaceCommand       "Rename" ,
                   SetNewGoalCommand            "Set A New Goal",
-                  ListCommandsReceived        "List Commands Received",
-                  ListCommandResponseProduced "List Command Responses Produced",
-                  ListEventsGenerated         "List Events Generated",
-                  ListValidationStateHistory  "List Validation State History",
+                  ListCommandsReceived         "List Commands Received",
+                  ListCommandResponsesProduced "List Command Responses Produced",
+                  ListEventsGenerated          "List Events Generated",
+                  ListValidationStates         "List Validation State History",
                   GotoWorkOnWorkspaces         "Work On Another Workspace",
-                  Quit                        "Quit"]
+                  QuitCommand                  "Quit"]
 
     stylizeAction :: Workspace -> WorkspaceCommand -> Stylized
     stylizeAction Workspace {goalStats = GoalStats {toBeAccomplished = goalsToBeAccomplished}} workspaceAction
       | goalsToBeAccomplished > 0 = case workspaceAction of
-          RenameWorkspaceCommand description -> fg white <> text description
-          SetNewGoalCommand description -> fg white <> text description <> "\nInfra-Monitoring"
-          ListCommandsReceived description -> fg white  <>  text description
-          ListCommandResponseProduced description -> fg white <> text description
-          ListEventsGenerated description -> fg white <> text description
-          ListValidationStateHistory description -> fg white  <> text description <> "\nNavigation"
-          GotoWorkOnAGoal description -> fg white <> text description
-          GotoWorkOnWorkspaces description -> fg white <> text description
-          Quit description -> fg white <> text description
+          RenameWorkspaceCommand       description -> fg white <> text description
+          SetNewGoalCommand            description -> fg white <> text description <> "\nInfra-Monitoring"
+          ListCommandsReceived         description -> fg white <> text description
+          ListCommandResponsesProduced description -> fg white <> text description
+          ListEventsGenerated          description -> fg white <> text description
+          ListValidationStates         description -> fg white <> text description <> "\nNavigation"
+          GotoWorkOnAGoal              description -> fg white <> text description
+          GotoWorkOnWorkspaces         description -> fg white <> text description
+          QuitCommand                  description -> fg white <> text description
       | otherwise  = case workspaceAction of
-          RenameWorkspaceCommand description -> fg white <> text description
-          SetNewGoalCommand description -> fg white <> text description <> "\nInfra-Monitoring"
-          ListCommandsReceived description -> fg white  <>  text description
-          ListCommandResponseProduced description -> fg white <> text description
-          ListEventsGenerated description -> fg white <> text description
-          ListValidationStateHistory description -> fg white  <> text description <> "\nNavigation"
-          GotoWorkOnWorkspaces description -> fg white <> text description
-          Quit description -> fg white <> text description
+          RenameWorkspaceCommand       description -> fg white <> text description
+          SetNewGoalCommand            description -> fg white <> text description <> "\nInfra-Monitoring"
+          ListCommandsReceived         description -> fg white <> text description
+          ListCommandResponsesProduced description -> fg white <> text description
+          ListEventsGenerated          description -> fg white <> text description
+          ListValidationStates         description -> fg white <> text description <> "\nNavigation"
+          GotoWorkOnWorkspaces         description -> fg white <> text description
+          QuitCommand                  description -> fg white <> text description
           _ -> fg red <> "Not handle"
 
     runRenameWorkspace :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep
                                         workOnAWorkspace
-                                        (clients @ Clients {writeApiUrl})
+                                        (clients @ clientsSetting @ ClientsSetting {read, write})
                                         workspace @ Workspace {workspaceId}
                                         workOnWorkspaces) = do
       commandId <- liftIO $ nextRandom
       sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceNewName <- askUntil "Enter a new workspace name : " Nothing atLeastThreeChars
-      manager <- liftIO $ newManager defaultManagerSettings
-      queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse
-                                            RenameWorkspace {commandId , workspaceId, workspaceNewName})
-                                         (mkClientEnv manager writeApiUrl)
-      case queryResult of
-          Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
-          Right RequestFailed {reason} ->  do
-            sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
-            displayEndOfACommand
-            return $ Right currentStep
-          Right (CommandResponseProduced CommandFailed {reason}) ->  do
-            sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
-            displayEndOfACommand
-            return $ Right currentStep
-          Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
-            sayLn $ fg green <> "> The command has been successfully processed... "
-            displayEndOfACommand
-            liftIO $ S.withClientM
-                          (fetchWorkspace workspaceId )
-                          (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                Left err -> return $ Right currentStep
-                Right Nothing  -> return $ Right currentStep
-                Right (Just workspace) ->
-                  return $ Right $ WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
-
-
+      response <- liftIO $ sendCommandAndWaitTillProcessed write RenameWorkspace {commandId ,
+                                                                                  workspaceId,
+                                                                                  workspaceNewName}
+      case response of
+        Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+        Right CommandFailed {reason} ->  do
+          sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
+          displayEndOfACommand
+          return $ Right currentStep
+        Right CommandSuccessfullyProcessed {} ->  do
+          sayLn $ fg green <> "> The command has been successfully processed... "
+          displayEndOfACommand
+          (liftIO $ fetchWorkspace read workspaceId)
+           <&> either
+                (\error -> Left $ StepError {currentStep ,errorDescription = show error})
+                (maybe
+                  (Left $ StepError {currentStep ,errorDescription = "Workspace asked does not exist"})
+                  (\workspace -> Right $ WorkOnAWorkspaceStep run clients workspace workOnWorkspaces))
 
     runSetNewGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runSetNewGoal currentStep @ (WorkOnAWorkspaceStep
                                     workOnAWorkspace
-                                    (clients @ Clients {writeApiUrl})
+                                    (clients @ clientsSetting @ ClientsSetting {read ,write})
                                     workspace @ Workspace {workspaceId}
                                     workOnWorkspaces) = do
         commandId <- liftIO $ nextRandom
@@ -208,51 +181,38 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
         goalId <- liftIO $ nextRandom
         sayLn $ fg green <> "generating a new goal Id (" <> text (toText goalId) <>") "
         goalDescription <- askUntil "Enter a goal description : " Nothing atLeastThreeChars
-        manager <- liftIO $ newManager defaultManagerSettings
-        queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse
-                                               SetGoal {commandId,
-                                                        workspaceId,
-                                                        goalId,
-                                                        goalDescription})
-                                           (mkClientEnv manager writeApiUrl)
-        case queryResult of
-            Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
-            Right RequestFailed {reason} ->  do
-              sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
-              displayEndOfACommand
-              return $ Right currentStep
-            Right (CommandResponseProduced CommandFailed {reason}) ->  do
-              sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
-              displayEndOfACommand
-              return $ Right currentStep
-            Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
-              sayLn $ fg green <> "> The command has been successfully processed... "
-              displayEndOfACommand
-              liftIO $ S.withClientM
-                                        (fetchWorkspace workspaceId )
-                                        (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                              Left err -> return $ Right currentStep
-                              Right Nothing  -> return $ Right currentStep
-                              Right (Just workspace) ->
-                                return $ Right $ WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
+        response <- liftIO $ sendCommandAndWaitTillProcessed write SetGoal {commandId,
+                                                                            workspaceId,
+                                                                            goalId,
+                                                                            goalDescription}
+        case response of
+          Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+          Right CommandFailed {reason} ->  do
+            sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
+            displayEndOfACommand
+            return $ Right currentStep
+          Right CommandSuccessfullyProcessed {} ->  do
+            sayLn $ fg green <> "> The command has been successfully processed... "
+            displayEndOfACommand
+            (liftIO $ fetchWorkspace read workspaceId)
+             <&> either
+                  (\error -> Left $ StepError {currentStep ,errorDescription = show error})
+                  (maybe
+                    (Left $ StepError {currentStep ,errorDescription = "Workspace asked does not exist"})
+                    (\workspace -> Right $ WorkOnAWorkspaceStep run clients workspace workOnWorkspaces))
+
 
 
     runWorkOnAGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAGoal))
     runWorkOnAGoal currentStep @ (WorkOnAWorkspaceStep
                                     workOnAWorkspace
-                                    (clients @ Clients {gsdReadApiUrl})
+                                    (clients @ clientsSetting @ ClientsSetting {read , write})
                                     workspace @ Workspace {workspaceId}
                                     workOnWorkspaces) = do
      displayBeginningOfACommand
-     manager <- liftIO $ newManager defaultManagerSettings
-     result <-  liftIO $ S.withClientM (streamGoal workspaceId) (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                   Left errorDescription -> return $ Left $ StepError {currentStep,
-                                                                       errorDescription = show errorDescription }
-                   Right stream -> do
-                     goals <- stream & Streamly.Prelude.toList
-                     return $ Right goals
-     case result of
-      Left stepError -> return $ Left stepError
+     safeResponse <-  liftIO $ fetchGoals read workspaceId
+     case safeResponse of
+      Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
       Right goals -> do
          sayLn "Goals"
          let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu goals displayGoalForSelection)
@@ -262,9 +222,8 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
          displayEndOfACommand
          return $ Right $ WorkOnAGoalStep GoalCLI.run clients workspace goal workOnAWorkspace workOnWorkspaces
 
-    runWorkOnWorkspaces :: Text -> Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnWorkspaces))
-    runWorkOnWorkspaces description (WorkOnAWorkspaceStep workOnAWorkspace clients  workspace workOnWorkspaces) = do
-      sayLn $ fg green <> (text . pack .show) description <> "selected "
+    runWorkOnWorkspaces :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnWorkspaces))
+    runWorkOnWorkspaces (WorkOnAWorkspaceStep workOnAWorkspace clients  workspace workOnWorkspaces) = do
       return $ Right $ WorkOnWorkspacesStep workOnWorkspaces clients
 
 
@@ -289,7 +248,7 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
        | otherwise =
               fg white <>"Summary\n"
            <> fg white <>" - Todo : "
-           <> fg green  <> (text . pack  .show) toBeAccomplished <> " goal(s) \n"
+           <> fg green <> (text . pack  .show) toBeAccomplished <> " goal(s) \n"
            <> fg white <>" - Done : "
            <> fg green <> (text . pack  .show) accomplished <> " goal(s)\n"
            <> fg white <>" - Given up : "
@@ -320,3 +279,10 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
       if length input < 3
         then Left "3 characters minimum for a workspace please..."
         else Right input
+
+    runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain :: forall stepType. Either StepError (Step stepType) ->
+                                                                              Byline IO ()
+    runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain =
+      either
+        (\error -> runNextStep $ Left error)
+        (\step -> proposeAvailableWorkspaceCommands)

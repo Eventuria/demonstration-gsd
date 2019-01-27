@@ -11,7 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Gsd.Read.WebApi  (execute , GSDReadApi, StreamWorkspace) where
+module Gsd.Read.Server  (execute , GSDReadApi, StreamWorkspace) where
 
 
 import Servant
@@ -37,10 +37,15 @@ import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
 import Gsd.Read.WebApiDefinition
+import System.SafeResponse
 
 type ApiPort = Int
 
-execute :: ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
+execute :: ApiPort ->
+           EventStore.Settings ->
+           EventStore.ConnectionType ->
+           EventStore.Credentials ->
+           IO ()
 execute apiPort eventStoreSettings eventStoreConnectionType credentials = do
   let logger = Logger { loggerId = "[gsd.read.api]" , executableName = "read.api" }
   initLogger logger
@@ -64,19 +69,19 @@ gsdReadStreamingServer eventStoreSettings = streamWorkspace
                                         :<|> fetchWorkspace
                                         :<|> fetchGoal
   where
-    streamWorkspace :: Handler (P.Producer (Persisted Workspace) IO ())
+    streamWorkspace :: Handler (P.Producer (SafeResponse (Persisted Workspace)) IO ())
     streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace eventStoreSettings
 
-    fetchWorkspace :: WorkspaceId -> Handler (Maybe Workspace)
+    fetchWorkspace :: WorkspaceId -> Handler (SafeResponse (Maybe Workspace))
     fetchWorkspace workspaceId = (liftIO $ GsdRead.fetchWorkspace eventStoreSettings workspaceId)
 
-    streamGoal :: WorkspaceId -> Handler (P.Producer Goal IO ())
+    streamGoal :: WorkspaceId -> Handler (P.Producer (SafeResponse Goal) IO ())
     streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal eventStoreSettings workspaceId
 
-    fetchGoal :: WorkspaceId -> GoalId -> Handler (Maybe Goal)
+    fetchGoal :: WorkspaceId -> GoalId -> Handler (SafeResponse (Maybe Goal))
     fetchGoal workspaceId goalId = (liftIO $ GsdRead.fetchGoal eventStoreSettings workspaceId goalId)
 
-    streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer Action IO ())
+    streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer (SafeResponse Action) IO ())
     streamAction workspaceId goalId = (return . toPipes) $ GsdRead.streamAction eventStoreSettings workspaceId goalId
 
 

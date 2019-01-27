@@ -21,10 +21,14 @@ import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.State
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-
+import DevOps.Core
 import qualified Pipes as P
+import System.SafeResponse
 
-type GSDMonitoringStreamingApi =   StreamWorkspaceIdsCreated
+proxy :: Proxy GSDMonitoringStreamingApi
+proxy = Proxy
+
+type GSDMonitoringStreamingApi =   HealthCheck
                              :<|>  StreamGsdCommandsByWorkspaceId
                              :<|>  StreamInfinitelyGsdCommandsByWorkspaceId
                              :<|>  StreamGsdCommandResponseByWorkspaceId
@@ -32,23 +36,47 @@ type GSDMonitoringStreamingApi =   StreamWorkspaceIdsCreated
                              :<|>  StreamInfinitelyGsdEventsByWorkspaceId
                              :<|>  StreamGsdValidationStateByWorkspaceId
 
-type StreamWorkspaceIdsCreated =      "gsd" :> "monitoring" :> "stream" :> "workspaceIds" :> StreamGet NewlineFraming JSON (P.Producer (Persisted WorkspaceId) IO () )
-type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                            :> "commands"
-                                            :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
-type StreamInfinitelyGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                                      :> "infinitely"
-                                                      :> "commands" :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdCommand) IO () )
-type StreamGsdCommandResponseByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                                   :> "commandResponses"
-                                                   :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted CommandResponse) IO () )
-type StreamGsdEventsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                          :> "events"
-                                          :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdEvent) IO () )
-type StreamInfinitelyGsdEventsByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                                    :> "infinitely"
-                                                    :> "events" :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted GsdEvent) IO () )
 
-type StreamGsdValidationStateByWorkspaceId = "gsd" :> "monitoring" :> "stream"
-                                          :> "validationState"
-                                          :> Capture "workspaceId" WorkspaceId :> StreamGet NewlineFraming JSON (P.Producer (Persisted (ValidationState GsdState)) IO () )
+type HealthCheck =      "health" :> Get '[JSON]  HealthCheckResult
+
+type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "command" :>
+                                      Capture "workspaceId" WorkspaceId :>
+                                      StreamGet
+                                        NewlineFraming
+                                        JSON
+                                        (P.Producer (SafeResponse (Persisted GsdCommand)) IO () )
+
+type StreamInfinitelyGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "infinitely" :> "commands" :>
+                                                Capture "workspaceId" WorkspaceId :>
+                                                StreamGet
+                                                  NewlineFraming
+                                                  JSON
+                                                  (P.Producer (SafeResponse (Persisted GsdCommand)) IO () )
+
+type StreamGsdCommandResponseByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "commandResponses" :>
+                                             Capture "workspaceId" WorkspaceId :>
+                                             StreamGet
+                                              NewlineFraming
+                                              JSON
+                                              (P.Producer (SafeResponse (Persisted CommandResponse)) IO () )
+
+type StreamGsdEventsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "events" :>
+                                    Capture "workspaceId" WorkspaceId :>
+                                    StreamGet
+                                      NewlineFraming
+                                      JSON
+                                      (P.Producer (SafeResponse (Persisted GsdEvent)) IO () )
+
+type StreamInfinitelyGsdEventsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "infinitely" :> "events" :>
+                                              Capture "workspaceId" WorkspaceId :>
+                                              StreamGet
+                                                NewlineFraming
+                                                JSON
+                                                (P.Producer (SafeResponse (Persisted GsdEvent)) IO () )
+
+type StreamGsdValidationStateByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "validationState" :>
+                                             Capture "workspaceId" WorkspaceId :>
+                                             StreamGet
+                                              NewlineFraming
+                                              JSON
+                                              (P.Producer (SafeResponse (Persisted (ValidationState GsdState))) IO () )

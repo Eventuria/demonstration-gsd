@@ -5,14 +5,15 @@ module Gsd.Write.GenericGsd  where
 
 import Logger.Core
 
-import qualified Cqrs.Write.CommandConsumption.Stream as Cqrs.Write.CommandConsumption
+import qualified Cqrs.Write.CommandConsumption.Main as Cqrs.Write.CommandConsumption
 import qualified Cqrs.Write.CqrsWrite as Cqrs.Write
 import Cqrs.Write.StreamRepository
 
 import PersistedStreamEngine.Interface.Write.Writing
 import PersistedStreamEngine.Interface.Read.Reading
 import PersistedStreamEngine.Interface.Write.WDsl
-
+import Cqrs.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)
+import Cqrs.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAggregate)
 import Gsd.Write.Commands.Handling.CommandHandler (commandHandler)
 import Gsd.Write.Commands.Command
 import Gsd.Write.State
@@ -23,6 +24,7 @@ import Cqrs.Write.Aggregate.Ids.AggregateId
 import PersistedStreamEngine.Interface.Offset
 import Cqrs.Write.Aggregate.Commands.CommandId
 import Cqrs.Write.Serialization.CommandResponse()
+import System.SafeResponse
 
 persistCommand ::  AggregateIdStream persistedStream ->
                    GetCommandStream persistedStream->
@@ -37,18 +39,32 @@ persistCommand aggregateIdStream getCommandStream querying writing gsdCommand =
     getCommandStream
     aggregateIdStream $ toCommand gsdCommand
 
-streamCommandConsumption :: CqrsStreamRepository persistedStream GsdState ->
-                            Reading persistedStream ->
-                            InterpreterWritePersistedStreamLanguage persistedStream GsdState () ->
-                            Logger ->
-                            IO ()
-streamCommandConsumption cqrsStreamRepository reading interpreterWritePersistedStreamLanguage logger  =
-   Cqrs.Write.CommandConsumption.stream
+startCommandConsumption :: Logger ->
+                           CqrsStreamRepository persistedStream GsdState ->
+                           Reading persistedStream ->
+                           TransactionInterpreter GsdState () ->
+                           IO (SafeResponse ())
+startCommandConsumption logger
+                        cqrsStreamRepository @ CqrsStreamRepository {
+                                                  aggregateIdStream,
+                                                  getCommandStream,
+                                                  getValidationStateStream}
+                        reading @ Reading { streaming ,querying}
+                        transactionInterpreter   =
+   Cqrs.Write.CommandConsumption.execute
       logger
-      cqrsStreamRepository
-      reading
-      commandHandler
-      interpreterWritePersistedStreamLanguage
+      aggregateIdStream
+      streaming
+      (getConsumeAnAggregate
+        logger
+        getCommandStream
+        getValidationStateStream
+        reading
+        transactionInterpreter
+        commandHandler
+        getConsumeACommandForAnAggregate)
+
+
 
 
 waitTillCommandResponseProduced ::
@@ -57,7 +73,7 @@ waitTillCommandResponseProduced ::
                      AggregateId ->
                      Offset ->
                      CommandId ->
-                     IO (Persisted CommandResponse)
+                     IO (SafeResponse (Persisted CommandResponse))
 waitTillCommandResponseProduced getCommandResponseStream subscribing @ Subscribing {subscribeOnOffset} aggregateId offset commandId =
     (subscribeOnOffset (getCommandResponseStream aggregateId) offset)
 

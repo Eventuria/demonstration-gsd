@@ -16,29 +16,38 @@ import Gsd.Read.Action
 import Cqrs.Write.StreamRepository
 import Cqrs.Write.Aggregate.Events.Event
 import Streamly (SerialT)
+import System.SafeResponse
 
-streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT monad Event) => EventStoreSettings -> stream monad (Persisted Workspace)
+streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT monad Event) =>
+                      EventStoreSettings ->
+                      stream monad (SafeResponse (Persisted Workspace))
 streamWorkspace settings =
     GenericRead.streamWorkspace
       (aggregateIdStream $ getEventStoreStreamRepository settings)
       (getEventStream $ getEventStoreStreamRepository settings)
       getEventStoreStreaming
 
-fetchWorkspace :: EventStoreSettings -> WorkspaceId -> IO (Maybe Workspace)
+fetchWorkspace :: EventStoreSettings -> WorkspaceId -> IO (SafeResponse (Maybe Workspace))
 fetchWorkspace settings workspaceId =
     GenericRead.fetchWorkspace
       (getEventStream $ getEventStoreStreamRepository settings)
       getEventStoreStreaming
       workspaceId
 
-streamGoal :: Streamable stream monad Event => EventStoreSettings -> WorkspaceId -> stream monad Goal
+streamGoal :: Streamable stream monad Event =>
+                EventStoreSettings ->
+                WorkspaceId ->
+                stream monad (SafeResponse Goal)
 streamGoal settings workspaceId =
     GenericRead.streamGoal
       (getEventStream $ getEventStoreStreamRepository settings)
       getEventStoreStreaming
       workspaceId
 
-fetchGoal :: EventStoreSettings -> WorkspaceId -> GoalId -> IO (Maybe Goal)
+fetchGoal :: EventStoreSettings ->
+             WorkspaceId ->
+             GoalId ->
+             IO (SafeResponse (Maybe Goal))
 fetchGoal settings workspaceId goalId =
     GenericRead.fetchGoal
       (getEventStream $ getEventStoreStreamRepository settings)
@@ -46,7 +55,11 @@ fetchGoal settings workspaceId goalId =
       workspaceId
       goalId
 
-streamAction :: Streamable stream monad Event => EventStoreSettings -> WorkspaceId -> GoalId -> stream monad Action
+streamAction :: Streamable stream monad Event =>
+                  EventStoreSettings ->
+                  WorkspaceId ->
+                  GoalId ->
+                  stream monad (SafeResponse (Action))
 streamAction settings workspaceId goalId =
     GenericRead.streamAction
       (getEventStream $ getEventStoreStreamRepository settings)

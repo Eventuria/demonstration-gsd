@@ -1,5 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards #-}
 module Cqrs.Write.CqrsWrite where
 
 import Cqrs.Write.StreamRepository
@@ -17,6 +18,7 @@ import Cqrs.Write.Serialization.AggregateId ()
 import PersistedStreamEngine.Interface.Write.PersistenceResult
 import Cqrs.Write.PersistCommandResult
 
+
 persistCommand :: Writing persistedStream ->
                   Querying persistedStream ->
                   GetCommandStream persistedStream ->
@@ -30,10 +32,12 @@ persistCommand Writing {persist}
                command @ Command {commandHeader = CommandHeader {aggregateId,commandId}}  = do
  let commandStream = getCommandStream $ getAggregateId command
  isStreamNotExist <- isStreamNotFound commandStream
- if(isStreamNotExist) then do
-   persist aggregateIdStream $ getAggregateId command
-   convertPersistResult <$> persist commandStream command
- else convertPersistResult <$> persist commandStream command
+ case isStreamNotExist of
+   Right (True) -> do
+    persist aggregateIdStream $ getAggregateId command
+    convertPersistResult <$> persist commandStream command
+   Right (False) -> convertPersistResult <$> persist commandStream command
+   Left error -> return $ FailedToPersist {reason = show error, ..}
   where
     convertPersistResult :: PersistenceResult -> PersistCommandResult
     convertPersistResult PersistenceSuccess {lastOffsetPersisted} =

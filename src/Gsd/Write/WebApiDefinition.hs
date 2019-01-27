@@ -22,6 +22,7 @@ import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import PersistedStreamEngine.Interface.PersistedItem
+import System.SafeResponse
 
 type GsdWriteApi =   SendGsdCommand :<|>  WaitTillCommandResponseProduced
 
@@ -34,4 +35,4 @@ type WaitTillCommandResponseProduced = "gsd" :> "write" :> "waitTillCommandRespo
                                        :> Capture "agreggateId" AggregateId
                                        :> Capture "offset" Offset
                                        :> Capture "commandId" CommandId
-                                       :> Get '[JSON] (Persisted CommandResponse)
+                                       :> Get '[JSON] (SafeResponse (Persisted CommandResponse))

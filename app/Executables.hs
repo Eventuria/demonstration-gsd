@@ -1,21 +1,19 @@
-{-|
-Module      : Executables
-Description : GSD Micro Services (Client + Backend)
-Copyright   : (c) Nicolas Henin, 2018-2019
-License     : Apache-2.0
-Stability   : experimental
--}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Executables where
 
 import Settings
-
+import Prelude hiding (read)
 import Gsd.Write.CommandConsumptionStreamer
-import Gsd.Write.WebApi
-import Gsd.Monitoring.WebStreamingApi
-import Gsd.Read.WebApi
+import Gsd.Write.Server
+import Gsd.Monitoring.Main
+import Gsd.Read.Server
 import Gsd.CLI.CLI
-import Servant.Client
+import Servant.Client hiding (manager)
 import Gsd.Clients
+import DevOps.MicroService.EventStore hiding (getCredentials,getConnectionType,getEventStoreSettings)
+import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Logger.Core
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------
@@ -27,10 +25,14 @@ import Gsd.Clients
 -- | Client Command line : Allow you to use the gsd application
 --   (send commands and access to a specific gsd read model )
 gsdWriteClientCommandLineInterface :: IO ()
-gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute Clients{
-   writeApiUrl = (BaseUrl Http "localhost" getWriteApiPort ""),
-   gsdReadApiUrl = (BaseUrl Http "localhost" getGsdReadStreamingApiPort ""),
-   gsdMonitoringApiUrl = (BaseUrl Http "localhost" getGsdMonitoringStreamingApiPort "")}
+gsdWriteClientCommandLineInterface = do
+  let logger = Logger { loggerId = "[gsd.client.cli]" , executableName = "client.cli" }
+  initLogger logger
+  manager <- (newManager defaultManagerSettings)
+  Gsd.CLI.CLI.execute ClientsSetting {
+     write = ClientSetting {manager , url = BaseUrl Http "localhost" getWriteApiPort "", logger},
+     read = ClientSetting {manager , url = BaseUrl Http "localhost" getGsdReadStreamingApiPort "",logger},
+     monitoring = ClientSetting {manager , url = BaseUrl Http "localhost" getGsdMonitoringStreamingApiPort "",logger}}
 
 
 --------------------------------------------------------------------------------
@@ -40,7 +42,7 @@ gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute Clients{
 
 -- | Gsd Web Write Api : Web Api that receives commands and persist them per Aggregate into the EventStore
 gsdWriteApi :: IO ()
-gsdWriteApi = Gsd.Write.WebApi.execute
+gsdWriteApi = Gsd.Write.Server.execute
   getWriteApiPort
   getEventStoreSettings
   getConnectionType
@@ -50,9 +52,11 @@ gsdWriteApi = Gsd.Write.WebApi.execute
 --  Processes commands stored in the EventStore and produces command responses and events
 gsdCommandConsumptionStreamer :: IO ()
 gsdCommandConsumptionStreamer = Gsd.Write.CommandConsumptionStreamer.execute
-  getEventStoreSettings
-  getConnectionType
-  getCredentials
+  EventStoreMicroService {
+        urlHost = "127.0.0.1",
+        port = 1113,
+        username = "admin",
+        password = "changeit"}
 
 
 --------------------------------------------------------------------------------
@@ -61,7 +65,7 @@ gsdCommandConsumptionStreamer = Gsd.Write.CommandConsumptionStreamer.execute
 
 -- | Gsd Web Read Api : Web Api readings events and returning an in memory specific read model for gsd
 gsdReadApi :: IO ()
-gsdReadApi = Gsd.Read.WebApi.execute
+gsdReadApi = Gsd.Read.Server.execute
   getGsdReadStreamingApiPort
   getEventStoreSettings
   getConnectionType
@@ -71,8 +75,10 @@ gsdReadApi = Gsd.Read.WebApi.execute
 -- | Monitoring Api : Tool to read directly what the Write Channel stored in the EventStore
 -- (example of a second useful read model in CQRS applications)
 gsdMonitoringApi :: IO ()
-gsdMonitoringApi = Gsd.Monitoring.WebStreamingApi.execute
+gsdMonitoringApi = Gsd.Monitoring.Main.execute
   getGsdMonitoringStreamingApiPort
-  getEventStoreSettings
-  getConnectionType
-  getCredentials
+  EventStoreMicroService {
+      urlHost = "127.0.0.1",
+      port = 1113,
+      username = "admin",
+      password = "changeit"}
