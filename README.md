@@ -28,15 +28,34 @@ GSD  is a basic todo list command-line application
 For details about my experience, please visit :
 https://www.linkedin.com/in/nhenin/
 
-## Get started (Mac OSX)
+## Developer's Guide (Mac OSX)
 
-    - Install the Haskell Platform (https://www.haskell.org/platform/mac.html)
-        - GHC
-        - Cabal build system
-        - Stack tool
-    - Install docker (https://docs.docker.com/docker-for-mac/install/)
-###
--------------------------------------------------------------------
+### Workstation Setup
+
+- Install the Haskell Platform (https://www.haskell.org/platform/mac.html)
+    - GHC
+    - Cabal build system
+    - Stack tool
+- Install docker (https://docs.docker.com/docker-for-mac/install/)
+
+### Build and Run
+
+- Clone this project
+- Build the executables
+    - Go at the root of the clone
+    - ```stack build ```
+- run the backend microservices
+
+## High-Level documentation
+### Project Structure
+### Design Choices
+
+## MVP Roadmap
+
+- Transaction
+
+
+------------------------
 
 
 
