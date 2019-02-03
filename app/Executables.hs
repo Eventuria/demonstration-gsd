@@ -1,21 +1,16 @@
-{-|
-Module      : Executables
-Description : GSD Micro Services (Client + Backend)
-Copyright   : (c) Nicolas Henin, 2018-2019
-License     : Apache-2.0
-Stability   : experimental
--}
+{-# LANGUAGE OverloadedStrings #-}
 module Executables where
 
 import Settings
 
 import Gsd.Write.CommandConsumptionStreamer
 import Gsd.Write.WebApi
-import Gsd.Monitoring.WebStreamingApi
+import Gsd.Monitoring.Main
 import Gsd.Read.WebApi
 import Gsd.CLI.CLI
 import Servant.Client
 import Gsd.Clients
+import DevOps.MicroService.EventStore hiding (getCredentials,getConnectionType,getEventStoreSettings)
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------
@@ -71,8 +66,10 @@ gsdReadApi = Gsd.Read.WebApi.execute
 -- | Monitoring Api : Tool to read directly what the Write Channel stored in the EventStore
 -- (example of a second useful read model in CQRS applications)
 gsdMonitoringApi :: IO ()
-gsdMonitoringApi = Gsd.Monitoring.WebStreamingApi.execute
+gsdMonitoringApi = Gsd.Monitoring.Main.execute
   getGsdMonitoringStreamingApiPort
-  getEventStoreSettings
-  getConnectionType
-  getCredentials
+  EventStoreMicroService {
+      urlHost = "127.0.0.1",
+      port = 1113,
+      username = "admin",
+      password = "changeit"}

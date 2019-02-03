@@ -33,6 +33,7 @@ import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Serialization.ValidationState ()
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Write.Serialization.CommandResponse ()
+import DevOps.Core
 
 streamWorkspaceId :: IsStream stream => S.ClientM (stream IO (Persisted WorkspaceId) )
 streamWorkspaceId = fromPipes <$> streamWorkspaceIdOnPipe
@@ -59,6 +60,7 @@ streamGsdValidationStateByWorkspaceId workspaceId = fromPipes <$> (streamGsdVali
 gsdMonitoringApi :: Proxy GSDMonitoringStreamingApi
 gsdMonitoringApi = Proxy
 
+healthCheck :: S.ClientM HealthCheckResult
 streamWorkspaceIdOnPipe :: S.ClientM (P.Producer (Persisted WorkspaceId) IO () )
 streamGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand) IO () )
 streamInfinitelyGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand) IO ())
@@ -66,7 +68,8 @@ streamGsdCommandResponseByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Produ
 streamGsdEventByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdEvent) IO ())
 streamInfinitelyGsdEventByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdEvent) IO ())
 streamGsdValidationStateByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted (ValidationState GsdState)) IO ())
-streamWorkspaceIdOnPipe
+healthCheck
+  :<|> streamWorkspaceIdOnPipe
   :<|> streamGsdCommandByWorkspaceIdOnPipe
   :<|> streamInfinitelyGsdCommandByWorkspaceIdOnPipe
   :<|> streamGsdCommandResponseByWorkspaceIdOnPipe

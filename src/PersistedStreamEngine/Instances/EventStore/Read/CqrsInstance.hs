@@ -12,7 +12,8 @@ getEventStoreStreaming :: Streaming EventStoreStream
 getEventStoreStreaming = Streaming {
                   streamFromOffset = EventStoreStreaming.streamFromOffset,
                   streamAllInfinitely = EventStoreStreaming.streamAllInfinitely,
-                  streamAll = EventStoreStreaming.streamAll }
+                  streamAll = EventStoreStreaming.streamAll,
+                  streamAllSafe = EventStoreStreaming.streamAllSafe }
 
 getEventStoreQuerying :: Querying EventStoreStream
 getEventStoreQuerying = Querying  {

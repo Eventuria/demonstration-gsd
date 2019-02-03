@@ -1,12 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Gsd.Monitoring.MonitoringOverEventStore (
-                streamWorkspaceId,
-                streamCommand,
-                streamInfinitelyCommand,
-                streamCommandResponse,
-                streamEvent,
-                streamInfinitelyEvent,
-                streamValidationState) where
+{-# LANGUAGE DuplicateRecordFields #-}
+module Gsd.Monitoring.MonitoringOverEventStore  where
 
 import PersistedStreamEngine.Interface.Streamable
 
@@ -25,6 +19,12 @@ import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import DevOps.Core (HealthCheckResult)
+import DevOps.MicroService.EventStore
+import Control.Exception (SomeException (..))
+
+healthCheck :: EventStoreMicroService -> IO HealthCheckResult
+healthCheck eventStoreMicroService = healthCheck eventStoreMicroService
 
 streamWorkspaceId :: Streamable stream monad WorkspaceId => EventStoreSettings -> stream monad (Persisted WorkspaceId)
 streamWorkspaceId settings =
@@ -33,12 +33,14 @@ streamWorkspaceId settings =
       getEventStoreStreaming
 
 
-streamCommand ::  Streamable stream monad Command => EventStoreSettings -> WorkspaceId -> stream monad (Persisted GsdCommand)
+streamCommand ::  StreamableSafe stream monad Command => EventStoreSettings -> WorkspaceId -> stream monad (Either SomeException (Persisted GsdCommand))
 streamCommand settings workspaceId =
-    GenericGSDMonitoring.streamCommand
-      (getCommandStream $ getEventStoreStreamRepository settings)
-      getEventStoreStreaming
-      workspaceId
+   GenericGSDMonitoring.streamCommand
+     (getCommandStream $ getEventStoreStreamRepository settings)
+     getEventStoreStreaming
+     workspaceId
+
+
 
 streamInfinitelyCommand ::  Streamable stream monad Command => EventStoreSettings -> WorkspaceId -> stream monad (Persisted GsdCommand)
 streamInfinitelyCommand settings workspaceId =

@@ -26,17 +26,19 @@ import Gsd.Write.State
 import Gsd.Write.Commands.Command
 import Gsd.Write.Events.Event
 import Gsd.Write.Core
-
+import Control.Exception (SomeException (..))
+import Control.Lens
 
 streamWorkspaceId :: Streamable stream monad WorkspaceId => AggregateIdStream persistedStream -> Streaming persistedStream -> stream monad (Persisted WorkspaceId)
 streamWorkspaceId aggregateIdStream Streaming {streamAll} = streamAll aggregateIdStream
 
 
-streamCommand ::  Streamable stream monad Command => GetCommandStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
-streamCommand getCommandStream Streaming {streamAll} workspaceId =
-  (streamAll $ getCommandStream workspaceId) &
-      S.map (\PersistedItem { offset = offset, item = cqrsCommand} ->
-              PersistedItem { offset = offset, item = fromCommand $ cqrsCommand})
+streamCommand ::  StreamableSafe stream monad Command => GetCommandStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Either SomeException (Persisted GsdCommand))
+streamCommand getCommandStream Streaming {streamAllSafe} workspaceId =
+  (streamAllSafe $ getCommandStream workspaceId) &
+      S.map (\result -> over _Right (\PersistedItem { offset = offset, item = cqrsCommand} ->
+                                      PersistedItem { offset = offset, item = fromCommand $ cqrsCommand}) result)
+
 
 streamInfinitelyCommand ::  Streamable stream monad Command => GetCommandStream persistedStream -> Streaming persistedStream -> WorkspaceId -> stream monad (Persisted GsdCommand)
 streamInfinitelyCommand getCommandStream Streaming {streamAllInfinitely} workspaceId =

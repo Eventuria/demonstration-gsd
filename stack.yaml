@@ -33,6 +33,27 @@ resolver: lts-13.0
 #  subdirs:
 #  - auto-update
 #  - wai
+
+image:
+
+  containers:
+
+    - name: "gsd.eventuria"
+      base: "eventuria/haskell-with-latest-stack-version:baseImageGsd"
+      executables:
+        - gsd-write-api
+        - gsd-read-api
+        - gsd-monitoring-api
+        - gsd-write-client-cli
+        - gsd-write-command-consumption-streamer
+      entrypoints:
+        - gsd-write-api
+        - gsd-read-api
+        - gsd-monitoring-api
+        - gsd-write-client-cli
+        - gsd-write-command-consumption-streamer
+
+
 packages:
 - .
 extra-deps :

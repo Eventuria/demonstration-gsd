@@ -1,0 +1,19 @@
+FROM ubuntu:18.04
+MAINTAINER Nicolas Henin <eventuria.consulting@gmail.com>
+
+RUN apt-get update
+
+# Build dependencies
+RUN apt-get install --assume-yes curl
+RUN curl -sSL https://get.haskellstack.org/ | sh
+RUN apt-get install --assume-yes libtinfo-dev
+
+# Without this haddock crashes for modules containing
+# non-ASCII characters.
+ENV LANG C.UTF-8
+
+RUN stack upgrade
+RUN stack update
+
+
+
