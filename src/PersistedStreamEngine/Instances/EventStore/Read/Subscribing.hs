@@ -17,25 +17,35 @@ import Data.Aeson
 import PersistedStreamEngine.Interface.Streamable
 import PersistedStreamEngine.Interface.Offset
 
-subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
+
+subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (SafeResponse (Persisted item))
 subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },
                                                streamName = streamName} = do
-              liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
+  liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
 
-              subscription <- liftIO $ EventStore.subscribe connection streamName EventStore.NoResolveLink Nothing
-              result <- liftIO $ (try $ EventStore.waitConfirmation subscription )
-              case result of
-                Left e @ SomeException {} -> do
-                           liftIO $ logInfo logger "subscription to stream failed - retrying..."
-                           liftIO $ threadDelay (5 * 1000000) -- 5 seconds
-                           subscribe eventStoreStream
-                Right _ -> do
-                           liftIO $ logInfo logger $ "subscription enabled on stream " ++ show streamName
-                           loopNextEvent subscription where
-                           loopNextEvent subscription = do
-                              resolvedEvent <- liftIO $ EventStore.nextEvent subscription
-                              liftIO $ logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
-                              (S.yield $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)) <> loopNextEvent subscription
+  result <- liftIO $ try (askForSubscription)
+
+  case result of
+    Left e @ SomeException {} -> do
+               liftIO $ logInfo logger "subscription to stream failed - retrying..."
+               liftIO $ threadDelay (5 * 1000000) -- 5 seconds
+               subscribe eventStoreStream
+    Right subscription -> do
+               liftIO $ logInfo logger $ "subscription enabled on stream " ++ show streamName
+               loopNextEvent subscription
+                where
+                   loopNextEvent subscription = do
+                      resolvedEvent <- liftIO $ EventStore.nextEvent subscription
+                      liftIO $ logInfo logger $ "subscription triggered on " ++ show streamName
+                                             ++ " with event > " ++ (show resolvedEvent)
+                      (S.yield $ Right $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent))
+                        <> loopNextEvent subscription
+  where
+     askForSubscription :: IO (EventStore.RegularSubscription EventStore.EventNumber)
+     askForSubscription = do
+        subscription <- EventStore.subscribe connection streamName EventStore.NoResolveLink Nothing
+        EventStore.waitConfirmation subscription
+        return subscription
 
 subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (Persisted item)
 subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },

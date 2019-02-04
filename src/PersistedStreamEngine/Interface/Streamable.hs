@@ -9,23 +9,14 @@ import Streamly
 import Data.Aeson
 import Control.Exception
 
+type SafeResponse result = Either SomeException result
 
 class (FromJSON item,
        Monad monad,
        IsStream stream,
        MonadIO (stream monad),
        MonadAsync monad,
-       Semigroup (stream monad (Persisted item))) => Streamable stream monad item
-
-class (FromJSON item,
-       Monad monad,
-       IsStream stream,
-       MonadIO (stream monad),
-       MonadAsync monad,
-       Semigroup (stream monad (Either SomeException (Persisted item)))) => StreamableSafe stream monad item
-
-instance FromJSON item =>  StreamableSafe SerialT IO item
-instance FromJSON item =>  StreamableSafe ParallelT IO  item
+       Semigroup (stream monad (SafeResponse (Persisted item)))) => Streamable stream monad item
 
 instance FromJSON item =>  Streamable SerialT IO item
 instance FromJSON item =>  Streamable ParallelT IO  item

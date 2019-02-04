@@ -31,25 +31,12 @@ import PersistedStreamEngine.Interface.Streamable
 import Control.Exception
 
 
-data EvenStoreExceptionReason = ReadStreamDeleted
-                        | ReadNotModified
-                        | ReadError
-                        | ReadAccessDenied  deriving Show
 
-instance Exception EvenStoreExceptionReason
-
-readStreamDeletedException,readNotModifiedException,readErrorException,readAccessDeniedException  :: SomeException
-readStreamDeletedException        = toException ReadStreamDeleted
-readNotModifiedException = toException ReadNotModified
-readErrorException = toException ReadError
-readAccessDeniedException = toException ReadAccessDenied
-
-
-streamFromOffsetSafe :: StreamableSafe stream monad item =>
+streamFromOffset :: Streamable stream monad item =>
                       EventStoreStream item ->
                       Offset ->
-                      stream monad (Either SomeException (Persisted item))
-streamFromOffsetSafe eventStoreStream @ EventStoreStream {
+                      stream monad (SafeResponse (Persisted item))
+streamFromOffset eventStoreStream @ EventStoreStream {
                                        settings = EventStoreSettings { logger, credentials, connection },
                                        streamName = streamName } fromOffset = do
 
@@ -71,7 +58,7 @@ streamFromOffsetSafe eventStoreStream @ EventStoreStream {
     Right (EventStore.ReadSuccess slices) -> do
       case (getPersistedItemsFromSlices slices) of
         persistedItems | (length persistedItems) == fromInteger batchSize ->
-          (Right <$> S.fromList persistedItems) <> (streamFromOffsetSafe eventStoreStream $ fromOffset + batchSize)
+          (Right <$> S.fromList persistedItems) <> (streamFromOffset eventStoreStream $ fromOffset + batchSize)
         persistedItems -> Right <$> S.fromList persistedItems
     Right (EventStore.ReadNoStream) -> do
             liftIO $ logInfo logger $ "> " ++ show streamName ++ " is not found."
@@ -88,60 +75,32 @@ streamFromOffsetSafe eventStoreStream @ EventStoreStream {
                                              <$> EventStore.sliceEvents slices
 
 
-streamAllSafe :: StreamableSafe stream monad item =>
+streamAll :: Streamable stream monad item =>
                 EventStoreStream item ->
-                stream monad (Either SomeException (Persisted item))
-streamAllSafe eventStoreStream = streamFromOffsetSafe eventStoreStream 0
+                stream monad (SafeResponse (Persisted item))
+streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
 streamAllInfinitely :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
 streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)
 
--- Deprecated
-streamAll :: Streamable stream monad item =>
-                EventStoreStream item ->
-                stream monad (Persisted item)
-streamAll eventStoreStream = streamFromOffset eventStoreStream 0
-
-
--- Deprecated
-streamFromOffset :: Streamable stream monad item =>
-                      EventStoreStream item ->
-                      Offset ->
-                      stream monad (Persisted item)
-
-streamFromOffset eventStoreStream @ EventStoreStream {
-                                       settings = EventStoreSettings { logger, credentials, connection },
-                                       streamName = streamName } fromOffset = do
-     liftIO $ logInfo logger $ "streaming [" ++ (show fromOffset) ++ "..] > " ++ show streamName
-
-     let batchSize = 100
-
-     asyncRead <- liftIO $ EventStore.readEventsForward
-                      connection
-                      streamName
-                      (EventStore.eventNumber $ naturalFromInteger fromOffset)
-                      (fromInteger batchSize)
-                      EventStore.NoResolveLink
-                      (Just credentials)
-     commandFetched <- liftIO $ wait asyncRead
-     case commandFetched of
-          EventStore.ReadSuccess readResult -> do
-              let persistedItems = recordedEventToPersistedItem
-                                                    <$> EventStore.resolvedEventOriginal
-                                                    <$> EventStore.sliceEvents readResult
-              if (length persistedItems) == (fromInteger batchSize) then do
-                  (S.fromList persistedItems) <>
-                    (streamFromOffset eventStoreStream $ fromOffset + batchSize)
-              else S.fromList persistedItems
-          EventStore.ReadNoStream -> do
-            liftIO $ logInfo logger $ "> " ++ show streamName ++ " is not found."
-            S.fromList []
-          e -> error $ "Read failure: " <> show e
-
 
 recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
 recordedEventToPersistedItem recordedEvent =
   PersistedItem { offset = toInteger $ EventStore.recordedEventNumber recordedEvent,
                   item = fromJust $ EventStore.recordedEventDataAsJson recordedEvent }
+
+
+data EvenStoreExceptionReason = ReadStreamDeleted
+                        | ReadNotModified
+                        | ReadError
+                        | ReadAccessDenied  deriving Show
+
+instance Exception EvenStoreExceptionReason
+
+readStreamDeletedException,readNotModifiedException,readErrorException,readAccessDeniedException  :: SomeException
+readStreamDeletedException        = toException ReadStreamDeleted
+readNotModifiedException = toException ReadNotModified
+readErrorException = toException ReadError
+readAccessDeniedException = toException ReadAccessDenied

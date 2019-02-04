@@ -28,7 +28,7 @@ import Cqrs.Write.Serialization.Event ()
 import Gsd.Read.GoalStats
 import Gsd.Read.ActionStats
 
-
+import Control.Lens
 
 data WorkspaceBuilder = WorkspaceBuilder {  workspaceIdMaybe :: Maybe WorkspaceId ,
                                             workspaceNameMaybe :: Maybe WorkspaceName ,
@@ -38,10 +38,10 @@ streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT mon
                      AggregateIdStream persistedStream ->
                      GetEventStream persistedStream ->
                      Streaming persistedStream ->
-                     stream monad (Persisted Workspace)
+                     stream monad (SafeResponse (Persisted Workspace))
 streamWorkspace aggregateIdStream getEventStream streaming @ Streaming {streamAll} =
     (streamAll $ aggregateIdStream)
-      & S.mapM (\PersistedItem { offset = offset, item = workspaceId} ->
+      & mapMSafe (\PersistedItem { offset = offset, item = workspaceId} ->
           (fmap . fmap ) (\workspace -> PersistedItem {offset, item = workspace })
             $ fetchWorkspace
                 getEventStream
@@ -51,6 +51,13 @@ streamWorkspace aggregateIdStream getEventStream streaming @ Streaming {streamAl
         Just persistedWorkspace -> True
         Nothing -> False )
       & S.map (\maybePersistedWorkspace -> fromJust $ maybePersistedWorkspace)
+
+mapMSafe :: (IsStream t, MonadAsync m) => (a -> m (SafeResponse b)) -> t m (SafeResponse a) -> t m (SafeResponse b)
+mapMSafe transformation stream = stream & S.mapM (\safeResponse -> case safeResponse of
+    Right a -> transformation a
+    Left error -> return $ Left error )
+
+filter
 
 fetchWorkspace :: Streamable SerialT monad Event =>
                      GetEventStream persistedStream ->
