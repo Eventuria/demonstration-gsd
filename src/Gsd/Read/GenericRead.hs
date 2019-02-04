@@ -57,7 +57,7 @@ mapMSafe transformation stream = stream & S.mapM (\safeResponse -> case safeResp
     Right a -> transformation a
     Left error -> return $ Left error )
 
-filter
+
 
 fetchWorkspace :: Streamable SerialT monad Event =>
                      GetEventStream persistedStream ->
