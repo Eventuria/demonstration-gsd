@@ -8,7 +8,7 @@ import PersistedStreamEngine.Interface.Streamable
 
 import PersistedStreamEngine.Interface.Offset
 import PersistedStreamEngine.Interface.PersistedItem
-import Control.Exception
+import System.SafeResponse
 
 data Reading persistedStream = Reading {
     streaming :: Streaming persistedStream,
@@ -16,17 +16,31 @@ data Reading persistedStream = Reading {
     subscribing :: Subscribing persistedStream }
 
 data Streaming persistedStream = Streaming {
-                             streamFromOffset    :: forall stream monad item . Streamable stream monad item => persistedStream item -> Offset -> stream monad (Either SomeException (Persisted item)),
-                             streamAllInfinitely :: forall stream monad item . Streamable stream monad item => persistedStream item -> stream monad (Either SomeException (Persisted item)) ,
-                             streamAll ::           forall stream monad item . Streamable stream monad item => persistedStream item -> stream monad (Either SomeException (Persisted item))}
+           streamFromOffset    :: forall stream monad item . Streamable stream monad item =>
+                                                              persistedStream item ->
+                                                              Offset ->
+                                                              stream monad (SafeResponse (Persisted item)),
+           streamAllInfinitely :: forall stream monad item . Streamable stream monad item =>
+                                                              persistedStream item ->
+                                                              stream monad (SafeResponse (Persisted item)) ,
+           streamAll ::           forall stream monad item . Streamable stream monad item =>
+                                                              persistedStream item ->
+                                                              stream monad (SafeResponse (Persisted item))}
 
 data Querying persistedStream = Querying {
-                             retrieveLast :: forall item . FromJSON item => persistedStream item -> IO( Maybe (Persisted item)),
-                             isStreamNotFound :: forall item . persistedStream item -> IO Bool}
+                             retrieveLast :: forall item . FromJSON item =>
+                                                              persistedStream item ->
+                                                              IO( SafeResponse (Maybe (Persisted item))),
+                             isStreamNotFound :: forall item . persistedStream item -> IO (SafeResponse Bool)}
 
 data Subscribing persistedStream = Subscribing {
-                              subscribe :: forall stream monad item . Streamable stream monad item => persistedStream item -> stream monad (Persisted item),
-                              subscribeOnOffset :: forall  item. FromJSON item => persistedStream item -> Offset -> IO (Persisted item) }
+                              subscribe :: forall stream monad item . Streamable stream monad item =>
+                                                                          persistedStream item ->
+                                                                          stream monad (SafeResponse (Persisted item)),
+                              subscribeOnOffset :: forall  item. FromJSON item =>
+                                                                  persistedStream item ->
+                                                                  Offset ->
+                                                                  IO (Persisted item) }
 
 
 

@@ -15,7 +15,7 @@ import Gsd.Write.Core
 import Gsd.Read.Goal
 import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
-
+import System.SafeResponse
 import Servant.Pipes ()
 
 import Streamly
@@ -23,19 +23,19 @@ import Streamly
 gsdReadApi :: Proxy GSDReadApi
 gsdReadApi = Proxy
 
-streamWorkspaceOnPipe :: S.ClientM (P.Producer (Persisted Workspace) IO () )
-fetchWorkspace :: WorkspaceId -> S.ClientM (Maybe Workspace)
-fetchGoal :: WorkspaceId -> GoalId ->  S.ClientM (Maybe Goal)
-streamGoalOnPipe :: WorkspaceId -> S.ClientM (P.Producer Goal IO () )
-streamActionOnPipe :: WorkspaceId -> GoalId -> S.ClientM (P.Producer Action IO () )
+streamWorkspaceOnPipe :: S.ClientM (P.Producer (SafeResponse (Persisted Workspace)) IO () )
+fetchWorkspace :: WorkspaceId -> S.ClientM (SafeResponse (Maybe Workspace))
+fetchGoal :: WorkspaceId -> GoalId ->  S.ClientM (SafeResponse (Maybe Goal))
+streamGoalOnPipe :: WorkspaceId -> S.ClientM (P.Producer (SafeResponse Goal )IO () )
+streamActionOnPipe :: WorkspaceId -> GoalId -> S.ClientM (P.Producer (SafeResponse Action) IO () )
 streamWorkspaceOnPipe :<|> streamGoalOnPipe :<|> streamActionOnPipe :<|> fetchWorkspace :<|> fetchGoal = S.client gsdReadApi
 
 
-streamWorkspace :: IsStream stream => S.ClientM (stream IO (Persisted Workspace) )
+streamWorkspace :: IsStream stream => S.ClientM (stream IO (SafeResponse (Persisted Workspace)) )
 streamWorkspace = fromPipes <$> streamWorkspaceOnPipe
 
-streamGoal :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Goal) )
+streamGoal :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (SafeResponse (Goal)) )
 streamGoal workspaceId = fromPipes <$> (streamGoalOnPipe workspaceId)
 
-streamAction :: IsStream stream => WorkspaceId -> GoalId -> S.ClientM (stream IO (Action) )
+streamAction :: IsStream stream => WorkspaceId -> GoalId -> S.ClientM (stream IO (SafeResponse (Action)) )
 streamAction workspaceId goalId = fromPipes <$> (streamActionOnPipe workspaceId goalId)

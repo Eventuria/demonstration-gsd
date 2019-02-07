@@ -14,13 +14,13 @@ type ValidateStateStream persistedStream applicationState = persistedStream (Val
 
 type GetCommandStream persistedStream = (AggregateId -> CommandStream persistedStream)
 type GetCommandResponseStream persistedStream = (AggregateId -> CommandResponseStream persistedStream)
-type GetValidateStateStream persistedStream applicationState = (AggregateId -> ValidateStateStream persistedStream applicationState)
+type GetValidationStateStream persistedStream applicationState = (AggregateId -> ValidateStateStream persistedStream applicationState)
 type GetEventStream persistedStream = (AggregateId -> EventStream persistedStream)
 
 data CqrsStreamRepository persistedStream applicationState = CqrsStreamRepository {
                                       aggregateIdStream :: AggregateIdStream persistedStream,
                                       getCommandStream :: GetCommandStream persistedStream,
                                       getCommandResponseStream :: GetCommandResponseStream persistedStream,
-                                      getValidationStateStream :: GetValidateStateStream persistedStream applicationState,
+                                      getValidationStateStream :: GetValidationStateStream persistedStream applicationState,
                                       getEventStream :: GetEventStream persistedStream
                                     }

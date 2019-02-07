@@ -22,28 +22,30 @@ import Cqrs.Write.Serialization.ValidationState ()
 import Cqrs.Write.Serialization.CommandResponse ()
 
 
+interpretWriteEventStoreLanguage :: (ToJSON applicationState , Show applicationState) =>
+                                        Logger ->
+                                        CqrsStreamRepository EventStoreStream applicationState ->
+                                        TransactionInterpreter applicationState a
 
-interpretWriteEventStoreLanguage :: (ToJSON applicationState , Show applicationState) => InterpreterWritePersistedStreamLanguage EventStoreStream applicationState a
-
-interpretWriteEventStoreLanguage (Pure a) logger streamRepository = return a
-interpretWriteEventStoreLanguage (Free (PersistEvent event next)) logger streamRepository = do
+interpretWriteEventStoreLanguage logger streamRepository (Pure a) = return $ Right a
+interpretWriteEventStoreLanguage logger streamRepository (Free (PersistEvent event next))  = do
     liftIO $ logInfo logger  $ "persist event : " ++ (show event)
     let eventStream = (getEventStream streamRepository) $ getAggregateId (event::Event)
     persist eventStream event
-    interpretWriteEventStoreLanguage next logger streamRepository
-interpretWriteEventStoreLanguage (Free (PersistValidationState validationState next)) logger streamRepository = do
+    interpretWriteEventStoreLanguage logger streamRepository next
+interpretWriteEventStoreLanguage logger streamRepository (Free (PersistValidationState validationState next)) = do
     liftIO $ logInfo logger $ "persist validationState : " ++ (show validationState)
     let validationStateStream = (getValidationStateStream streamRepository) $ getAggregateId validationState
     persist validationStateStream validationState
-    interpretWriteEventStoreLanguage next logger streamRepository
-interpretWriteEventStoreLanguage (Free (PersistCommandResponse commandResponse next)) logger streamRepository = do
+    interpretWriteEventStoreLanguage logger streamRepository next
+interpretWriteEventStoreLanguage logger streamRepository (Free (PersistCommandResponse commandResponse next))  = do
     liftIO $ logInfo logger $ "persist response : " ++ (show commandResponse)
     let responseStream = (getCommandResponseStream streamRepository) $ getAggregateId commandResponse
     persist responseStream commandResponse
-    interpretWriteEventStoreLanguage next logger streamRepository
-interpretWriteEventStoreLanguage (Free (GetCurrentTime fct)) logger streamRepository = do
+    interpretWriteEventStoreLanguage logger streamRepository next
+interpretWriteEventStoreLanguage logger streamRepository (Free (GetCurrentTime fct))  = do
     now <- Time.getCurrentTime
-    interpretWriteEventStoreLanguage (fct now) logger streamRepository
-interpretWriteEventStoreLanguage (Free (GetNewEventId fct)) logger streamRepository = do
+    interpretWriteEventStoreLanguage logger streamRepository (fct now)
+interpretWriteEventStoreLanguage logger streamRepository (Free (GetNewEventId fct))  = do
     eventId <- liftIO $ Uuid.nextRandom
-    interpretWriteEventStoreLanguage (fct eventId) logger streamRepository
+    interpretWriteEventStoreLanguage logger streamRepository (fct eventId)

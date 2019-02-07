@@ -11,8 +11,9 @@ import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import Data.Aeson
 import PersistedStreamEngine.Interface.Offset
+import System.SafeResponse
 
-isStreamNotFound :: EventStoreStream item -> IO Bool
+isStreamNotFound :: EventStoreStream item -> IO (SafeResponse Bool)
 isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },
                                            streamName = streamName} = do
 
@@ -25,11 +26,11 @@ isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, cred
                     EventStore.NoResolveLink
                     (Just credentials)
    commandFetched <- wait asyncRead
-   return $ case commandFetched of
+   return $ Right $ case commandFetched of
         EventStore.ReadNoStream -> True
         _ -> False
 
-retrieveLast :: FromJSON item => EventStoreStream item -> IO( Maybe (Persisted item))
+retrieveLast :: FromJSON item => EventStoreStream item -> IO( SafeResponse (Maybe (Persisted item)))
 retrieveLast EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },
                                 streamName = streamName} =  do
         let resolveLinkTos = False
@@ -40,7 +41,7 @@ retrieveLast EventStoreStream { settings = EventStoreSettings { logger, credenti
                     EventStore.streamEnd
                     EventStore.NoResolveLink
                     (Just credentials) >>= wait
-        return $ case readResult of
+        return $ Right $ case readResult of
           EventStore.ReadSuccess EventStore.ReadEvent {readEventResolved = readEventResolved , readEventNumber = readEventNumber} -> do
              Just $ recordedEventToPersistedItem (toInteger $ readEventNumber) readEventResolved
           EventStore.ReadNoStream ->

@@ -11,11 +11,10 @@ import Cqrs.Write.Aggregate.Events.EventId
 import Data.Time
 import Control.Monad.Free
 import qualified Data.Set as Set
-import Logger.Core
-import Cqrs.Write.StreamRepository
 import Cqrs.Write.Aggregate.Commands.CommandHeader
+import System.SafeResponse
 
-type InterpreterWritePersistedStreamLanguage persistedStream applicationState a = WritePersistenceStreamLanguage applicationState a -> Logger -> CqrsStreamRepository persistedStream applicationState   ->  IO a
+type TransactionInterpreter applicationState a = WritePersistenceStreamLanguage applicationState a -> IO (SafeResponse a)
 
 data Directive applicationState a = PersistEvent Event a
                 | PersistValidationState (ValidationState applicationState) a

@@ -7,9 +7,7 @@ import PersistedStreamEngine.Interface.PersistedItem
 import Control.Monad.IO.Class
 import Streamly
 import Data.Aeson
-import Control.Exception
-
-type SafeResponse result = Either SomeException result
+import System.SafeResponse
 
 class (FromJSON item,
        Monad monad,

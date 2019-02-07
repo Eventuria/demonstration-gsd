@@ -11,18 +11,16 @@ module Gsd.CLI.WorkspaceMonitoringCLI
 
 import System.Console.Byline
 import qualified Servant.Client.Streaming as S
-import qualified Streamly.Prelude as Streamly.Prelude
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Control.Monad (void)
 import Data.Text
-import Streamly
 import Data.Function ((&))
 import Gsd.CLI.Steps
 import Gsd.Read.Workspace
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.CLI.Greetings
-
+import qualified Streamly.Safe as StreamlySafe
 import Gsd.Monitoring.Client (streamGsdEventByWorkspaceId,
                               streamGsdCommandByWorkspaceId,
                               streamGsdCommandResponseByWorkspaceId,
@@ -40,14 +38,20 @@ runListCommandReceived currentStep gsdMonitoringApiUrl Workspace {workspaceId} =
                         (streamGsdCommandByWorkspaceId workspaceId)
                         (S.mkClientEnv manager gsdMonitoringApiUrl)
                         $ \e -> case e of
-                                 Left errorDescription -> return $ Left $ StepError {
-                                                                              currentStep,
-                                                                              errorDescription = show errorDescription }
-                                 Right streamGsdCommandByWorkspaceId -> do
-                                   runStream $ streamGsdCommandByWorkspaceId
-                                         & Streamly.Prelude.mapM (\persistedGsdCommand -> void $ runByline $ do
-                                            sayLn $ displayItem persistedGsdCommand)
-                                   return $ Right currentStep
+                           Left errorHttpLevel -> return $ Left $ StepError {
+                                                                      currentStep,
+                                                                      errorDescription = show errorHttpLevel }
+                           Right streamGsdEventsByWorkspaceId -> do
+                             response <- StreamlySafe.toList $ streamGsdEventsByWorkspaceId
+                             case (response) of
+                                Left errorApplicationLevel -> return $ Left $ StepError {
+                                                                            currentStep,
+                                                                            errorDescription = show errorApplicationLevel }
+                                Right persistedGsdCommands -> do
+                                     persistedGsdCommands
+                                      & mapM(\persistedGsdCommand ->
+                                          void $ runByline $ sayLn $ displayItem persistedGsdCommand)
+                                     return $ Right currentStep
   displayEndOfACommand
   return result
 
@@ -63,14 +67,20 @@ runListCommandResponseReceived currentStep gsdMonitoringApiUrl Workspace {worksp
                         (streamGsdCommandResponseByWorkspaceId workspaceId)
                         (S.mkClientEnv manager gsdMonitoringApiUrl)
                         $ \e -> case e of
-                                 Left errorDescription -> return $ Left $ StepError {
-                                                                             currentStep,
-                                                                             errorDescription = show errorDescription }
-                                 Right streamGsdCommandResponseByWorkspaceId -> do
-                                   runStream $ streamGsdCommandResponseByWorkspaceId
-                                         & Streamly.Prelude.mapM (\persistedGsdCommandResponse -> void $ runByline $ do
-                                           sayLn $ displayItem persistedGsdCommandResponse)
-                                   return $ Right currentStep
+                           Left errorHttpLevel -> return $ Left $ StepError {
+                                                                      currentStep,
+                                                                      errorDescription = show errorHttpLevel }
+                           Right streamGsdEventsByWorkspaceId -> do
+                             response <- StreamlySafe.toList $ streamGsdEventsByWorkspaceId
+                             case (response) of
+                                Left errorApplicationLevel -> return $ Left $ StepError {
+                                                                            currentStep,
+                                                                            errorDescription = show errorApplicationLevel }
+                                Right persistedGsdCommandResponses -> do
+                                     persistedGsdCommandResponses
+                                      & mapM(\persistedGsdCommandResponse ->
+                                          void $ runByline $ sayLn $ displayItem persistedGsdCommandResponse)
+                                     return $ Right currentStep
   displayEndOfACommand
   return result
 
@@ -86,14 +96,20 @@ runListEventsGenerated currentStep gsdMonitoringApiUrl Workspace {workspaceId} =
                         (streamGsdEventByWorkspaceId workspaceId)
                         (S.mkClientEnv manager gsdMonitoringApiUrl)
                         $ \e -> case e of
-                                 Left errorDescription -> return $ Left $ StepError {
+                           Left errorHttpLevel -> return $ Left $ StepError {
+                                                                      currentStep,
+                                                                      errorDescription = show errorHttpLevel }
+                           Right streamGsdEventsByWorkspaceId -> do
+                             response <- StreamlySafe.toList $ streamGsdEventsByWorkspaceId
+                             case (response) of
+                                Left errorApplicationLevel -> return $ Left $ StepError {
                                                                             currentStep,
-                                                                            errorDescription = show errorDescription }
-                                 Right streamGsdEventsByWorkspaceId -> do
-                                   runStream $ streamGsdEventsByWorkspaceId
-                                         & Streamly.Prelude.mapM (\persistedGsdEvent -> void $ runByline $ do
-                                           sayLn $ displayItem persistedGsdEvent)
-                                   return $ Right currentStep
+                                                                            errorDescription = show errorApplicationLevel }
+                                Right persistedGsdEvents -> do
+                                     persistedGsdEvents
+                                      & mapM(\persistedGsdEvent ->
+                                          void $ runByline $ sayLn $ displayItem persistedGsdEvent)
+                                     return $ Right currentStep
   displayEndOfACommand
   return result
 
@@ -109,14 +125,20 @@ runListValidationStateHistory currentStep gsdMonitoringApiUrl Workspace {workspa
                         (streamGsdValidationStateByWorkspaceId workspaceId)
                         (S.mkClientEnv manager gsdMonitoringApiUrl)
                         $ \e -> case e of
-                                 Left errorDescription -> return $ Left $ StepError {
+                           Left errorHttpLevel -> return $ Left $ StepError {
+                                                                      currentStep,
+                                                                      errorDescription = show errorHttpLevel }
+                           Right streamGsdEventsByWorkspaceId -> do
+                             response <- StreamlySafe.toList $ streamGsdEventsByWorkspaceId
+                             case (response) of
+                                Left errorApplicationLevel -> return $ Left $ StepError {
                                                                             currentStep,
-                                                                            errorDescription = show errorDescription }
-                                 Right streamGsdEventsByWorkspaceId -> do
-                                   runStream $ streamGsdEventsByWorkspaceId
-                                         & Streamly.Prelude.mapM (\persistedValidationState -> void $ runByline $ do
-                                           sayLn $ displayItem persistedValidationState)
-                                   return $ Right currentStep
+                                                                            errorDescription = show errorApplicationLevel }
+                                Right persistedValidationStates -> do
+                                     persistedValidationStates
+                                      & mapM(\persistedValidationState ->
+                                          void $ runByline $ sayLn $ displayItem persistedValidationState)
+                                     return $ Right currentStep
   displayEndOfACommand
   return result
 

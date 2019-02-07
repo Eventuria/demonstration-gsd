@@ -18,6 +18,7 @@ import Gsd.Read.Goal
 import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Core
+import System.SafeResponse
 
 type GSDReadApi =   StreamWorkspace
                       :<|>   StreamGoal
@@ -26,24 +27,24 @@ type GSDReadApi =   StreamWorkspace
                       :<|>   FetchGoal
 
 type StreamWorkspace =   "gsd" :> "read" :> "streamWorkspace"
-                                         :> StreamGet NewlineFraming JSON (P.Producer (Persisted Workspace) IO () )
+                                         :> StreamGet NewlineFraming JSON (P.Producer (SafeResponse (Persisted Workspace)) IO () )
 
 type FetchWorkspace =   "gsd" :> "read" :> "fetchWorkspace"
                                         :> Capture "workspaceId" WorkspaceId
-                                        :> Get '[JSON] (Maybe Workspace)
+                                        :> Get '[JSON] (SafeResponse (Maybe Workspace))
 
 type StreamGoal =        "gsd" :> "read" :> "streamGoal"
                                          :> Capture "workspaceId" WorkspaceId
-                                         :> "goals" :> StreamGet NewlineFraming JSON (P.Producer (Goal) IO () )
+                                         :> "goals" :> StreamGet NewlineFraming JSON (P.Producer (SafeResponse(Goal)) IO () )
 
 type FetchGoal =   "gsd" :> "read" :> "fetchGoal"
                                         :> Capture "workspaceId" WorkspaceId
                                         :> Capture "goalId" GoalId
-                                        :> Get '[JSON] (Maybe Goal)
+                                        :> Get '[JSON] (SafeResponse (Maybe Goal))
 
 type StreamAction =      "gsd" :> "read" :> "streamAction"
                                          :> Capture "workspaceId" WorkspaceId
                                          :> "goals"
                                          :> Capture "goalId" GoalId
-                                         :> StreamGet NewlineFraming JSON (P.Producer (Action) IO () )
+                                         :> StreamGet NewlineFraming JSON (P.Producer (SafeResponse (Action)) IO () )
 

@@ -16,7 +16,7 @@ import Data.Maybe
 import Data.Aeson
 import PersistedStreamEngine.Interface.Streamable
 import PersistedStreamEngine.Interface.Offset
-
+import System.SafeResponse
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (SafeResponse (Persisted item))
 subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },

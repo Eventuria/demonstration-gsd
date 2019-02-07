@@ -5,7 +5,7 @@ module Gsd.Write.GenericGsd  where
 
 import Logger.Core
 
-import qualified Cqrs.Write.CommandConsumption.Stream as Cqrs.Write.CommandConsumption
+import qualified Cqrs.Write.CommandConsumption.Main as Cqrs.Write.CommandConsumption
 import qualified Cqrs.Write.CqrsWrite as Cqrs.Write
 import Cqrs.Write.StreamRepository
 
@@ -23,6 +23,7 @@ import Cqrs.Write.Aggregate.Ids.AggregateId
 import PersistedStreamEngine.Interface.Offset
 import Cqrs.Write.Aggregate.Commands.CommandId
 import Cqrs.Write.Serialization.CommandResponse()
+import System.SafeResponse
 
 persistCommand ::  AggregateIdStream persistedStream ->
                    GetCommandStream persistedStream->
@@ -41,7 +42,7 @@ streamCommandConsumption :: CqrsStreamRepository persistedStream GsdState ->
                             Reading persistedStream ->
                             InterpreterWritePersistedStreamLanguage persistedStream GsdState () ->
                             Logger ->
-                            IO ()
+                            IO (SafeResponse ())
 streamCommandConsumption cqrsStreamRepository reading interpreterWritePersistedStreamLanguage logger  =
    Cqrs.Write.CommandConsumption.stream
       logger
@@ -57,7 +58,7 @@ waitTillCommandResponseProduced ::
                      AggregateId ->
                      Offset ->
                      CommandId ->
-                     IO (Persisted CommandResponse)
+                     IO (SafeResponse (Persisted CommandResponse))
 waitTillCommandResponseProduced getCommandResponseStream subscribing @ Subscribing {subscribeOnOffset} aggregateId offset commandId =
     (subscribeOnOffset (getCommandResponseStream aggregateId) offset)
 

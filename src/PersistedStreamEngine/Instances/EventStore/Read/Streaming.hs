@@ -6,8 +6,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module PersistedStreamEngine.Instances.EventStore.Read.Streaming (
-  streamAllSafe,
-  streamFromOffsetSafe,
   streamFromOffset,
   streamAll,
   streamAllInfinitely) where
@@ -15,7 +13,7 @@ module PersistedStreamEngine.Instances.EventStore.Read.Streaming (
 import Streamly
 import qualified Streamly.Prelude as S
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Control.Concurrent.Async (wait,waitCatch)
+import Control.Concurrent.Async (waitCatch)
 import GHC.Natural
 
 import qualified Database.EventStore as EventStore
@@ -29,7 +27,7 @@ import Data.Aeson
 import Data.Maybe
 import PersistedStreamEngine.Interface.Streamable
 import Control.Exception
-
+import System.SafeResponse
 
 
 streamFromOffset :: Streamable stream monad item =>
@@ -80,7 +78,9 @@ streamAll :: Streamable stream monad item =>
                 stream monad (SafeResponse (Persisted item))
 streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
-streamAllInfinitely :: Streamable stream monad item => EventStoreStream item -> stream monad (Persisted item)
+streamAllInfinitely :: Streamable stream monad item =>
+                          EventStoreStream item ->
+                          stream monad (SafeResponse (Persisted item))
 streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)

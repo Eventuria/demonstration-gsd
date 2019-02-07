@@ -34,40 +34,59 @@ import Cqrs.Write.Serialization.ValidationState ()
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Write.Serialization.CommandResponse ()
 import DevOps.Core
+import System.SafeResponse
 
-streamWorkspaceId :: IsStream stream => S.ClientM (stream IO (Persisted WorkspaceId) )
+
+
+streamWorkspaceId :: IsStream stream => S.ClientM (stream IO (SafeResponse (Persisted WorkspaceId) ))
 streamWorkspaceId = fromPipes <$> streamWorkspaceIdOnPipe
 
-streamGsdCommandByWorkspaceId :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Persisted GsdCommand) )
+streamGsdCommandByWorkspaceId :: IsStream stream =>
+                                   WorkspaceId ->
+                                   S.ClientM (stream IO (SafeResponse (Persisted GsdCommand) ))
 streamGsdCommandByWorkspaceId workspaceId = fromPipes <$> (streamGsdCommandByWorkspaceIdOnPipe workspaceId)
 
 
-streamInfinitelyGsdCommandByWorkspaceId :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Persisted GsdCommand) )
-streamInfinitelyGsdCommandByWorkspaceId workspaceId = fromPipes <$> (streamInfinitelyGsdCommandByWorkspaceIdOnPipe workspaceId)
+streamInfinitelyGsdCommandByWorkspaceId :: IsStream stream =>
+                                            WorkspaceId -> 
+                                            S.ClientM (stream IO (SafeResponse (Persisted GsdCommand)) )
+streamInfinitelyGsdCommandByWorkspaceId workspaceId = 
+    fromPipes <$> (streamInfinitelyGsdCommandByWorkspaceIdOnPipe workspaceId)
 
-streamGsdCommandResponseByWorkspaceId :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Persisted CommandResponse) )
-streamGsdCommandResponseByWorkspaceId workspaceId = fromPipes <$> (streamGsdCommandResponseByWorkspaceIdOnPipe workspaceId)
+streamGsdCommandResponseByWorkspaceId :: IsStream stream => 
+                                          WorkspaceId -> 
+                                          S.ClientM (stream IO (SafeResponse (Persisted CommandResponse)) )
+streamGsdCommandResponseByWorkspaceId workspaceId =
+    fromPipes <$> (streamGsdCommandResponseByWorkspaceIdOnPipe workspaceId)
 
-streamGsdEventByWorkspaceId :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Persisted GsdEvent) )
+streamGsdEventByWorkspaceId :: IsStream stream => 
+                                WorkspaceId -> 
+                                S.ClientM (stream IO (SafeResponse (Persisted GsdEvent)) )
 streamGsdEventByWorkspaceId workspaceId = fromPipes <$> (streamGsdEventByWorkspaceIdOnPipe workspaceId)
 
-streamInfinitelyGsdEventByWorkspaceId :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Persisted GsdEvent) )
-streamInfinitelyGsdEventByWorkspaceId workspaceId = fromPipes <$> (streamInfinitelyGsdEventByWorkspaceIdOnPipe workspaceId)
+streamInfinitelyGsdEventByWorkspaceId :: IsStream stream => 
+                                          WorkspaceId -> 
+                                          S.ClientM (stream IO (SafeResponse (Persisted GsdEvent)) )
+streamInfinitelyGsdEventByWorkspaceId workspaceId = 
+    fromPipes <$> (streamInfinitelyGsdEventByWorkspaceIdOnPipe workspaceId)
 
-streamGsdValidationStateByWorkspaceId :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (Persisted (ValidationState GsdState)) )
-streamGsdValidationStateByWorkspaceId workspaceId = fromPipes <$> (streamGsdValidationStateByWorkspaceIdOnPipe workspaceId)
+streamGsdValidationStateByWorkspaceId :: IsStream stream => 
+                                          WorkspaceId -> 
+                                          S.ClientM (stream IO (SafeResponse (Persisted (ValidationState GsdState))) )
+streamGsdValidationStateByWorkspaceId workspaceId =
+    fromPipes <$> (streamGsdValidationStateByWorkspaceIdOnPipe workspaceId)
 
 gsdMonitoringApi :: Proxy GSDMonitoringStreamingApi
 gsdMonitoringApi = Proxy
 
 healthCheck :: S.ClientM HealthCheckResult
-streamWorkspaceIdOnPipe :: S.ClientM (P.Producer (Persisted WorkspaceId) IO () )
-streamGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand) IO () )
-streamInfinitelyGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand) IO ())
-streamGsdCommandResponseByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted CommandResponse) IO ())
-streamGsdEventByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdEvent) IO ())
-streamInfinitelyGsdEventByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdEvent) IO ())
-streamGsdValidationStateByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted (ValidationState GsdState)) IO ())
+streamWorkspaceIdOnPipe ::                                      S.ClientM (P.Producer (SafeResponse (Persisted WorkspaceId))                IO ())
+streamGsdCommandByWorkspaceIdOnPipe ::           WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdCommand))                 IO ())
+streamInfinitelyGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdCommand))                 IO ())
+streamGsdCommandResponseByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted CommandResponse))            IO ())
+streamGsdEventByWorkspaceIdOnPipe ::             WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdEvent))                   IO ())
+streamInfinitelyGsdEventByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdEvent))                   IO ())
+streamGsdValidationStateByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted (ValidationState GsdState))) IO ())
 healthCheck
   :<|> streamWorkspaceIdOnPipe
   :<|> streamGsdCommandByWorkspaceIdOnPipe

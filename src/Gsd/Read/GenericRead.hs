@@ -8,7 +8,8 @@ module Gsd.Read.GenericRead where
 
 import Streamly hiding (Streaming)
 import Data.Function ((&))
-import qualified Streamly.Prelude as S
+import qualified Streamly.Safe as StreamlySafe
+import System.SafeResponse
 import Data.Maybe
 import Data.Text hiding (map,length,find)
 import Data.List (find)
@@ -28,8 +29,6 @@ import Cqrs.Write.Serialization.Event ()
 import Gsd.Read.GoalStats
 import Gsd.Read.ActionStats
 
-import Control.Lens
-
 data WorkspaceBuilder = WorkspaceBuilder {  workspaceIdMaybe :: Maybe WorkspaceId ,
                                             workspaceNameMaybe :: Maybe WorkspaceName ,
                                             goalStats :: GoalStats} deriving Show
@@ -41,21 +40,16 @@ streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT mon
                      stream monad (SafeResponse (Persisted Workspace))
 streamWorkspace aggregateIdStream getEventStream streaming @ Streaming {streamAll} =
     (streamAll $ aggregateIdStream)
-      & mapMSafe (\PersistedItem { offset = offset, item = workspaceId} ->
-          (fmap . fmap ) (\workspace -> PersistedItem {offset, item = workspace })
+      & StreamlySafe.mapM (\PersistedItem { offset = offset, item = workspaceId} ->
+          (fmap. fmap .fmap ) (\workspace -> PersistedItem {offset, item = workspace })
             $ fetchWorkspace
                 getEventStream
                 streaming
                 workspaceId)
-      & S.filter (\maybePersistedWorkspace -> case maybePersistedWorkspace of
+      & StreamlySafe.filter (\maybePersistedWorkspace -> case maybePersistedWorkspace of
         Just persistedWorkspace -> True
         Nothing -> False )
-      & S.map (\maybePersistedWorkspace -> fromJust $ maybePersistedWorkspace)
-
-mapMSafe :: (IsStream t, MonadAsync m) => (a -> m (SafeResponse b)) -> t m (SafeResponse a) -> t m (SafeResponse b)
-mapMSafe transformation stream = stream & S.mapM (\safeResponse -> case safeResponse of
-    Right a -> transformation a
-    Left error -> return $ Left error )
+      & StreamlySafe.map (\maybePersistedWorkspace -> fromJust $ maybePersistedWorkspace)
 
 
 
@@ -63,12 +57,12 @@ fetchWorkspace :: Streamable SerialT monad Event =>
                      GetEventStream persistedStream ->
                      Streaming persistedStream ->
                      WorkspaceId ->
-                     monad (Maybe Workspace)
+                     monad (SafeResponse (Maybe Workspace))
 fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
-    S.foldx
-     foldEvent
-     WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing,
-                        goalStats = GoalStats {total = 0, accomplished = 0, toBeAccomplished = 0 }}
+    StreamlySafe.foldx
+     folding
+     (WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing,
+                        goalStats = GoalStats {total = 0, accomplished = 0, toBeAccomplished = 0 }})
      (\WorkspaceBuilder{workspaceIdMaybe,workspaceNameMaybe, goalStats} ->
         case (workspaceIdMaybe, workspaceNameMaybe) of
           (Just workspaceId, Just workspaceName) ->
@@ -84,57 +78,58 @@ fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
                         GetEventStream persistedStream ->
                         Streaming persistedStream ->
                         WorkspaceId ->
-                        stream monad GsdEvent
+                        stream monad (SafeResponse GsdEvent)
     streamingEvent getEventStream Streaming {streamAll} workspaceId =
-        (streamAll $ getEventStream workspaceId) & S.map (\PersistedItem{item = event} -> fromEvent event)
+        (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
 
-    foldEvent :: WorkspaceBuilder -> GsdEvent -> WorkspaceBuilder
-    foldEvent workspaceBuilder gsdEvent =
-      case (workspaceBuilder,gsdEvent) of
-         (WorkspaceBuilder {..} , WorkspaceCreated {workspaceId}) ->
-            WorkspaceBuilder { workspaceIdMaybe = Just workspaceId, ..}
-         (WorkspaceBuilder {..} , WorkspaceNamed {workspaceName}) ->
-            WorkspaceBuilder { workspaceNameMaybe = Just workspaceName, ..}
-         (WorkspaceBuilder {..} , WorkspaceRenamed {workspaceNewName}) ->
-            WorkspaceBuilder { workspaceNameMaybe = Just workspaceNewName, ..}
-         (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, ..}, .. }, GoalSet {}) ->
-            WorkspaceBuilder { goalStats =  GoalStats {
-                                                total = total + 1,
-                                                toBeAccomplished = toBeAccomplished +1 , ..} , ..}
-         (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, ..}, .. }, GoalGivenUp {}) ->
-            WorkspaceBuilder { goalStats =  GoalStats {
-                                                toBeAccomplished = toBeAccomplished -1 , ..} , ..}
-         (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, accomplished}, ..} , GoalAccomplished {}) ->
-            WorkspaceBuilder { goalStats =  GoalStats {
-                                                toBeAccomplished = toBeAccomplished -1,
-                                                accomplished = accomplished +1 , .. } , ..}
-         (workspaceBuilder , _ ) -> workspaceBuilder
+    folding :: WorkspaceBuilder -> GsdEvent -> WorkspaceBuilder
+    folding workspaceBuilder gsdEvent =
+        case (workspaceBuilder,gsdEvent) of
+                       (WorkspaceBuilder {..}, WorkspaceCreated {workspaceId}) ->
+                          WorkspaceBuilder { workspaceIdMaybe = Just workspaceId, ..}
+                       (WorkspaceBuilder {..}, WorkspaceNamed {workspaceName}) ->
+                          WorkspaceBuilder { workspaceNameMaybe = Just workspaceName, ..}
+                       (WorkspaceBuilder {..} , WorkspaceRenamed {workspaceNewName}) ->
+                          WorkspaceBuilder { workspaceNameMaybe = Just workspaceNewName, ..}
+                       (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, ..}, .. }, GoalSet {}) ->
+                          WorkspaceBuilder { goalStats =  GoalStats {
+                                                              total = total + 1,
+                                                              toBeAccomplished = toBeAccomplished +1 , ..} , ..}
+                       (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, ..}, .. }, GoalGivenUp {}) ->
+                          WorkspaceBuilder { goalStats =  GoalStats {
+                                                              toBeAccomplished = toBeAccomplished -1 , ..} , ..}
+                       (WorkspaceBuilder {goalStats = GoalStats {total,toBeAccomplished, accomplished}, ..}, GoalAccomplished {}) ->
+                          WorkspaceBuilder { goalStats =  GoalStats {
+                                                              toBeAccomplished = toBeAccomplished -1,
+                                                              accomplished = accomplished +1 , .. } , ..}
+                       (workspaceBuilder , _ ) -> workspaceBuilder
+
 
 streamGoal :: Streamable stream monad Event =>
                 GetEventStream persistedStream ->
                 Streaming persistedStream ->
                 WorkspaceId ->
-                stream monad Goal
+                stream monad (SafeResponse Goal)
 streamGoal getEventStream streaming workspaceId = do
     goals <- liftIO $ fetchGoals getEventStream streaming workspaceId
-    S.fromList goals
+    StreamlySafe.fromList goals
 
 fetchGoal :: Streamable SerialT monad Event =>
                      GetEventStream persistedStream ->
                      Streaming persistedStream ->
                      WorkspaceId ->
                      GoalId ->
-                     monad (Maybe Goal)
+                     monad (SafeResponse (Maybe Goal))
 fetchGoal getEventStream streaming @ Streaming {streamAll} workspaceId goalIdGiven =
-  (find (\goal@Goal{goalId} -> goalId == goalIdGiven)) <$> (fetchGoals getEventStream streaming workspaceId)
+  (fmap . fmap) (find (\goal@Goal{goalId} -> goalId == goalIdGiven)) (fetchGoals getEventStream streaming workspaceId)
 
 fetchGoals :: Streamable SerialT monad Event =>
                      GetEventStream persistedStream ->
                      Streaming persistedStream ->
                      WorkspaceId ->
-                     monad [Goal]
+                     monad (SafeResponse [Goal])
 fetchGoals getEventStream streaming @ Streaming {streamAll} workspaceId =
-  S.foldx
+  StreamlySafe.foldx
     folding
     []
     id
@@ -144,9 +139,9 @@ fetchGoals getEventStream streaming @ Streaming {streamAll} workspaceId =
                         GetEventStream persistedStream ->
                         Streaming persistedStream ->
                         WorkspaceId ->
-                        stream monad GsdEvent
+                        stream monad (SafeResponse GsdEvent)
     streamingEvent getEventStream Streaming {streamAll} workspaceId =
-      (streamAll $ getEventStream workspaceId) & S.map (\PersistedItem{item = event} -> fromEvent event)
+      (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
 
     folding :: [Goal] -> GsdEvent -> [Goal]
     folding goals GoalSet {workspaceId, goalId, goalDescription} =
@@ -199,23 +194,23 @@ streamAction :: Streamable stream monad Event =>
                   Streaming persistedStream ->
                   WorkspaceId ->
                   GoalId ->
-                  stream monad Action
+                  stream monad (SafeResponse Action)
 streamAction getEventStream streaming workspaceId goalIdGiven = do
-    actions <- liftIO $ S.foldx
+    actions <- liftIO $ StreamlySafe.foldx
       folding
       []
       id
       (streamingEvent getEventStream streaming workspaceId goalIdGiven)
 
-    S.fromList actions
+    StreamlySafe.fromList actions
   where
     streamingEvent :: (Streamable stream monad Event) =>
                         GetEventStream persistedStream ->
                         Streaming persistedStream ->
                         WorkspaceId -> GoalId ->
-                        stream monad GsdEvent
+                        stream monad (SafeResponse GsdEvent)
     streamingEvent getEventStream Streaming {streamAll} workspaceId goalIdToStream =
-      (streamAll $ getEventStream workspaceId) & S.map (\PersistedItem{item = event} -> fromEvent event)
+      (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
     folding :: [Action] -> GsdEvent -> [Action]
     folding actions ActionRevealed {actionDetails, ..} | goalIdGiven == goalId =
       actions ++ [Action { indexation = (length actions), details = actionDetails, status = Initiated, ..}]
