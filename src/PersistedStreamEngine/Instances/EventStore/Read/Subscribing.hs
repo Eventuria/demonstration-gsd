@@ -47,7 +47,7 @@ subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { l
         EventStore.waitConfirmation subscription
         return subscription
 
-subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (Persisted item)
+subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (SafeResponse (Persisted item))
 subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },
                                                streamName = streamName} offset = do
               liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
@@ -62,7 +62,7 @@ subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreSett
                 Right _ -> do
                         resolvedEvent <- liftIO $ EventStore.nextEvent subscription
                         liftIO $ logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
-                        return $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)
+                        return $ Right $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)
 
 recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
 recordedEventToPersistedItem recordedEvent =

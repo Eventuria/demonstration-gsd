@@ -40,7 +40,7 @@ data Subscribing persistedStream = Subscribing {
                               subscribeOnOffset :: forall  item. FromJSON item =>
                                                                   persistedStream item ->
                                                                   Offset ->
-                                                                  IO (Persisted item) }
+                                                                  IO (SafeResponse (Persisted item)) }
 
 
 

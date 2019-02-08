@@ -111,8 +111,11 @@ consumeAnAggregateStream  logger
             let lastOffsetConsumed = getLastOffsetConsumed lastValidationStateCall
             threadId <- myThreadId
             liftIO $ logInfo logger $ "last offset command consummed is   " ++ (show lastOffsetConsumed)
-            try (StreamlySafe.runStreamOnIOAndThrowFailureTo threadId $ (streamFromOffset commandStream $ fromMaybe 0 (fmap (+1) lastOffsetConsumed))
-              & StreamlySafe.mapM (consumeACommand ))
+            try (StreamlySafe.runStreamOnIOAndThrowFailureTo threadId
+                  $ (streamFromOffset
+                        commandStream $
+                        fromMaybe 0 (fmap (+1) lastOffsetConsumed))
+                  & StreamlySafe.mapM (consumeACommand ))
           Left error -> return $ Left error)
 
 getLastOffsetConsumed :: Maybe (Persisted (ValidationState applicationState)) ->

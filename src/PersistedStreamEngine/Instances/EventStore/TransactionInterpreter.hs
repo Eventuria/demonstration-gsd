@@ -1,4 +1,4 @@
-module PersistedStreamEngine.Instances.EventStore.CqrsEDSLInterpreter where
+module PersistedStreamEngine.Instances.EventStore.TransactionInterpreter where
 
 import Control.Monad.Free
 import qualified Data.Time as Time
@@ -22,30 +22,31 @@ import Cqrs.Write.Serialization.ValidationState ()
 import Cqrs.Write.Serialization.CommandResponse ()
 
 
-interpretWriteEventStoreLanguage :: (ToJSON applicationState , Show applicationState) =>
+
+transactionInterpreterForEventStore :: (ToJSON applicationState , Show applicationState) =>
                                         Logger ->
                                         CqrsStreamRepository EventStoreStream applicationState ->
                                         TransactionInterpreter applicationState a
 
-interpretWriteEventStoreLanguage logger streamRepository (Pure a) = return $ Right a
-interpretWriteEventStoreLanguage logger streamRepository (Free (PersistEvent event next))  = do
+transactionInterpreterForEventStore logger streamRepository (Pure a) = return $ Right a
+transactionInterpreterForEventStore logger streamRepository (Free (PersistEvent event next))  = do
     liftIO $ logInfo logger  $ "persist event : " ++ (show event)
     let eventStream = (getEventStream streamRepository) $ getAggregateId (event::Event)
     persist eventStream event
-    interpretWriteEventStoreLanguage logger streamRepository next
-interpretWriteEventStoreLanguage logger streamRepository (Free (PersistValidationState validationState next)) = do
+    transactionInterpreterForEventStore logger streamRepository next
+transactionInterpreterForEventStore logger streamRepository (Free (PersistValidationState validationState next)) = do
     liftIO $ logInfo logger $ "persist validationState : " ++ (show validationState)
     let validationStateStream = (getValidationStateStream streamRepository) $ getAggregateId validationState
     persist validationStateStream validationState
-    interpretWriteEventStoreLanguage logger streamRepository next
-interpretWriteEventStoreLanguage logger streamRepository (Free (PersistCommandResponse commandResponse next))  = do
+    transactionInterpreterForEventStore logger streamRepository next
+transactionInterpreterForEventStore logger streamRepository (Free (PersistCommandResponse commandResponse next))  = do
     liftIO $ logInfo logger $ "persist response : " ++ (show commandResponse)
     let responseStream = (getCommandResponseStream streamRepository) $ getAggregateId commandResponse
     persist responseStream commandResponse
-    interpretWriteEventStoreLanguage logger streamRepository next
-interpretWriteEventStoreLanguage logger streamRepository (Free (GetCurrentTime fct))  = do
+    transactionInterpreterForEventStore logger streamRepository next
+transactionInterpreterForEventStore logger streamRepository (Free (GetCurrentTime fct))  = do
     now <- Time.getCurrentTime
-    interpretWriteEventStoreLanguage logger streamRepository (fct now)
-interpretWriteEventStoreLanguage logger streamRepository (Free (GetNewEventId fct))  = do
+    transactionInterpreterForEventStore logger streamRepository (fct now)
+transactionInterpreterForEventStore logger streamRepository (Free (GetNewEventId fct))  = do
     eventId <- liftIO $ Uuid.nextRandom
-    interpretWriteEventStoreLanguage logger streamRepository (fct eventId)
+    transactionInterpreterForEventStore logger streamRepository (fct eventId)

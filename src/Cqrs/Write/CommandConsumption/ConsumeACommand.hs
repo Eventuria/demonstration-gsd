@@ -17,12 +17,6 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Cqrs.Write.Serialization.ValidationState ()
 import Cqrs.Write.Aggregate.Ids.AggregateId
 
-type GetConsumeACommand persistedStreamEngine applicationState = Logger ->
-                          Querying persistedStreamEngine ->
-                          GetValidationStateStream persistedStreamEngine applicationState ->
-                          TransactionInterpreter applicationState () ->
-                          CommandHandler applicationState ->
-                          (AggregateId -> ConsumeACommand)
 
 getConsumeACommandForAnAggregate :: (FromJSON applicationState, Show applicationState) =>
                                       Logger ->

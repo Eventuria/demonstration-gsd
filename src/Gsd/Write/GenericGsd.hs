@@ -12,7 +12,8 @@ import Cqrs.Write.StreamRepository
 import PersistedStreamEngine.Interface.Write.Writing
 import PersistedStreamEngine.Interface.Read.Reading
 import PersistedStreamEngine.Interface.Write.WDsl
-
+import Cqrs.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)
+import Cqrs.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAggregate)
 import Gsd.Write.Commands.Handling.CommandHandler (commandHandler)
 import Gsd.Write.Commands.Command
 import Gsd.Write.State
@@ -38,18 +39,32 @@ persistCommand aggregateIdStream getCommandStream querying writing gsdCommand =
     getCommandStream
     aggregateIdStream $ toCommand gsdCommand
 
-streamCommandConsumption :: CqrsStreamRepository persistedStream GsdState ->
-                            Reading persistedStream ->
-                            InterpreterWritePersistedStreamLanguage persistedStream GsdState () ->
-                            Logger ->
-                            IO (SafeResponse ())
-streamCommandConsumption cqrsStreamRepository reading interpreterWritePersistedStreamLanguage logger  =
-   Cqrs.Write.CommandConsumption.stream
+startCommandConsumption :: Logger ->
+                           CqrsStreamRepository persistedStream GsdState ->
+                           Reading persistedStream ->
+                           TransactionInterpreter GsdState () ->
+                           IO (SafeResponse ())
+startCommandConsumption logger
+                        cqrsStreamRepository @ CqrsStreamRepository {
+                                                  aggregateIdStream,
+                                                  getCommandStream,
+                                                  getValidationStateStream}
+                        reading @ Reading { streaming ,querying}
+                        transactionInterpreter   =
+   Cqrs.Write.CommandConsumption.execute
       logger
-      cqrsStreamRepository
-      reading
-      commandHandler
-      interpreterWritePersistedStreamLanguage
+      aggregateIdStream
+      streaming
+      (getConsumeAnAggregate
+        logger
+        getCommandStream
+        getValidationStateStream
+        reading
+        transactionInterpreter
+        commandHandler
+        getConsumeACommandForAnAggregate)
+
+
 
 
 waitTillCommandResponseProduced ::

@@ -36,6 +36,8 @@ import Cqrs.Write.PersistCommandResult
 import PersistedStreamEngine.Interface.PersistedItem
 import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
+import System.SafeResponse
+
 type ApiPort = Int
 
 execute ::  ApiPort -> EventStore.Settings -> EventStore.ConnectionType -> EventStore.Credentials -> IO ()
@@ -63,7 +65,7 @@ gsdWriteServer eventStoreSettings = sendGsdCommand :<|> waitTillCommandResponseP
         sendGsdCommand gsdCommand = (liftIO $ Gsd.Write.persistCommand eventStoreSettings gsdCommand )
 
 
-        waitTillCommandResponseProduced :: AggregateId -> Offset -> CommandId -> Handler (Persisted CommandResponse)
+        waitTillCommandResponseProduced :: AggregateId -> Offset -> CommandId -> Handler (SafeResponse (Persisted CommandResponse))
         waitTillCommandResponseProduced aggregateId offset commandId =
           liftIO $ Gsd.Write.waitTillCommandResponseProduced eventStoreSettings aggregateId offset commandId
 

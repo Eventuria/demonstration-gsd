@@ -16,12 +16,15 @@ import PersistedStreamEngine.Interface.Offset
 import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.PersistedItem
 import Cqrs.Write.PersistCommandResult
+import System.SafeResponse
+
 
 data SendCommandAnWaitResponse =  RequestFailed {reason :: String}
+                        | ProcessMomentarilyPostponed {reason :: String}
                         | CommandResponseProduced CommandResponse  deriving Show
 
 sendCommand :: GsdCommand -> ClientM PersistCommandResult
-waitTillCommandResponseProduced :: AggregateId -> Offset -> CommandId -> ClientM (Persisted CommandResponse)
+waitTillCommandResponseProduced :: AggregateId -> Offset -> CommandId -> ClientM (SafeResponse (Persisted CommandResponse))
 
 api :: Proxy GsdWriteApi
 api = Proxy
@@ -34,8 +37,13 @@ sendCommandAndWaitResponse gsdCommand = do
    case persistenceResult of
     FailedToPersist {reason } -> return $ RequestFailed {reason}
     SuccessfullyPersisted {aggregateId, commandId,lastOffsetPersisted} -> do
-      PersistedItem {item = commandResponse } <- waitTillCommandResponseProduced aggregateId lastOffsetPersisted commandId
-      return $ CommandResponseProduced commandResponse
+      safeResponse <- waitTillCommandResponseProduced aggregateId lastOffsetPersisted commandId
+      case safeResponse of
+        Left reason -> return $ ProcessMomentarilyPostponed {reason = show reason}
+        Right PersistedItem {item = commandResponse } -> return $ CommandResponseProduced commandResponse
+
+
+
 
 
 
