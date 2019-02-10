@@ -22,9 +22,7 @@ import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Gsd.CLI.Steps
 import Servant.Client
 import Data.Function ((&))
-import Control.Monad (void)
 import Gsd.CLI.QuitCLI (runQuitCLI)
-import qualified Streamly.Prelude as Streamly.Prelude
 import qualified Servant.Client.Streaming as S
 import Gsd.CLI.Greetings
 import PersistedStreamEngine.Interface.PersistedItem
@@ -32,8 +30,8 @@ import Gsd.Read.Workspace
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import qualified Gsd.CLI.WorkspaceCLI as WorkspaceActions (run)
 import Gsd.Read.GoalStats
-
-
+import qualified Streamly.Safe as StreamlySafe
+import Control.Exception
 data WorkspacesCommand = CreateWorkspaceRequest  Text
                        | GotoWorkOnAWorkspace Text
                        | Quit Text deriving Show
@@ -41,12 +39,21 @@ data WorkspacesCommand = CreateWorkspaceRequest  Text
 
 run :: WorkOnWorkspacesStepHandle
 run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
-
+  let currentStep = WorkOnWorkspacesStep run clients
   manager <- liftIO $ newManager defaultManagerSettings
-  liftIO $ S.withClientM streamWorkspace (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-    Left err -> return $ ()
-    Right streamWorkspace -> void $ runByline $ do
-        workspaces <- liftIO $ map (\PersistedItem{item} -> item) <$> (streamWorkspace & Streamly.Prelude.toList)
+  result <- liftIO $ S.withClientM
+                        streamWorkspace
+                        (S.mkClientEnv manager gsdReadApiUrl)
+                        (\result -> case result of
+                             Left error -> return $ Left $ toException $ error
+                             Right streamWorkspace -> do
+                                 safeResponse <- (fmap.fmap) (map (\PersistedItem{item} -> item))
+                                                             (streamWorkspace & StreamlySafe.toList)
+                                 return safeResponse)
+  case result of
+      Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
+      Right workspaces -> do
+
         displayWorkspacesState workspaces
         sayLn "Commands"
         let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu $
@@ -100,6 +107,10 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
           sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
           displayEndOfACommand
           return $ Right currentStep
+        Right ProcessMomentarilyPostponed {reason} ->  do
+          sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
+          displayEndOfACommand
+          return $ Right currentStep
         Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
           sayLn $ fg green <> "> The command has been successfully processed... "
           displayEndOfACommand
@@ -110,14 +121,18 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
     runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep workOnWorkspaces clients)  = do
       displayBeginningOfACommand
       manager <- liftIO $ newManager defaultManagerSettings
-      result <- liftIO $ S.withClientM streamWorkspace (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-        Left err -> return $ Left $ show err
-        Right streamWorkspace -> do
-            workspaces <- map (\PersistedItem{item} -> item) <$> (streamWorkspace & Streamly.Prelude.toList)
-            return $ Right workspaces
+      result <- liftIO $ S.withClientM
+                            streamWorkspace
+                            (S.mkClientEnv manager gsdReadApiUrl)
+                           $ \e -> case e of
+                                Left error -> return $ Left $ toException $ error
+                                Right streamWorkspace -> do
+                                    safeResponse <- (fmap.fmap) (map (\PersistedItem{item} -> item))
+                                                                (streamWorkspace & StreamlySafe.toList)
+                                    return safeResponse
 
       case result of
-        Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription}
+        Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
         Right workspaces -> do
             sayLn "Workspaces"
             let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu workspaces displayWorkspaceState)

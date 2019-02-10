@@ -29,7 +29,6 @@ import Servant.Client
 import Gsd.Write.Commands.Command
 import Gsd.Read.Workspace
 import qualified Servant.Client.Streaming as S
-import qualified Streamly.Prelude as Streamly.Prelude
 import Data.Function ((&))
 import Gsd.Read.Client (streamGoal,fetchWorkspace)
 import Gsd.Read.Goal
@@ -39,6 +38,8 @@ import Gsd.CLI.Greetings
 import Gsd.Read.GoalStats
 import Gsd.Read.ActionStats
 import qualified  Data.List as List
+import qualified Streamly.Safe as StreamlySafe
+import Control.Exception
 
 data WorkspaceCommand = RenameWorkspaceCommand       Text
                       | SetNewGoalCommand            Text
@@ -60,15 +61,13 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
  result  <- liftIO $ S.withClientM
                         (streamGoal workspaceId)
                         (S.mkClientEnv manager gsdReadApiUrl)
-                        $ (\e -> case e of
-                                   Left errorDescription ->
-                                     return $ Left $ StepError {currentStep,
-                                                                errorDescription = show errorDescription }
-                                   Right stream -> do
-                                     goals <- stream & Streamly.Prelude.toList
-                                     return $ Right goals)
+                        $ (\result -> case result of
+                              Left error -> return $ Left $ toException $ error
+                              Right stream -> do
+                                 safeResponse <- stream & StreamlySafe.toList
+                                 return safeResponse)
  case result of
-  Left stepError -> runNextStep $ Left stepError
+  Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
   Right goals -> do
       sayLn $ displayWorkspace workspace goals
       askNextStep currentStep
@@ -184,15 +183,26 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
             sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
             displayEndOfACommand
             return $ Right currentStep
+          Right ProcessMomentarilyPostponed {reason} ->  do
+            sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
+            displayEndOfACommand
+            return $ Right currentStep
           Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
             liftIO $ S.withClientM
                           (fetchWorkspace workspaceId )
                           (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                Left err -> return $ Right currentStep
-                Right Nothing  -> return $ Right currentStep
-                Right (Just workspace) ->
+                Left servantError -> return $ Left $ StepError {
+                                              currentStep,
+                                              errorDescription = show servantError }
+                Right (Left applicationError)  -> return $ Left $ StepError {
+                                              currentStep ,
+                                              errorDescription = show applicationError}
+                Right (Right Nothing)  -> return $ Left $ StepError {
+                                              currentStep ,
+                                              errorDescription = "Workspace asked does not exist"}
+                Right (Right (Just workspace)) ->
                   return $ Right $ WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
 
 
@@ -225,16 +235,28 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
               sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
               displayEndOfACommand
               return $ Right currentStep
+            Right ProcessMomentarilyPostponed {reason} ->  do
+              sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
+              displayEndOfACommand
+              return $ Right currentStep
             Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
               sayLn $ fg green <> "> The command has been successfully processed... "
               displayEndOfACommand
               liftIO $ S.withClientM
                                         (fetchWorkspace workspaceId )
                                         (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                              Left err -> return $ Right currentStep
-                              Right Nothing  -> return $ Right currentStep
-                              Right (Just workspace) ->
+                              Left servantError -> return $ Left $ StepError {
+                                                                            currentStep,
+                                                                            errorDescription = show servantError }
+                              Right (Left applicationError)  -> return $ Left $ StepError {
+                                                            currentStep ,
+                                                            errorDescription = show applicationError}
+                              Right (Right Nothing)  -> return $ Left $ StepError {
+                                                            currentStep ,
+                                                            errorDescription = "Workspace asked does not exist"}
+                              Right (Right (Just workspace)) ->
                                 return $ Right $ WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
+
 
 
     runWorkOnAGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAGoal))
@@ -245,14 +267,16 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
                                     workOnWorkspaces) = do
      displayBeginningOfACommand
      manager <- liftIO $ newManager defaultManagerSettings
-     result <-  liftIO $ S.withClientM (streamGoal workspaceId) (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                   Left errorDescription -> return $ Left $ StepError {currentStep,
-                                                                       errorDescription = show errorDescription }
-                   Right stream -> do
-                     goals <- stream & Streamly.Prelude.toList
-                     return $ Right goals
+     result <-  liftIO $ S.withClientM
+                          (streamGoal workspaceId)
+                          (S.mkClientEnv manager gsdReadApiUrl)
+                        $ (\result -> case result of
+                                        Left error -> return $ Left $ toException $ error
+                                        Right stream -> do
+                                           safeResponse <- stream & StreamlySafe.toList
+                                           return safeResponse)
      case result of
-      Left stepError -> return $ Left stepError
+      Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
       Right goals -> do
          sayLn "Goals"
          let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu goals displayGoalForSelection)

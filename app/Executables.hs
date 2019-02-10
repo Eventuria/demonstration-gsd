@@ -45,9 +45,11 @@ gsdWriteApi = Gsd.Write.WebApi.execute
 --  Processes commands stored in the EventStore and produces command responses and events
 gsdCommandConsumptionStreamer :: IO ()
 gsdCommandConsumptionStreamer = Gsd.Write.CommandConsumptionStreamer.execute
-  getEventStoreSettings
-  getConnectionType
-  getCredentials
+  EventStoreMicroService {
+        urlHost = "127.0.0.1",
+        port = 1113,
+        username = "admin",
+        password = "changeit"}
 
 
 --------------------------------------------------------------------------------

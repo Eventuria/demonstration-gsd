@@ -8,7 +8,6 @@ module Gsd.CLI.GoalCLI (run)where
 import Prelude hiding (length)
 import Data.Function ((&))
 import qualified Servant.Client.Streaming as S
-import qualified Streamly.Prelude as Streamly.Prelude
 import Data.Text hiding (foldr,map)
 import qualified  Data.List as List
 import Data.UUID.V4
@@ -33,11 +32,13 @@ import Gsd.CLI.Greetings
 import Gsd.Read.Workspace
 import Gsd.Read.ActionStats
 import Gsd.Read.GoalStats
-
+import qualified Streamly.Safe as StreamlySafe
 import Gsd.CLI.WorkspaceMonitoringCLI (runListCommandReceived,
                                            runListCommandResponseReceived,
                                            runListEventsGenerated,
                                            runListValidationStateHistory)
+import Control.Exception
+
 
 data GoalCommands = -- Goal Commands
                     RefineGoalDescriptionCommand Text
@@ -70,16 +71,15 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
   result  <- liftIO $ S.withClientM
                           (streamAction workspaceId goalId)
                           (S.mkClientEnv manager gsdReadApiUrl)
-                          $ (\e -> case e of
-                                     Left errorDescription ->
-                                       return $ Left $ StepError {currentStep,
-                                                                  errorDescription = show errorDescription }
+                          $ (\result -> case result of
+                                     Left error -> return $ Left $ toException $ error
                                      Right stream -> do
-                                       actions <- stream & Streamly.Prelude.toList
-                                       return $ Right actions)
+                                        safeResponse <- stream & StreamlySafe.toList
+                                        return safeResponse)
+
 
   case result of
-    Left stepError -> runNextStep $ Left stepError
+    Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
     Right actions -> do
       sayLn $ displayGoal workspace goal actions
       askNextStep currentStep
@@ -225,15 +225,13 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
       result <-  liftIO $ S.withClientM
                             (streamAction workspaceId goalId)
                             (S.mkClientEnv manager gsdReadApiUrl)
-                            $ \e -> case e of
-                                Left errorDescription -> return $ Left $ StepError {
-                                                                            currentStep,
-                                                                            errorDescription = show errorDescription }
-                                Right stream -> do
-                                 actions <- stream & Streamly.Prelude.toList
-                                 return $ Right actions
+                            $ (\result -> case result of
+                                             Left error -> return $ Left $ toException $ error
+                                             Right stream -> do
+                                                safeResponse <- stream & StreamlySafe.toList
+                                                return safeResponse)
       case result of
-        Left stepError -> return $ Left stepError
+        Left error -> return $ Left StepError {currentStep, errorDescription = show error }
         Right actions -> do
            let menuConfig = banner "Available actions :" $ menu actions stylizeAction
                prompt     = "please choose the action you consider Accomplished (provide the index) : "
@@ -255,6 +253,10 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
                   sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
                   displayEndOfACommand
                   return $ Right currentStep
+                Right ProcessMomentarilyPostponed {reason} ->  do
+                                      sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
+                                      displayEndOfACommand
+                                      return $ Right currentStep
                 Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
                   sayLn $ fg green <> "> The command has been successfully processed... "
                   displayEndOfACommand
@@ -303,27 +305,34 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
             sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
             displayEndOfACommand
             return $ Right currentStep
+          Right ProcessMomentarilyPostponed {reason} ->  do
+                      sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
+                      displayEndOfACommand
+                      return $ Right currentStep
           Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
             liftIO $ S.withClientM
                         (fetchGoal workspaceId goalId)
                         (S.mkClientEnv manager gsdReadApiUrl)
-                        $ \e -> case e of
+                        $ (\result -> case result of
                           Left servantError -> return $ Left $ StepError {
                                                                 currentStep,
                                                                 errorDescription = show servantError }
-                          Right Nothing  -> return $ Left $ StepError {
+                          Right (Left applicationError)  -> return $ Left $ StepError {
+                                                                      currentStep ,
+                                                                      errorDescription = show applicationError}
+                          Right (Right Nothing)  -> return $ Left $ StepError {
                                                                 currentStep ,
                                                                 errorDescription = "Goal asked does not exist"}
-                          Right (Just goal) ->
+                          Right (Right (Just goal)) ->
                               return $ Right $ WorkOnAGoalStep
                                                 run
                                                 clients
                                                 workspace
                                                 goal
                                                 workOnWorkspace
-                                                workOnWorkspaces
+                                                workOnWorkspaces)
 
 
 
@@ -355,27 +364,34 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
             sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
             displayEndOfACommand
             return $ Right currentStep
+          Right ProcessMomentarilyPostponed {reason} ->  do
+                                sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
+                                displayEndOfACommand
+                                return $ Right currentStep
           Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
             liftIO $ S.withClientM
                         (fetchGoal workspaceId goalId)
                         (S.mkClientEnv manager gsdReadApiUrl)
-                        $ \e -> case e of
+                        $ (\result -> case result of
                           Left servantError -> return $ Left $ StepError {
                                                                 currentStep,
                                                                 errorDescription = show servantError }
-                          Right Nothing  -> return $ Left $ StepError {
+                          Right (Left applicationError)  -> return $ Left $ StepError {
+                                                                      currentStep ,
+                                                                      errorDescription = show applicationError}
+                          Right (Right Nothing)  -> return $ Left $ StepError {
                                                                 currentStep ,
                                                                 errorDescription = "Goal asked does not exist"}
-                          Right (Just goal) ->
+                          Right (Right (Just goal)) ->
                               return $ Right $ WorkOnAGoalStep
                                                 run
                                                 clients
                                                 workspace
                                                 goal
                                                 workOnWorkspace
-                                                workOnWorkspaces
+                                                workOnWorkspaces)
 
 
     runWorkOnAGoal :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
@@ -388,14 +404,15 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
                                               workOnWorkspaces) = do
      displayBeginningOfACommand
      manager <- liftIO $ newManager defaultManagerSettings
-     result <-  liftIO $ S.withClientM (streamGoal workspaceId) (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
-                   Left errorDescription -> return $ Left $ StepError {currentStep,
-                                                                       errorDescription = show errorDescription }
-                   Right stream -> do
-                     goals <- stream & Streamly.Prelude.toList
-                     return $ Right goals
+     result <-  liftIO $ S.withClientM (streamGoal workspaceId)
+                             (S.mkClientEnv manager gsdReadApiUrl)
+                           $ (\result -> case result of
+                                Left error -> return $ Left $ toException $ error
+                                Right stream -> do
+                                   safeResponse <- stream & StreamlySafe.toList
+                                   return safeResponse)
      case result of
-      Left stepError -> return $ Left stepError
+      Left error -> return $ Left StepError {currentStep, errorDescription = show error }
       Right goals -> do
          sayLn "Goals"
          let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu goals displayGoalForSelection)
@@ -418,13 +435,18 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
       queryResult <- liftIO $ S.withClientM
                                 (fetchGoal workspaceId goalId)
                                 (S.mkClientEnv manager gsdReadApiUrl)
-                                $ \e -> case e of
-                                          Left servantError -> return $ Left servantError
-                                          Right result -> return $ Right result
+                                $ (\e -> return e)
       case queryResult of
-        Left errorDescription -> return $ Left $ StepError {currentStep,errorDescription = show errorDescription }
-        Right Nothing  -> return $ Left $ StepError {currentStep , errorDescription = "Goal asked does not exist"}
-        Right (Just goal @ Goal {status}) -> do
+        Left servantError -> return $ Left $ StepError {
+                                                  currentStep,
+                                                  errorDescription = show servantError }
+        Right (Left applicationError)  -> return $ Left $ StepError {
+                                                              currentStep ,
+                                                              errorDescription = show applicationError}
+        Right (Right Nothing)  -> return $ Left $ StepError {
+                                                      currentStep ,
+                                                      errorDescription = "Goal asked does not exist"}
+        Right (Right (Just goal @ Goal {status})) -> do
             case (getNextStatusAvailable status) of
                [] -> do
                   sayLn $ fg green <> "No status avalaible (final state)"
@@ -459,6 +481,10 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
                         sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
                         displayEndOfACommand
                         return $ Right currentStep
+                      Right ProcessMomentarilyPostponed {reason} ->  do
+                        sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
+                        displayEndOfACommand
+                        return $ Right currentStep
                       Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
                         sayLn $ fg green <> "> The command has been successfully processed... "
                         displayEndOfACommand
@@ -470,10 +496,13 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
                                   Left servantError -> return $ Left $ StepError {
                                                                         currentStep,
                                                                         errorDescription = show servantError }
-                                  Right Nothing  -> return $ Left $ StepError {
+                                  Right (Left applicationError)  -> return $ Left $ StepError {
+                                                                              currentStep ,
+                                                                              errorDescription = show applicationError}
+                                  Right (Right Nothing)  -> return $ Left $ StepError {
                                                                         currentStep ,
                                                                         errorDescription = "Goal asked does not exist"}
-                                  Right (Just goal) ->
+                                  Right (Right (Just goal)) ->
                                       return $ Right $ WorkOnAGoalStep
                                                         run
                                                         clients

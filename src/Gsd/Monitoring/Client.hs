@@ -79,6 +79,7 @@ streamGsdValidationStateByWorkspaceId workspaceId =
 gsdMonitoringApi :: Proxy GSDMonitoringStreamingApi
 gsdMonitoringApi = Proxy
 
+
 healthCheck :: S.ClientM HealthCheckResult
 streamWorkspaceIdOnPipe ::                                      S.ClientM (P.Producer (SafeResponse (Persisted WorkspaceId))                IO ())
 streamGsdCommandByWorkspaceIdOnPipe ::           WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdCommand))                 IO ())

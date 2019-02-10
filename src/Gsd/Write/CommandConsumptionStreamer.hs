@@ -1,3 +1,5 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 module Gsd.Write.CommandConsumptionStreamer where
 
 import Logger.Core
@@ -6,34 +8,39 @@ import Control.Exception
 import DevOps.MicroService.EventStore
 import DevOps.Core
 import Control.Concurrent
-
 import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
 import qualified Gsd.Write.GsdOverEventStore as Gsd.Write
 import System.SafeResponse
 
-execute :: EventStoreMicroService -> IO (SafeResponse ())
+execute :: EventStoreMicroService -> IO ()
 execute eventStoreMicroService = do
   let logger = Logger { loggerId = "[gsd.command.processing.manager]" , executableName = "command.processing.manager" }
-      eventStoreSettings = getEventStoreSettings eventStoreMicroService
-      eventStoreConnectionType = getConnectionType eventStoreMicroService
-      credentials = getCredentials eventStoreMicroService
-
   initLogger logger
 
   logInfo logger "Checking Service Health"
   waitTillMicroServiceHealthy logger eventStoreMicroService
   logInfo logger "Service is Up and Running "
 
-  catch
-    (bracket (EventStore.connect eventStoreSettings eventStoreConnectionType)
-           (\connection -> do EventStore.shutdown connection
-                              EventStore.waitTillClosed connection)
-           (\connection ->do
-              let eventStoreSettings = EventStoreSettings {logger = logger, credentials = credentials, connection = connection}
-              Gsd.Write.startCommandConsumption eventStoreSettings logger ))
-    (\e @SomeException {} -> do
-        logInfo logger $ "An Exception occured causing the reboot of the microservice : " ++ show e
-        execute eventStoreMicroService)
+  safeResponse <- executeSafely logger eventStoreMicroService
+  case safeResponse of
+    Right () -> do
+      logInfo logger $ "The microservice terminated without issues raised (it should not happened...)"
+      return ()
+    Left error -> do
+      logInfo logger $ "An Exception occured causing the reboot of the microservice : " ++ show error
+      execute eventStoreMicroService
+  where
+     executeSafely :: Logger -> EventStoreMicroService -> IO(SafeResponse())
+     executeSafely logger eventStoreMicroService  = do
+       let eventStoreSettings = getEventStoreSettings eventStoreMicroService
+           eventStoreConnectionType = getConnectionType eventStoreMicroService
+           credentials = getCredentials eventStoreMicroService
+       catch
+          (bracket (EventStore.connect eventStoreSettings eventStoreConnectionType )
+              (\connection -> do EventStore.shutdown connection
+                                 EventStore.waitTillClosed connection)
+              (\connection -> Gsd.Write.startCommandConsumption EventStoreSettings {..} logger ))
+          (\e @SomeException {} -> return $ Left e)
 
 
 waitTillMicroServiceHealthy ::  Logger -> EventStoreMicroService -> IO ()
@@ -48,3 +55,5 @@ waitTillMicroServiceHealthy logger eventStoreMicroService = do
           threadDelay (5 * 1000000) -- 5 seconds
           logInfo logger "Retrying Health Check"
           waitTillMicroServiceHealthy logger eventStoreMicroService
+
+

@@ -50,18 +50,18 @@ subscribe eventStoreStream @ EventStoreStream {settings = EventStoreSettings { l
 subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (SafeResponse (Persisted item))
 subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreSettings { logger, credentials, connection },
                                                streamName = streamName} offset = do
-              liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
+              logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
 
               subscription <- EventStore.subscribeFrom connection streamName EventStore.NoResolveLink (Just $ EventStore.rawEventNumber (fromInteger offset)) Nothing Nothing
               result <- (try $ EventStore.waitConfirmation subscription )
               case result of
                 Left e @ SomeException {} -> do
-                           liftIO $ logInfo logger "subscription to stream failed - retrying..."
-                           liftIO $ threadDelay (5 * 1000000) -- 5 seconds
+                           logInfo logger "subscription to stream failed - retrying..."
+                           threadDelay (5 * 1000000) -- 5 seconds
                            subscribeOnOffset eventStoreStream offset
                 Right _ -> do
-                        resolvedEvent <- liftIO $ EventStore.nextEvent subscription
-                        liftIO $ logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
+                        resolvedEvent <- EventStore.nextEvent subscription
+                        logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
                         return $ Right $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)
 
 recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
