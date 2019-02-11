@@ -1,16 +1,19 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Executables where
 
 import Settings
-
+import Prelude hiding (read)
 import Gsd.Write.CommandConsumptionStreamer
 import Gsd.Write.WebApi
 import Gsd.Monitoring.Main
 import Gsd.Read.WebApi
 import Gsd.CLI.CLI
-import Servant.Client
+import Servant.Client hiding (manager)
 import Gsd.Clients
 import DevOps.MicroService.EventStore hiding (getCredentials,getConnectionType,getEventStoreSettings)
+import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Logger.Core
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------
@@ -22,10 +25,14 @@ import DevOps.MicroService.EventStore hiding (getCredentials,getConnectionType,g
 -- | Client Command line : Allow you to use the gsd application
 --   (send commands and access to a specific gsd read model )
 gsdWriteClientCommandLineInterface :: IO ()
-gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute Clients{
-   writeApiUrl = (BaseUrl Http "localhost" getWriteApiPort ""),
-   gsdReadApiUrl = (BaseUrl Http "localhost" getGsdReadStreamingApiPort ""),
-   gsdMonitoringApiUrl = (BaseUrl Http "localhost" getGsdMonitoringStreamingApiPort "")}
+gsdWriteClientCommandLineInterface = do
+  let logger = Logger { loggerId = "[gsd.client.cli]" , executableName = "client.cli" }
+  initLogger logger
+  manager <- (newManager defaultManagerSettings)
+  Gsd.CLI.CLI.execute ClientsSetting {
+     write = ClientSetting {manager , url = BaseUrl Http "localhost" getWriteApiPort "", logger},
+     read = ClientSetting {manager , url = BaseUrl Http "localhost" getGsdReadStreamingApiPort "",logger},
+     monitoring = ClientSetting {manager , url = BaseUrl Http "localhost" getGsdMonitoringStreamingApiPort "",logger}}
 
 
 --------------------------------------------------------------------------------

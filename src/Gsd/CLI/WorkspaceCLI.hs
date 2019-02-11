@@ -7,22 +7,19 @@
 {-# LANGUAGE RecordWildCards #-}
 module Gsd.CLI.WorkspaceCLI (run)where
 
-import Prelude hiding (length)
+import Prelude hiding (length,read)
 import System.Console.Byline hiding (askWithMenuRepeatedly)
 import Gsd.CLI.ByLineWrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
 
 import Data.Text hiding (foldr,map)
 import Data.UUID.V4
 import Data.UUID
-import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.Client
 
 import qualified Gsd.CLI.GoalCLI as GoalCLI (run)
-import Gsd.CLI.WorkspaceMonitoringCLI (runListCommandReceived,
-                                           runListCommandResponseReceived,
-                                           runListEventsGenerated,
-                                           runListValidationStateHistory)
+import qualified Gsd.CLI.MonitoringCLI as MonitoringCLI
+import Gsd.CLI.MonitoringCLI (runMonitoringCommand)
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Gsd.Clients
 import Servant.Client
@@ -41,26 +38,28 @@ import qualified  Data.List as List
 import qualified Streamly.Safe as StreamlySafe
 import Control.Exception
 
-data WorkspaceCommand = RenameWorkspaceCommand       Text
+data WorkspaceCommand = -- Workspace Commands
+                        RenameWorkspaceCommand       Text
                       | SetNewGoalCommand            Text
-                      | ListCommandsReceived        Text
-                      | ListCommandResponseProduced Text
-                      | ListEventsGenerated         Text
-                      | ListValidationStateHistory  Text
+                        -- Infra-Monitoring
+                      | ListCommandsReceived         Text
+                      | ListCommandResponsesProduced Text
+                      | ListEventsGenerated          Text
+                      | ListValidationStates         Text
+                        -- Navigation
                       | GotoWorkOnAGoal             Text
-                      | GotoWorkOnWorkspaces            Text
+                      | GotoWorkOnWorkspaces        Text
                       | Quit                        Text
 
 
 run :: WorkOnAWorkspaceStepHandle
-run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
+run clients   @ ClientsSetting {write,monitoring,read = read @ ClientSetting { manager = readManager}}
                 workspace @ Workspace {workspaceId}
                 workOnWorkspaces =  do
  let currentStep = WorkOnAWorkspaceStep run clients workspace workOnWorkspaces
- manager <- liftIO $ newManager defaultManagerSettings
  result  <- liftIO $ S.withClientM
                         (streamGoal workspaceId)
-                        (S.mkClientEnv manager gsdReadApiUrl)
+                        (S.mkClientEnv readManager (url read))
                         $ (\result -> case result of
                               Left error -> return $ Left $ toException $ error
                               Right stream -> do
@@ -90,23 +89,39 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
         SetNewGoalCommand description ->
           runSetNewGoal currentStep >>= runNextStep
         ListCommandsReceived description -> do
-          result <- runListCommandReceived currentStep gsdMonitoringApiUrl workspace
+          result <- runMonitoringCommand
+                        MonitoringCLI.ListCommandsReceived
+                        currentStep
+                        monitoring
+                        workspace
           case result of
             Left stepError -> runNextStep $ Left stepError
             Right currentStep -> askNextStep currentStep
-        ListCommandResponseProduced description -> do
-          result <- runListCommandResponseReceived currentStep gsdMonitoringApiUrl workspace
+        ListCommandResponsesProduced description -> do
+          result <- runMonitoringCommand
+                      MonitoringCLI.ListCommandResponsesProduced
+                        currentStep
+                        monitoring
+                        workspace
           case result of
             Left stepError -> runNextStep $ Left stepError
             Right currentStep -> askNextStep currentStep
         ListEventsGenerated description -> do
-          result <- runListEventsGenerated currentStep gsdMonitoringApiUrl workspace
+          result <- runMonitoringCommand
+                                MonitoringCLI.ListEventsGenerated
+                                  currentStep
+                                  monitoring
+                                  workspace
           case result of
             Left stepError -> runNextStep $ Left stepError
             Right currentStep -> askNextStep currentStep
-        ListValidationStateHistory description -> do
-          result <- runListValidationStateHistory currentStep gsdMonitoringApiUrl workspace
-          case result of
+        ListValidationStates description -> do
+         result <- runMonitoringCommand
+                               MonitoringCLI.ListValidationStates
+                                 currentStep
+                                 monitoring
+                                 workspace
+         case result of
             Left stepError -> runNextStep $ Left stepError
             Right currentStep -> askNextStep currentStep
         GotoWorkOnAGoal description ->
@@ -121,9 +136,9 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
           [ RenameWorkspaceCommand       "Rename" ,
             SetNewGoalCommand            "Set A New Goal",
             ListCommandsReceived        "List Commands Received",
-            ListCommandResponseProduced "List Command Responses Produced",
+            ListCommandResponsesProduced "List Command Responses Produced",
             ListEventsGenerated         "List Events Generated",
-            ListValidationStateHistory  "List Validation State History",
+            ListValidationStates  "List Validation State History",
             GotoWorkOnAGoal                 "Work On A Goal",
             GotoWorkOnWorkspaces            "Work On Another Workspace",
             Quit                        "Quit"]
@@ -131,9 +146,9 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
                 [ RenameWorkspaceCommand       "Rename" ,
                   SetNewGoalCommand            "Set A New Goal",
                   ListCommandsReceived        "List Commands Received",
-                  ListCommandResponseProduced "List Command Responses Produced",
+                  ListCommandResponsesProduced "List Command Responses Produced",
                   ListEventsGenerated         "List Events Generated",
-                  ListValidationStateHistory  "List Validation State History",
+                  ListValidationStates  "List Validation State History",
                   GotoWorkOnWorkspaces         "Work On Another Workspace",
                   Quit                        "Quit"]
 
@@ -143,9 +158,9 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
           RenameWorkspaceCommand description -> fg white <> text description
           SetNewGoalCommand description -> fg white <> text description <> "\nInfra-Monitoring"
           ListCommandsReceived description -> fg white  <>  text description
-          ListCommandResponseProduced description -> fg white <> text description
+          ListCommandResponsesProduced description -> fg white <> text description
           ListEventsGenerated description -> fg white <> text description
-          ListValidationStateHistory description -> fg white  <> text description <> "\nNavigation"
+          ListValidationStates description -> fg white  <> text description <> "\nNavigation"
           GotoWorkOnAGoal description -> fg white <> text description
           GotoWorkOnWorkspaces description -> fg white <> text description
           Quit description -> fg white <> text description
@@ -153,9 +168,9 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
           RenameWorkspaceCommand description -> fg white <> text description
           SetNewGoalCommand description -> fg white <> text description <> "\nInfra-Monitoring"
           ListCommandsReceived description -> fg white  <>  text description
-          ListCommandResponseProduced description -> fg white <> text description
+          ListCommandResponsesProduced description -> fg white <> text description
           ListEventsGenerated description -> fg white <> text description
-          ListValidationStateHistory description -> fg white  <> text description <> "\nNavigation"
+          ListValidationStates description -> fg white  <> text description <> "\nNavigation"
           GotoWorkOnWorkspaces description -> fg white <> text description
           Quit description -> fg white <> text description
           _ -> fg red <> "Not handle"
@@ -163,16 +178,15 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
     runRenameWorkspace :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep
                                         workOnAWorkspace
-                                        (clients @ Clients {writeApiUrl})
+                                        (clients @ clientsSetting @ ClientsSetting {read = ClientSetting {manager = readManager}, write = ClientSetting {manager = writeManager}})
                                         workspace @ Workspace {workspaceId}
                                         workOnWorkspaces) = do
       commandId <- liftIO $ nextRandom
       sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceNewName <- askUntil "Enter a new workspace name : " Nothing atLeastThreeChars
-      manager <- liftIO $ newManager defaultManagerSettings
       queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse
                                             RenameWorkspace {commandId , workspaceId, workspaceNewName})
-                                         (mkClientEnv manager writeApiUrl)
+                                         (mkClientEnv writeManager (url write))
       case queryResult of
           Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
           Right RequestFailed {reason} ->  do
@@ -192,7 +206,7 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
             displayEndOfACommand
             liftIO $ S.withClientM
                           (fetchWorkspace workspaceId )
-                          (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
+                          (S.mkClientEnv readManager (url read)) $ \e -> case e of
                 Left servantError -> return $ Left $ StepError {
                                               currentStep,
                                               errorDescription = show servantError }
@@ -210,7 +224,7 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
     runSetNewGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runSetNewGoal currentStep @ (WorkOnAWorkspaceStep
                                     workOnAWorkspace
-                                    (clients @ Clients {writeApiUrl})
+                                    (clients @ clientsSetting @ ClientsSetting {read = ClientSetting {manager = readManager}, write = ClientSetting {manager = writeManager}})
                                     workspace @ Workspace {workspaceId}
                                     workOnWorkspaces) = do
         commandId <- liftIO $ nextRandom
@@ -218,13 +232,12 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
         goalId <- liftIO $ nextRandom
         sayLn $ fg green <> "generating a new goal Id (" <> text (toText goalId) <>") "
         goalDescription <- askUntil "Enter a goal description : " Nothing atLeastThreeChars
-        manager <- liftIO $ newManager defaultManagerSettings
         queryResult <- liftIO $ runClientM (sendCommandAndWaitResponse
                                                SetGoal {commandId,
                                                         workspaceId,
                                                         goalId,
                                                         goalDescription})
-                                           (mkClientEnv manager writeApiUrl)
+                                           (mkClientEnv writeManager (url write))
         case queryResult of
             Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
             Right RequestFailed {reason} ->  do
@@ -244,7 +257,7 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
               displayEndOfACommand
               liftIO $ S.withClientM
                                         (fetchWorkspace workspaceId )
-                                        (S.mkClientEnv manager gsdReadApiUrl) $ \e -> case e of
+                                        (S.mkClientEnv readManager (url read)) $ \e -> case e of
                               Left servantError -> return $ Left $ StepError {
                                                                             currentStep,
                                                                             errorDescription = show servantError }
@@ -262,14 +275,13 @@ run clients   @ Clients {writeApiUrl,gsdMonitoringApiUrl,gsdReadApiUrl}
     runWorkOnAGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAGoal))
     runWorkOnAGoal currentStep @ (WorkOnAWorkspaceStep
                                     workOnAWorkspace
-                                    (clients @ Clients {gsdReadApiUrl})
+                                    (clients @ clientsSetting @ ClientsSetting {read = ClientSetting {manager = readManager}, write = ClientSetting {manager = writeManager}})
                                     workspace @ Workspace {workspaceId}
                                     workOnWorkspaces) = do
      displayBeginningOfACommand
-     manager <- liftIO $ newManager defaultManagerSettings
      result <-  liftIO $ S.withClientM
                           (streamGoal workspaceId)
-                          (S.mkClientEnv manager gsdReadApiUrl)
+                          (S.mkClientEnv readManager (url read))
                         $ (\result -> case result of
                                         Left error -> return $ Left $ toException $ error
                                         Right stream -> do

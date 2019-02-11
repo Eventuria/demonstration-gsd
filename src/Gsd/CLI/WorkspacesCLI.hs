@@ -18,7 +18,6 @@ import Gsd.Write.Client (sendCommandAndWaitResponse,SendCommandAnWaitResponse (.
 import Gsd.Write.Commands.Command
 import Gsd.Read.Client (streamWorkspace )
 import Gsd.Clients
-import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Gsd.CLI.Steps
 import Servant.Client
 import Data.Function ((&))
@@ -38,12 +37,11 @@ data WorkspacesCommand = CreateWorkspaceRequest  Text
 
 
 run :: WorkOnWorkspacesStepHandle
-run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
-  let currentStep = WorkOnWorkspacesStep run clients
-  manager <- liftIO $ newManager defaultManagerSettings
+run clientsSetting @ ClientsSetting {read = read @ ClientSetting {manager = readManager}, write = write @ ClientSetting {manager = writeManager}} = do
+  let currentStep = WorkOnWorkspacesStep run clientsSetting
   result <- liftIO $ S.withClientM
                         streamWorkspace
-                        (S.mkClientEnv manager gsdReadApiUrl)
+                        (S.mkClientEnv readManager (url read))
                         (\result -> case result of
                              Left error -> return $ Left $ toException $ error
                              Right streamWorkspace -> do
@@ -60,7 +58,7 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
                           menu (workspacesActions workspaces) stylizeAction
             prompt     = "> please choose an action (provide the index) : "
             onError    = "> please enter a valid index..."
-            currentStep = WorkOnWorkspacesStep run clients
+            currentStep = WorkOnWorkspacesStep run clientsSetting
 
         answer <- askWithMenuRepeatedly menuConfig prompt onError
         case answer of
@@ -93,10 +91,10 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
       sayLn $ fg cyan <> "generating a new Workspace Id (" <> text (toText workspaceId) <> ") "
       sayLn $ fg cyan <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceName <- askUntil ("> enter a workspace name : " ) Nothing atLeastThreeChars
-      manager <- liftIO $ newManager defaultManagerSettings
+
       queryResult <- liftIO $ runClientM
                                 (sendCommandAndWaitResponse CreateWorkspace {commandId , workspaceId , workspaceName})
-                                (mkClientEnv manager writeApiUrl)
+                                (mkClientEnv writeManager (url write))
       case queryResult of
         Left errorDescription -> return $ Left $ StepError {currentStep, errorDescription = show errorDescription }
         Right RequestFailed {reason} ->  do
@@ -118,12 +116,12 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
 
 
     runWorkOnAWorkspace :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnAWorkspace))
-    runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep workOnWorkspaces clients)  = do
+    runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep workOnWorkspaces clientsSetting @ ClientsSetting {read = ClientSetting {manager = readManager}, write = ClientSetting {manager = writeManager}})  = do
       displayBeginningOfACommand
-      manager <- liftIO $ newManager defaultManagerSettings
+
       result <- liftIO $ S.withClientM
                             streamWorkspace
-                            (S.mkClientEnv manager gsdReadApiUrl)
+                            (S.mkClientEnv readManager (url read))
                            $ \e -> case e of
                                 Left error -> return $ Left $ toException $ error
                                 Right streamWorkspace -> do
@@ -143,7 +141,7 @@ run clients @ Clients {writeApiUrl,gsdReadApiUrl} = do
                             prompt
                             onError
             displayEndOfACommand
-            return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clients workspace workOnWorkspaces
+            return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clientsSetting workspace workOnWorkspaces
 
 
     displayWorkspacesState :: [Workspace] -> Byline IO ()

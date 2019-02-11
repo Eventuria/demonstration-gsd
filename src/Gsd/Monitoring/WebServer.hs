@@ -49,7 +49,6 @@ import System.SafeResponse
 webServer :: EventStoreSettings  -> Server GSDMonitoringStreamingApi
 webServer eventStoreSettings @ EventStoreSettings {logger} =
     healthCheck
-     :<|> streamWorkspaceId
      :<|> streamCommand
      :<|> streamInfinitelyCommand
      :<|> streamCommandResponse
@@ -60,9 +59,6 @@ webServer eventStoreSettings @ EventStoreSettings {logger} =
 
     healthCheck :: Handler HealthCheckResult
     healthCheck = return Healthy
-
-    streamWorkspaceId :: Handler (P.Producer (SafeResponse (Persisted WorkspaceId)) IO ())
-    streamWorkspaceId = return $ toPipes $ GsdMonitoring.streamWorkspaceId eventStoreSettings
 
     streamCommandResponse :: WorkspaceId -> Handler (P.Producer (SafeResponse (Persisted CommandResponse)) IO ())
     streamCommandResponse workspaceId = return $ toPipes $ GsdMonitoring.streamCommandResponse

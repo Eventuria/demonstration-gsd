@@ -2,8 +2,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 module Gsd.Monitoring.Client (
-  streamWorkspaceId,
   streamGsdCommandByWorkspaceId,
   streamInfinitelyGsdCommandByWorkspaceId,
   streamGsdCommandResponseByWorkspaceId,
@@ -27,7 +27,6 @@ import Gsd.Write.Commands.Serialization ()
 import Gsd.Write.Events.Event
 import Gsd.Write.Events.Serialization()
 import Servant.Pipes ()
-import Streamly
 import Gsd.Write.State
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Serialization.ValidationState ()
@@ -35,53 +34,90 @@ import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Write.Serialization.CommandResponse ()
 import DevOps.Core
 import System.SafeResponse
+import Control.Exception
+import Gsd.Clients
+import Logger.Core
+import qualified Streamly.Safe as StreamlySafe
+
+streamGsdCommandByWorkspaceId :: ClientSetting ->
+                                 WorkspaceId ->
+                                 IO (SafeResponse [Persisted GsdCommand])
+streamGsdCommandByWorkspaceId clientSetting workspaceId = do
+  bindWithSettings
+    clientSetting
+    streamGsdCommandByWorkspaceIdOnPipe
+    workspaceId
+
+streamInfinitelyGsdCommandByWorkspaceId :: ClientSetting ->
+                                           WorkspaceId ->
+                                           IO (SafeResponse [Persisted GsdCommand])
+streamInfinitelyGsdCommandByWorkspaceId clientSetting workspaceId =
+  bindWithSettings
+    clientSetting
+    streamInfinitelyGsdCommandByWorkspaceIdOnPipe
+    workspaceId
+
+streamGsdCommandResponseByWorkspaceId :: ClientSetting ->
+                                         WorkspaceId ->
+                                         IO (SafeResponse [Persisted CommandResponse])
+streamGsdCommandResponseByWorkspaceId clientSetting workspaceId =
+  bindWithSettings
+    clientSetting
+    streamGsdCommandResponseByWorkspaceIdOnPipe
+    workspaceId
 
 
+streamGsdEventByWorkspaceId :: ClientSetting ->
+                                WorkspaceId ->
+                                IO (SafeResponse [Persisted GsdEvent])
+streamGsdEventByWorkspaceId clientSetting workspaceId =
+  bindWithSettings
+    clientSetting
+    streamGsdEventByWorkspaceIdOnPipe
+    workspaceId
 
-streamWorkspaceId :: IsStream stream => S.ClientM (stream IO (SafeResponse (Persisted WorkspaceId) ))
-streamWorkspaceId = fromPipes <$> streamWorkspaceIdOnPipe
 
-streamGsdCommandByWorkspaceId :: IsStream stream =>
-                                   WorkspaceId ->
-                                   S.ClientM (stream IO (SafeResponse (Persisted GsdCommand) ))
-streamGsdCommandByWorkspaceId workspaceId = fromPipes <$> (streamGsdCommandByWorkspaceIdOnPipe workspaceId)
+streamInfinitelyGsdEventByWorkspaceId ::  ClientSetting ->
+                                          WorkspaceId ->
+                                          IO (SafeResponse [Persisted GsdEvent])
+streamInfinitelyGsdEventByWorkspaceId clientSetting workspaceId =
+  bindWithSettings
+    clientSetting
+    streamInfinitelyGsdEventByWorkspaceIdOnPipe
+    workspaceId
+
+streamGsdValidationStateByWorkspaceId :: ClientSetting ->
+                                         WorkspaceId ->
+                                         IO (SafeResponse [Persisted (ValidationState GsdState)])
+streamGsdValidationStateByWorkspaceId clientSetting workspaceId =
+  bindWithSettings
+    clientSetting
+    streamGsdValidationStateByWorkspaceIdOnPipe
+    workspaceId
+
+bindWithSettings :: ClientSetting ->
+                    (WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted item)) IO ())) ->
+                    WorkspaceId ->
+                    IO (SafeResponse [Persisted item])
+bindWithSettings ClientSetting { manager, url, logger} call workspaceId = do
+  (S.withClientM
+     (fromPipes <$> (call workspaceId))
+     (S.mkClientEnv manager url)
+     (\e -> case e of
+        Left errorHttpLevel -> do
+         logInfo logger "An http error occured with the monitoring microservice."
+         return $ Left $ toException errorHttpLevel
+        Right stream -> do
+         safeResponse <- StreamlySafe.toList stream
+         return safeResponse))
 
 
-streamInfinitelyGsdCommandByWorkspaceId :: IsStream stream =>
-                                            WorkspaceId -> 
-                                            S.ClientM (stream IO (SafeResponse (Persisted GsdCommand)) )
-streamInfinitelyGsdCommandByWorkspaceId workspaceId = 
-    fromPipes <$> (streamInfinitelyGsdCommandByWorkspaceIdOnPipe workspaceId)
-
-streamGsdCommandResponseByWorkspaceId :: IsStream stream => 
-                                          WorkspaceId -> 
-                                          S.ClientM (stream IO (SafeResponse (Persisted CommandResponse)) )
-streamGsdCommandResponseByWorkspaceId workspaceId =
-    fromPipes <$> (streamGsdCommandResponseByWorkspaceIdOnPipe workspaceId)
-
-streamGsdEventByWorkspaceId :: IsStream stream => 
-                                WorkspaceId -> 
-                                S.ClientM (stream IO (SafeResponse (Persisted GsdEvent)) )
-streamGsdEventByWorkspaceId workspaceId = fromPipes <$> (streamGsdEventByWorkspaceIdOnPipe workspaceId)
-
-streamInfinitelyGsdEventByWorkspaceId :: IsStream stream => 
-                                          WorkspaceId -> 
-                                          S.ClientM (stream IO (SafeResponse (Persisted GsdEvent)) )
-streamInfinitelyGsdEventByWorkspaceId workspaceId = 
-    fromPipes <$> (streamInfinitelyGsdEventByWorkspaceIdOnPipe workspaceId)
-
-streamGsdValidationStateByWorkspaceId :: IsStream stream => 
-                                          WorkspaceId -> 
-                                          S.ClientM (stream IO (SafeResponse (Persisted (ValidationState GsdState))) )
-streamGsdValidationStateByWorkspaceId workspaceId =
-    fromPipes <$> (streamGsdValidationStateByWorkspaceIdOnPipe workspaceId)
 
 gsdMonitoringApi :: Proxy GSDMonitoringStreamingApi
 gsdMonitoringApi = Proxy
 
 
 healthCheck :: S.ClientM HealthCheckResult
-streamWorkspaceIdOnPipe ::                                      S.ClientM (P.Producer (SafeResponse (Persisted WorkspaceId))                IO ())
 streamGsdCommandByWorkspaceIdOnPipe ::           WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdCommand))                 IO ())
 streamInfinitelyGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdCommand))                 IO ())
 streamGsdCommandResponseByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted CommandResponse))            IO ())
@@ -89,7 +125,6 @@ streamGsdEventByWorkspaceIdOnPipe ::             WorkspaceId -> S.ClientM (P.Pro
 streamInfinitelyGsdEventByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdEvent))                   IO ())
 streamGsdValidationStateByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted (ValidationState GsdState))) IO ())
 healthCheck
-  :<|> streamWorkspaceIdOnPipe
   :<|> streamGsdCommandByWorkspaceIdOnPipe
   :<|> streamInfinitelyGsdCommandByWorkspaceIdOnPipe
   :<|> streamGsdCommandResponseByWorkspaceIdOnPipe

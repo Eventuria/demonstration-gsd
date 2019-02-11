@@ -29,7 +29,6 @@ proxy :: Proxy GSDMonitoringStreamingApi
 proxy = Proxy
 
 type GSDMonitoringStreamingApi =   HealthCheck
-                             :<|>  StreamWorkspaceIdsCreated
                              :<|>  StreamGsdCommandsByWorkspaceId
                              :<|>  StreamInfinitelyGsdCommandsByWorkspaceId
                              :<|>  StreamGsdCommandResponseByWorkspaceId
@@ -39,12 +38,6 @@ type GSDMonitoringStreamingApi =   HealthCheck
 
 
 type HealthCheck =      "health" :> Get '[JSON]  HealthCheckResult
-
-type StreamWorkspaceIdsCreated =      "gsd" :> "monitoring" :> "stream" :> "workspaceId" :>
-                                      StreamGet
-                                        NewlineFraming
-                                        JSON
-                                        (P.Producer (SafeResponse (Persisted WorkspaceId)) IO () )
 
 type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "command" :>
                                       Capture "workspaceId" WorkspaceId :>

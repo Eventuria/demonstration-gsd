@@ -64,9 +64,11 @@ runStreamOnIOAndThrowFailureTo threadId stream = runStream $
 
 
 -- Bunch of smells that justifies improving the "SafeResponse abstraction"  ...
-toList :: Monad m => SerialT m (SafeResponse a) -> m (SafeResponse [a])
+toList :: SerialT IO (SafeResponse a) -> IO (SafeResponse [a])
 toList stream =  do
-    items <- S.toList stream
+    items <- catch
+              (S.toList stream)
+              (\error @ SomeException {} -> return $ [Left $ toException error])
     case (reverse items) of
       [] -> return $ Right []
       (Right lastItem :xs )  -> return $ Right $ removeSafeResponseLayer items

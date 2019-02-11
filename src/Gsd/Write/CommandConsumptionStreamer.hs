@@ -32,14 +32,13 @@ execute eventStoreMicroService = do
   where
      executeSafely :: Logger -> EventStoreMicroService -> IO(SafeResponse())
      executeSafely logger eventStoreMicroService  = do
-       let eventStoreSettings = getEventStoreSettings eventStoreMicroService
-           eventStoreConnectionType = getConnectionType eventStoreMicroService
-           credentials = getCredentials eventStoreMicroService
        catch
-          (bracket (EventStore.connect eventStoreSettings eventStoreConnectionType )
+          (bracket ((EventStore.connect <$> getEventStoreSettings <*> getConnectionType) eventStoreMicroService )
               (\connection -> do EventStore.shutdown connection
                                  EventStore.waitTillClosed connection)
-              (\connection -> Gsd.Write.startCommandConsumption EventStoreSettings {..} logger ))
+              (\connection -> Gsd.Write.startCommandConsumption
+                                  EventStoreSettings {credentials = getCredentials eventStoreMicroService ,..}
+                                  logger ))
           (\e @SomeException {} -> return $ Left e)
 
 

@@ -9,7 +9,7 @@ import Gsd.CLI.Greetings (greetings)
 import Gsd.Clients
 
 
-execute :: Clients -> IO ()
+execute :: ClientsSetting -> IO ()
 execute clients = void $ runByline $ do
   greetings
   WorkspacesCLI.run clients
