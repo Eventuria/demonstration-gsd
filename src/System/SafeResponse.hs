@@ -8,6 +8,7 @@ import Control.Exception
 import Data.Aeson
 import Data.Text
 
+
 type SafeResponse result = Either SomeException result
 
 
@@ -26,4 +27,6 @@ instance FromJSON SomeException   where
 
     parseJSON (String text) = return $ toException $ ClientExceptionBadlyDeserialized (unpack text)
     parseJSON _ =  error $ "FromJSON SomeException : Json format not expected"
+
+
 

@@ -16,71 +16,59 @@ import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.Client (sendCommandAndWaitResponse,SendCommandAnWaitResponse (..))
 import Gsd.Write.Commands.Command
-import Gsd.Read.Client (streamWorkspace )
+import Gsd.Read.Client (fetchWorkspaces )
 import Gsd.Clients
 import Gsd.CLI.Steps
 import Servant.Client
-import Data.Function ((&))
 import Gsd.CLI.QuitCLI (runQuitCLI)
-import qualified Servant.Client.Streaming as S
 import Gsd.CLI.Greetings
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import qualified Gsd.CLI.WorkspaceCLI as WorkspaceActions (run)
 import Gsd.Read.GoalStats
-import qualified Streamly.Safe as StreamlySafe
-import Control.Exception
 data WorkspacesCommand = CreateWorkspaceRequest  Text
                        | GotoWorkOnAWorkspace Text
-                       | Quit Text deriving Show
+                       | QuitCommand Text deriving Show
 
 
 run :: WorkOnWorkspacesStepHandle
-run clientsSetting @ ClientsSetting {read = read @ ClientSetting {manager = readManager}, write = write @ ClientSetting {manager = writeManager}} = do
+run clientsSetting @ ClientsSetting {read , write = write @ ClientSetting {manager = writeManager}} = do
   let currentStep = WorkOnWorkspacesStep run clientsSetting
-  result <- liftIO $ S.withClientM
-                        streamWorkspace
-                        (S.mkClientEnv readManager (url read))
-                        (\result -> case result of
-                             Left error -> return $ Left $ toException $ error
-                             Right streamWorkspace -> do
-                                 safeResponse <- (fmap.fmap) (map (\PersistedItem{item} -> item))
-                                                             (streamWorkspace & StreamlySafe.toList)
-                                 return safeResponse)
-  case result of
-      Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
-      Right workspaces -> do
+  safeResponse <- liftIO $ fetchWorkspaces read
+  case safeResponse of
+    Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
+    Right persistedWorkspaces -> do
+      let workspaces =  (\PersistedItem{item} -> item) <$> persistedWorkspaces
+      displayWorkspacesState workspaces
+      sayLn "Commands"
+      let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu $
+                        menu (workspacesActions workspaces) stylizeAction
+          prompt     = "> please choose an action (provide the index) : "
+          onError    = "> please enter a valid index..."
+          currentStep = WorkOnWorkspacesStep run clientsSetting
 
-        displayWorkspacesState workspaces
-        sayLn "Commands"
-        let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu $
-                          menu (workspacesActions workspaces) stylizeAction
-            prompt     = "> please choose an action (provide the index) : "
-            onError    = "> please enter a valid index..."
-            currentStep = WorkOnWorkspacesStep run clientsSetting
-
-        answer <- askWithMenuRepeatedly menuConfig prompt onError
-        case answer of
-          CreateWorkspaceRequest description -> (runCreateWorkspaceRequest currentStep) >>= runNextStep
-          GotoWorkOnAWorkspace description -> (runWorkOnAWorkspace currentStep) >>= runNextStep
-          Quit description -> runQuitCLI
+      answer <- askWithMenuRepeatedly menuConfig prompt onError
+      case answer of
+        CreateWorkspaceRequest _ -> runCreateWorkspaceRequest currentStep >>= runNextStep
+        GotoWorkOnAWorkspace _ ->   runWorkOnAWorkspace       currentStep >>= runNextStep
+        QuitCommand _ ->            runQuitCLI                            >>= runNextStep
 
 
   where
     workspacesActions :: [Workspace] -> [WorkspacesCommand]
     workspacesActions workspaces
       | List.length workspaces == 0 = [ CreateWorkspaceRequest     "Create A Workspace" ,
-                                        Quit                       "Quit" ]
+                                        QuitCommand                       "Quit" ]
       | otherwise = [ CreateWorkspaceRequest     "Create A Workspace" ,
                       GotoWorkOnAWorkspace       "Work On A Workspace",
-                      Quit                       "Quit" ]
+                      QuitCommand                       "Quit" ]
 
     stylizeAction :: WorkspacesCommand -> Stylized
     stylizeAction workspacesAction = case workspacesAction of
       CreateWorkspaceRequest description ->  fg white <> text description
       GotoWorkOnAWorkspace description ->  fg white <> text description
-      Quit description ->  fg white <> text description
+      QuitCommand description ->  fg white <> text description
 
 
     runCreateWorkspaceRequest :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnWorkspaces))
@@ -118,30 +106,21 @@ run clientsSetting @ ClientsSetting {read = read @ ClientSetting {manager = read
     runWorkOnAWorkspace :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep workOnWorkspaces clientsSetting @ ClientsSetting {read = ClientSetting {manager = readManager}, write = ClientSetting {manager = writeManager}})  = do
       displayBeginningOfACommand
-
-      result <- liftIO $ S.withClientM
-                            streamWorkspace
-                            (S.mkClientEnv readManager (url read))
-                           $ \e -> case e of
-                                Left error -> return $ Left $ toException $ error
-                                Right streamWorkspace -> do
-                                    safeResponse <- (fmap.fmap) (map (\PersistedItem{item} -> item))
-                                                                (streamWorkspace & StreamlySafe.toList)
-                                    return safeResponse
-
-      case result of
+      safeResponse <- liftIO $ fetchWorkspaces read
+      case safeResponse of
         Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
-        Right workspaces -> do
-            sayLn "Workspaces"
-            let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu workspaces displayWorkspaceState)
-                prompt     = "> please choose an action (provide the index) : "
-                onError    = "> please enter a valid index..."
-            workspace <- askWithMenuRepeatedly
-                            menuConfig
-                            prompt
-                            onError
-            displayEndOfACommand
-            return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clientsSetting workspace workOnWorkspaces
+        Right persistedWorkspaces -> do
+          let workspaces =  (\PersistedItem{item} -> item) <$> persistedWorkspaces
+          sayLn "Workspaces"
+          let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu workspaces displayWorkspaceState)
+              prompt     = "> please choose an action (provide the index) : "
+              onError    = "> please enter a valid index..."
+          workspace <- askWithMenuRepeatedly
+                          menuConfig
+                          prompt
+                          onError
+          displayEndOfACommand
+          return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run clientsSetting workspace workOnWorkspaces
 
 
     displayWorkspacesState :: [Workspace] -> Byline IO ()

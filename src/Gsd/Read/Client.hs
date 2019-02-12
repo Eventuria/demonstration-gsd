@@ -2,7 +2,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Gsd.Read.Client (streamWorkspace,streamGoal,streamAction,fetchWorkspace,fetchGoal) where
+{-# LANGUAGE NamedFieldPuns #-}
+module Gsd.Read.Client (
+  fetchWorkspaces,
+  fetchWorkspace,
+  fetchGoals,
+  fetchGoal,
+  fetchActions) where
 
 import Data.Proxy
 import Servant
@@ -17,25 +23,89 @@ import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import System.SafeResponse
 import Servant.Pipes ()
+import Gsd.Clients
+import qualified Streamly.Safe as StreamlySafe
+import Logger.Core
+import Control.Exception
 
-import Streamly
+fetchWorkspaces :: ClientSetting ->
+                   IO (SafeResponse [Persisted Workspace])
+fetchWorkspaces clientSetting =
+  bindWithSettings
+    clientSetting
+    streamWorkspaceOnPipe
+
+fetchGoals :: ClientSetting ->
+              WorkspaceId ->
+              IO (SafeResponse [Goal])
+fetchGoals clientSetting workspaceId =
+  bindWithSettings
+    clientSetting
+    (streamGoalOnPipe workspaceId)
+
+fetchActions :: ClientSetting ->
+                WorkspaceId ->
+                GoalId ->
+                IO (SafeResponse [Action])
+fetchActions clientSetting workspaceId goalId =
+  bindWithSettings
+    clientSetting
+    (streamActionOnPipe workspaceId goalId)
+
+bindWithSettings :: ClientSetting ->
+                    S.ClientM (P.Producer (SafeResponse (item)) IO ()) ->
+                    IO (SafeResponse [item])
+bindWithSettings ClientSetting { manager, url, logger} call = do
+  (S.withClientM
+     (fromPipes <$> call )
+     (S.mkClientEnv manager url)
+     (\e -> case e of
+        Left errorHttpLevel -> do
+         logInfo logger "An http error occured with the monitoring microservice."
+         return $ Left $ toException errorHttpLevel
+        Right stream -> do
+         safeResponse <- StreamlySafe.toList stream
+         return safeResponse))
+
+fetchGoal :: ClientSetting ->
+              WorkspaceId ->
+              GoalId ->
+              IO (SafeResponse (Maybe Goal))
+fetchGoal ClientSetting { manager, url, logger} workspaceId goalId =
+  (S.withClientM
+       (fetchGoalCall workspaceId goalId)
+       (S.mkClientEnv manager url)
+       (\e -> case e of
+          Left errorHttpLevel -> do
+           logInfo logger "An http error occured with the monitoring microservice."
+           return $ Left $ toException errorHttpLevel
+          Right safeResponse -> return safeResponse))
+
+fetchWorkspace :: ClientSetting ->
+              WorkspaceId ->
+              IO (SafeResponse (Maybe Workspace))
+fetchWorkspace ClientSetting { manager, url, logger} workspaceId  =
+  (S.withClientM
+       (fetchWorkspaceCall workspaceId)
+       (S.mkClientEnv manager url)
+       (\e -> case e of
+          Left errorHttpLevel -> do
+           logInfo logger "An http error occured with the monitoring microservice."
+           return $ Left $ toException errorHttpLevel
+          Right safeResponse -> return safeResponse))
 
 gsdReadApi :: Proxy GSDReadApi
 gsdReadApi = Proxy
 
 streamWorkspaceOnPipe :: S.ClientM (P.Producer (SafeResponse (Persisted Workspace)) IO () )
-fetchWorkspace :: WorkspaceId -> S.ClientM (SafeResponse (Maybe Workspace))
-fetchGoal :: WorkspaceId -> GoalId ->  S.ClientM (SafeResponse (Maybe Goal))
+fetchWorkspaceCall :: WorkspaceId -> S.ClientM (SafeResponse (Maybe Workspace))
+fetchGoalCall :: WorkspaceId -> GoalId ->  S.ClientM (SafeResponse (Maybe Goal))
 streamGoalOnPipe :: WorkspaceId -> S.ClientM (P.Producer (SafeResponse Goal )IO () )
 streamActionOnPipe :: WorkspaceId -> GoalId -> S.ClientM (P.Producer (SafeResponse Action) IO () )
-streamWorkspaceOnPipe :<|> streamGoalOnPipe :<|> streamActionOnPipe :<|> fetchWorkspace :<|> fetchGoal = S.client gsdReadApi
+streamWorkspaceOnPipe
+  :<|> streamGoalOnPipe
+  :<|> streamActionOnPipe
+  :<|> fetchWorkspaceCall
+  :<|> fetchGoalCall = S.client gsdReadApi
 
 
-streamWorkspace :: IsStream stream => S.ClientM (stream IO (SafeResponse (Persisted Workspace)) )
-streamWorkspace = fromPipes <$> streamWorkspaceOnPipe
-
-streamGoal :: IsStream stream => WorkspaceId -> S.ClientM (stream IO (SafeResponse (Goal)) )
-streamGoal workspaceId = fromPipes <$> (streamGoalOnPipe workspaceId)
-
-streamAction :: IsStream stream => WorkspaceId -> GoalId -> S.ClientM (stream IO (SafeResponse (Action)) )
-streamAction workspaceId goalId = fromPipes <$> (streamActionOnPipe workspaceId goalId)

@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DataKinds #-}
 module Gsd.CLI.QuitCLI where
 
+import Gsd.CLI.Steps
 import System.Console.Byline
-import Control.Monad.IO.Class (MonadIO(liftIO))
-import System.Exit (exitSuccess)
 
-runQuitCLI :: Byline IO ()
+runQuitCLI :: Byline IO (Either StepError (Step Quit))
 runQuitCLI = do
   sayLn $ fg green <> "###############################################"
   sayLn $ fg green <> "You're leaving gsd, See you soon !! "
   sayLn $ fg green <> "###############################################"
-  liftIO $ exitSuccess
+  return $ Right QuitStep

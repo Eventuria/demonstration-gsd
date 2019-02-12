@@ -29,12 +29,12 @@ data MonitoringCommand = ListCommandsReceived
                        | ListValidationStates
 
 
-runMonitoringCommand :: forall stepType. MonitoringCommand ->
-                                           Step stepType ->
-                                           ClientSetting ->
-                                           Workspace ->
-                                           Byline IO (Either StepError (Step stepType))
-runMonitoringCommand monitoringCommand currentStep settings @ ClientSetting { logger} Workspace {workspaceId} =
+runMonitoringCommand :: forall stepType. Step stepType ->
+                                         MonitoringCommand ->
+                                         ClientSetting ->
+                                         Workspace ->
+                                         Byline IO (Either StepError (Step stepType))
+runMonitoringCommand currentStep monitoringCommand settings @ ClientSetting { logger} Workspace {workspaceId} =
   (case monitoringCommand of
     ListCommandsReceived ->         displayCallResult currentStep  logger "Commands"                 (streamGsdCommandByWorkspaceId         settings workspaceId)
     ListCommandResponsesProduced -> displayCallResult currentStep  logger "Command Responses"        (streamGsdCommandResponseByWorkspaceId settings workspaceId)
