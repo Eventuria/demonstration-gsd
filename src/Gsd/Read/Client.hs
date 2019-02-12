@@ -94,18 +94,17 @@ fetchWorkspace ClientSetting { manager, url, logger} workspaceId  =
            return $ Left $ toException errorHttpLevel
           Right safeResponse -> return safeResponse))
 
-gsdReadApi :: Proxy GSDReadApi
-gsdReadApi = Proxy
-
-streamWorkspaceOnPipe :: S.ClientM (P.Producer (SafeResponse (Persisted Workspace)) IO () )
-fetchWorkspaceCall :: WorkspaceId -> S.ClientM (SafeResponse (Maybe Workspace))
-fetchGoalCall :: WorkspaceId -> GoalId ->  S.ClientM (SafeResponse (Maybe Goal))
-streamGoalOnPipe :: WorkspaceId -> S.ClientM (P.Producer (SafeResponse Goal )IO () )
-streamActionOnPipe :: WorkspaceId -> GoalId -> S.ClientM (P.Producer (SafeResponse Action) IO () )
+fetchWorkspaceCall :: WorkspaceId ->            S.ClientM (SafeResponse (Maybe Workspace))
+fetchGoalCall ::      WorkspaceId -> GoalId ->  S.ClientM (SafeResponse (Maybe Goal))
+streamWorkspaceOnPipe ::                        S.ClientM (P.Producer (SafeResponse (Persisted Workspace)) IO () )
+streamGoalOnPipe ::   WorkspaceId ->            S.ClientM (P.Producer (SafeResponse Goal )IO () )
+streamActionOnPipe :: WorkspaceId -> GoalId ->  S.ClientM (P.Producer (SafeResponse Action) IO () )
 streamWorkspaceOnPipe
   :<|> streamGoalOnPipe
   :<|> streamActionOnPipe
   :<|> fetchWorkspaceCall
   :<|> fetchGoalCall = S.client gsdReadApi
-
+ where
+  gsdReadApi :: Proxy GSDReadApi
+  gsdReadApi = Proxy
 

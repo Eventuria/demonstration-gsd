@@ -14,12 +14,11 @@ import Data.Text hiding (map,foldr)
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Gsd.Write.Client (sendCommandAndWaitResponse,SendCommandAnWaitResponse (..))
+import Gsd.Write.Client
 import Gsd.Write.Commands.Command
 import Gsd.Read.Client (fetchWorkspaces )
 import Gsd.Clients
 import Gsd.CLI.Steps
-import Servant.Client
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Gsd.CLI.Greetings
 import PersistedStreamEngine.Interface.PersistedItem
@@ -33,7 +32,7 @@ data WorkspacesCommand = CreateWorkspaceRequest  Text
 
 
 run :: WorkOnWorkspacesStepHandle
-run clientsSetting @ ClientsSetting {read , write = write @ ClientSetting {manager = writeManager}} = do
+run clientsSetting @ ClientsSetting {read , write} = do
   let currentStep = WorkOnWorkspacesStep run clientsSetting
   safeResponse <- liftIO $ fetchWorkspaces read
   case safeResponse of
@@ -80,31 +79,26 @@ run clientsSetting @ ClientsSetting {read , write = write @ ClientSetting {manag
       sayLn $ fg cyan <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceName <- askUntil ("> enter a workspace name : " ) Nothing atLeastThreeChars
 
-      queryResult <- liftIO $ runClientM
-                                (sendCommandAndWaitResponse CreateWorkspace {commandId , workspaceId , workspaceName})
-                                (mkClientEnv writeManager (url write))
-      case queryResult of
-        Left errorDescription -> return $ Left $ StepError {currentStep, errorDescription = show errorDescription }
-        Right RequestFailed {reason} ->  do
-          sayLn $ fg red <> "The command has not been sent and taken into account : "<> (text . pack ) reason
+      response <- liftIO $ sendCommandAndWaitTillProcessed write  CreateWorkspace {
+                                                                    commandId ,
+                                                                    workspaceId ,
+                                                                    workspaceName}
+      case response of
+        Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+        Right CommandFailed {reason} ->  do
+          sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
           displayEndOfACommand
           return $ Right currentStep
-        Right (CommandResponseProduced CommandFailed {reason}) ->  do
-          sayLn $ fg red <> "> The command processed failed : "<> (text . pack ) reason
-          displayEndOfACommand
-          return $ Right currentStep
-        Right ProcessMomentarilyPostponed {reason} ->  do
-          sayLn $ fg red <> "> The command concumption is momentarily stopped : "<> (text . pack ) reason
-          displayEndOfACommand
-          return $ Right currentStep
-        Right (CommandResponseProduced CommandSuccessfullyProcessed {}) ->  do
+        Right CommandSuccessfullyProcessed {} ->  do
           sayLn $ fg green <> "> The command has been successfully processed... "
           displayEndOfACommand
           return $ Right currentStep
 
 
     runWorkOnAWorkspace :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnAWorkspace))
-    runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep workOnWorkspaces clientsSetting @ ClientsSetting {read = ClientSetting {manager = readManager}, write = ClientSetting {manager = writeManager}})  = do
+    runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep
+                                            workOnWorkspaces
+                                            clientsSetting @ ClientsSetting {read,write})  = do
       displayBeginningOfACommand
       safeResponse <- liftIO $ fetchWorkspaces read
       case safeResponse of
