@@ -20,9 +20,9 @@ import qualified Gsd.Read.API.Client.Settings as Read.Client
 import qualified Gsd.Write.API.Client.Settings as Write.Client
 import qualified Gsd.Monitoring.API.Client.Settings as Monitoring.Client
 
-import qualified Gsd.Write.API.Server.Settings as WriteServer
-import qualified Gsd.Read.API.Server.ServerSettings as ReadServer
-import qualified Gsd.Monitoring.API.Server.Settings as MonitoringServer
+import qualified Gsd.Write.API.Server.Settings as Write.Server
+import qualified Gsd.Read.API.Server.Settings as Read.Server
+import qualified Gsd.Monitoring.API.Server.Settings as Monitoring.Server
 import qualified Gsd.Write.Commands.Consumer.CommandConsumerSettings as CommandConsumer
 import qualified Gsd.Write.Commands.Consumer.CommandConsumer as CommandConsumer
 --------------------------------------------------------------------------------
@@ -62,12 +62,16 @@ gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute CLI.Settings {
 
 -- | Gsd Web Write Api : Web Api that receives commands and persist them per Aggregate into the EventStore
 gsdWriteApi :: IO ()
-gsdWriteApi = getLogger "[gsd.write.server]" >>= (\logger -> Gsd.Write.API.Server.Server.start WriteServer.ServerSettings { port = 3000, eventStoreClientSettings = getEventStoreSettingsToChangeName "[write.server/event.store.client]",logger})
+gsdWriteApi = Gsd.Write.API.Server.Server.start
+                Write.Server.Settings { loggerId = "[write.server]",
+                                        port = 3000,
+                                        eventStoreClientSettings = getEventStoreSettings
+                                                                       "[write.server/event.store.client]"}
 
 -- | Command consumption streamer :
 --  Processes commands stored in the EventStore and produces command responses and events
 gsdCommandConsumptionStreamer :: IO ()
-gsdCommandConsumptionStreamer = getLogger "[gsd.Write.CommandConsummer]" >>= (\logger -> CommandConsumer.start CommandConsumer.CommandConsumerSettings { eventStoreClientSettings = getEventStoreSettingsToChangeName "[command.consummer/event.store.client]", logger})
+gsdCommandConsumptionStreamer = getLogger "[gsd.Write.CommandConsummer]" >>= (\logger -> CommandConsumer.start CommandConsumer.CommandConsumerSettings { eventStoreClientSettings = getEventStoreSettings "[command.consummer/event.store.client]", logger})
 
   
 --------------------------------------------------------------------------------
@@ -76,22 +80,24 @@ gsdCommandConsumptionStreamer = getLogger "[gsd.Write.CommandConsummer]" >>= (\l
 
 -- | Gsd Web Read Api : Web Api readings events and returning an in memory specific read model for gsd
 gsdReadApi :: IO ()
-gsdReadApi = getLogger "[gsd.read.server]" >>= (\logger -> Gsd.Read.API.Server.Server.start
-                    ReadServer.ServerSettings {
+gsdReadApi = Gsd.Read.API.Server.Server.start
+                    Read.Server.Settings {
+                      loggerId = "[gsd.read.server]",
                       port = 3001, 
-                      eventStoreClientSettings = getEventStoreSettingsToChangeName "[read.server/event.store.client]", logger})
+                      eventStoreClientSettings = getEventStoreSettings "[read.server/event.store.client]"}
 
 
 -- | Monitoring Api : Tool to read directly what the Write Channel stored in the EventStore
 -- (example of a second useful read model in CQRS applications)
 gsdMonitoringApi :: IO ()
-gsdMonitoringApi = getLogger "[gsd.monitoring.server]" >>= (\logger -> Gsd.Monitoring.API.Server.Server.start
-                    MonitoringServer.ServerSettings {
+gsdMonitoringApi = Gsd.Monitoring.API.Server.Server.start
+                    Monitoring.Server.Settings {
+                      loggerId = "[gsd.monitoring.server]",
                       port = 3002,
-                      eventStoreClientSettings = getEventStoreSettingsToChangeName "[monitoring.server/event.store.client]", logger})
+                      eventStoreClientSettings = getEventStoreSettings "[monitoring.server/event.store.client]"}
 
-getEventStoreSettingsToChangeName :: LoggerId -> EventStoreClientSettings
-getEventStoreSettingsToChangeName loggerId = EventStoreClientSettings {
+getEventStoreSettings :: LoggerId -> EventStoreClientSettings
+getEventStoreSettings loggerId = EventStoreClientSettings {
                                                     urlHost = "127.0.0.1",
                                                     port = 1113,
                                                     path = "",

@@ -5,7 +5,7 @@ import qualified Gsd.Read.GenericRead  as GenericRead
 import PersistedStreamEngine.Interface.Streamable
 
 import PersistedStreamEngine.Interface.PersistedItem
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
 
 import Gsd.Write.EventStoreStreamRepository
@@ -19,7 +19,7 @@ import Streamly (SerialT)
 import System.SafeResponse
 
 streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT monad Event) =>
-                      EventStoreClientManager ->
+                      EventStoreClientState ->
                       stream monad (SafeResponse (Persisted Workspace))
 streamWorkspace settings =
     GenericRead.streamWorkspace
@@ -27,7 +27,7 @@ streamWorkspace settings =
       (getEventStream $ getEventStoreStreamRepository settings)
       getEventStoreStreaming
 
-fetchWorkspace :: EventStoreClientManager -> WorkspaceId -> IO (SafeResponse (Maybe Workspace))
+fetchWorkspace :: EventStoreClientState -> WorkspaceId -> IO (SafeResponse (Maybe Workspace))
 fetchWorkspace settings workspaceId =
     GenericRead.fetchWorkspace
       (getEventStream $ getEventStoreStreamRepository settings)
@@ -35,7 +35,7 @@ fetchWorkspace settings workspaceId =
       workspaceId
 
 streamGoal :: Streamable stream monad Event =>
-                EventStoreClientManager ->
+                EventStoreClientState ->
                 WorkspaceId ->
                 stream monad (SafeResponse Goal)
 streamGoal settings workspaceId =
@@ -44,7 +44,7 @@ streamGoal settings workspaceId =
       getEventStoreStreaming
       workspaceId
 
-fetchGoal :: EventStoreClientManager ->
+fetchGoal :: EventStoreClientState ->
              WorkspaceId ->
              GoalId ->
              IO (SafeResponse (Maybe Goal))
@@ -56,7 +56,7 @@ fetchGoal settings workspaceId goalId =
       goalId
 
 streamAction :: Streamable stream monad Event =>
-                  EventStoreClientManager ->
+                  EventStoreClientState ->
                   WorkspaceId ->
                   GoalId ->
                   stream monad (SafeResponse (Action))

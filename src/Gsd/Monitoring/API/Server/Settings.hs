@@ -7,12 +7,7 @@ import Network.Core
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientSettings
 
 
-data ServerSettings = ServerSettings {
-                        port :: URLPort,
-                        eventStoreClientSettings :: EventStoreClientSettings,
-                        logger :: Logger }
+data Settings = Settings {loggerId :: LoggerId,
+                          port :: URLPort,
+                          eventStoreClientSettings :: EventStoreClientSettings}
 
-getSettings :: LoggerId -> URLPort -> EventStoreClientSettings -> IO(ServerSettings)
-getSettings loggerId port eventStoreClientSettings = do
-  logger <- getLogger loggerId
-  return ServerSettings {port ,..}

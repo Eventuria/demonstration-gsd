@@ -15,7 +15,7 @@ module Gsd.Read.API.Server.Server  (start) where
 
 
 import Servant
-import Network.Wai.Handler.Warp
+import Network.Wai.Handler.Warp hiding (Settings)
 
 import Streamly.Adapters
 import Servant.Pipes ()
@@ -25,7 +25,7 @@ import Prelude hiding (foldr)
 import Logger.Core
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import qualified Gsd.Read.ReadOverEventStore as GsdRead
 
 import Gsd.Write.Core
@@ -35,45 +35,58 @@ import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Workspace
 import Gsd.Read.API.Definition
 import System.SafeResponse
-import Gsd.Read.API.Server.ServerSettings
+import Gsd.Read.API.Server.Settings
+import qualified Gsd.Read.API.Server.State as Server.State
+import Gsd.Read.API.Server.State
 
-start :: ServerSettings -> IO ()
-start ServerSettings {port,eventStoreClientSettings,logger}    = do
+start :: Settings -> IO ()
+start settings   = do
 
-    logInfo logger "Starting Server"
+  Server.State.getState
+    settings
+    (\State {port, logger, eventStoreClientState } -> do
+        logInfo logger "Starting Server"
+        run port (application eventStoreClientState))
 
-    bracketEventStoreClientManager
-      eventStoreClientSettings
-      (\eventStoreClientManager -> run port (application eventStoreClientManager))
+  where
+    application :: EventStoreClientState  -> Application
+    application eventStoreClientState = serve proxy $ server eventStoreClientState
 
-    where
-      application :: EventStoreClientManager  -> Application
-      application eventStoreClientManager = serve proxy $ server eventStoreClientManager
+    proxy :: Proxy GSDReadApi
+    proxy = Proxy
 
-      proxy :: Proxy GSDReadApi
-      proxy = Proxy
+    server :: EventStoreClientState  -> Server GSDReadApi
+    server eventStoreClientState = streamWorkspace
+                                            :<|> streamGoal
+                                            :<|> streamAction
+                                            :<|> fetchWorkspace
+                                            :<|> fetchGoal
+     where
+      streamWorkspace :: Handler (P.Producer (SafeResponse (Persisted Workspace)) IO ())
+      streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace
+                                                        eventStoreClientState
 
-      server :: EventStoreClientManager  -> Server GSDReadApi
-      server eventStoreClientManager = streamWorkspace
-                                              :<|> streamGoal
-                                              :<|> streamAction
-                                              :<|> fetchWorkspace
-                                              :<|> fetchGoal
-       where
-        streamWorkspace :: Handler (P.Producer (SafeResponse (Persisted Workspace)) IO ())
-        streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace eventStoreClientManager
+      fetchWorkspace :: WorkspaceId -> Handler (SafeResponse (Maybe Workspace))
+      fetchWorkspace workspaceId = (liftIO $ GsdRead.fetchWorkspace
+                                                        eventStoreClientState
+                                                        workspaceId)
 
-        fetchWorkspace :: WorkspaceId -> Handler (SafeResponse (Maybe Workspace))
-        fetchWorkspace workspaceId = (liftIO $ GsdRead.fetchWorkspace eventStoreClientManager workspaceId)
+      streamGoal :: WorkspaceId -> Handler (P.Producer (SafeResponse Goal) IO ())
+      streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal
+                                                              eventStoreClientState
+                                                              workspaceId
 
-        streamGoal :: WorkspaceId -> Handler (P.Producer (SafeResponse Goal) IO ())
-        streamGoal workspaceId = (return . toPipes) $ GsdRead.streamGoal eventStoreClientManager workspaceId
+      fetchGoal :: WorkspaceId -> GoalId -> Handler (SafeResponse (Maybe Goal))
+      fetchGoal workspaceId goalId = (liftIO $ GsdRead.fetchGoal
+                                                          eventStoreClientState
+                                                          workspaceId
+                                                          goalId)
 
-        fetchGoal :: WorkspaceId -> GoalId -> Handler (SafeResponse (Maybe Goal))
-        fetchGoal workspaceId goalId = (liftIO $ GsdRead.fetchGoal eventStoreClientManager workspaceId goalId)
-
-        streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer (SafeResponse Action) IO ())
-        streamAction workspaceId goalId = (return . toPipes) $ GsdRead.streamAction eventStoreClientManager workspaceId goalId
+      streamAction :: WorkspaceId -> GoalId -> Handler (P.Producer (SafeResponse Action) IO ())
+      streamAction workspaceId goalId = (return . toPipes) $ GsdRead.streamAction
+                                                                        eventStoreClientState
+                                                                        workspaceId
+                                                                        goalId
 
 
 

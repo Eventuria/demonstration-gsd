@@ -1,5 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
-module PersistedStreamEngine.Instances.EventStore.EventStoreClientManager where
+module PersistedStreamEngine.Instances.EventStore.EventStoreClientState where
 
 import Logger.Core
 import qualified Database.EventStore as EventStore
@@ -7,14 +7,14 @@ import PersistedStreamEngine.Instances.EventStore.EventStoreClientSettings
 import Control.Exception
 
 
-data EventStoreClientManager = EventStoreClientManager {
+data EventStoreClientState = EventStoreClientState {
                                   logger :: Logger,
                                   credentials :: EventStore.Credentials,
                                   connection :: EventStore.Connection}
 
 
-bracketEventStoreClientManager :: EventStoreClientSettings -> (EventStoreClientManager -> IO c) -> IO c
-bracketEventStoreClientManager eventStoreClientSettings @ EventStoreClientSettings { loggerId ,
+getState :: EventStoreClientSettings -> (EventStoreClientState -> IO c) -> IO c
+getState eventStoreClientSettings @ EventStoreClientSettings { loggerId ,
                                                       urlHost  ,
                                                       port     ,
                                                       username ,
@@ -23,7 +23,7 @@ bracketEventStoreClientManager eventStoreClientSettings @ EventStoreClientSettin
     bracket ((EventStore.connect <$> getEventStoreSettings <*> getConnectionType) eventStoreClientSettings )
              (\connection -> do EventStore.shutdown connection
                                 EventStore.waitTillClosed connection)
-             (\connection ->  executionUnderTheBracket EventStoreClientManager {
+             (\connection ->  executionUnderTheBracket EventStoreClientState {
                                                           logger,
                                                           credentials = getCredentials eventStoreClientSettings,
                                                           connection})

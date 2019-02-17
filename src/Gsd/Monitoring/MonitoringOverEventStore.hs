@@ -16,7 +16,7 @@ import Cqrs.Write.StreamRepository
 import qualified Gsd.Monitoring.GenericMonitoring  as GenericGSDMonitoring
 import Gsd.Write.State
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 --import DevOps.Core (HealthCheckResult)
@@ -27,7 +27,7 @@ import System.SafeResponse
 --healthCheck eventStoreMicroService = healthCheck eventStoreMicroService
 
 streamWorkspaceId :: Streamable stream monad WorkspaceId =>
-                      EventStoreClientManager ->
+                      EventStoreClientState ->
                       stream monad (SafeResponse (Persisted WorkspaceId))
 streamWorkspaceId settings =
     GenericGSDMonitoring.streamWorkspaceId
@@ -36,7 +36,7 @@ streamWorkspaceId settings =
 
 
 streamCommand :: Streamable stream monad Command =>
-                  EventStoreClientManager ->
+                  EventStoreClientState ->
                   WorkspaceId ->
                   stream monad (SafeResponse (Persisted GsdCommand))
 streamCommand settings workspaceId =
@@ -48,7 +48,7 @@ streamCommand settings workspaceId =
 
 
 streamInfinitelyCommand :: Streamable stream monad Command =>
-                            EventStoreClientManager ->
+                            EventStoreClientState ->
                             WorkspaceId ->
                             stream monad (SafeResponse (Persisted GsdCommand))
 streamInfinitelyCommand settings workspaceId =
@@ -58,7 +58,7 @@ streamInfinitelyCommand settings workspaceId =
       workspaceId
 
 streamCommandResponse :: Streamable stream monad CommandResponse =>
-                          EventStoreClientManager ->
+                          EventStoreClientState ->
                           WorkspaceId ->
                           stream monad (SafeResponse (Persisted CommandResponse))
 streamCommandResponse settings workspaceId =
@@ -68,7 +68,7 @@ streamCommandResponse settings workspaceId =
       workspaceId
 
 streamEvent :: Streamable stream monad Event =>
-                EventStoreClientManager ->
+                EventStoreClientState ->
                 WorkspaceId ->
                 stream monad (SafeResponse (Persisted GsdEvent))
 streamEvent settings workspaceId =
@@ -78,7 +78,7 @@ streamEvent settings workspaceId =
       workspaceId
 
 streamInfinitelyEvent :: Streamable stream monad Event =>
-                          EventStoreClientManager ->
+                          EventStoreClientState ->
                           WorkspaceId ->
                           stream monad (SafeResponse (Persisted GsdEvent))
 streamInfinitelyEvent settings workspaceId =
@@ -88,7 +88,7 @@ streamInfinitelyEvent settings workspaceId =
       workspaceId
 
 streamValidationState :: Streamable stream monad (ValidationState GsdState) =>
-                          EventStoreClientManager ->
+                          EventStoreClientState ->
                           WorkspaceId ->
                           stream monad (SafeResponse (Persisted (ValidationState GsdState)))
 streamValidationState settings workspaceId =

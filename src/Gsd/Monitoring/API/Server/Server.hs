@@ -21,10 +21,10 @@ import Streamly.Adapters
 import Servant.Pipes ()
 import qualified Pipes as P
 import Prelude hiding (foldr)
-import Network.Wai.Handler.Warp
+import Network.Wai.Handler.Warp hiding (Settings)
 import Gsd.Monitoring.API.Definition
 
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import qualified Gsd.Monitoring.MonitoringOverEventStore as GsdMonitoring
 
 import PersistedStreamEngine.Interface.PersistedItem
@@ -45,26 +45,28 @@ import Cqrs.Write.Serialization.CommandResponse ()
 import DevOps.Core
 import System.SafeResponse
 import Gsd.Monitoring.API.Server.Settings
+import qualified Gsd.Monitoring.API.Server.State as Server.State
+import Gsd.Monitoring.API.Server.State
 import Logger.Core
 
-start :: ServerSettings -> IO ()
-start ServerSettings {port,eventStoreClientSettings,logger} = do
+start :: Settings -> IO ()
+start settings   = do
 
-    logInfo logger "Starting Server"
-
-    bracketEventStoreClientManager
-      eventStoreClientSettings
-      (\eventStoreClientManager -> run port (application eventStoreClientManager))
+  Server.State.getState
+    settings
+    (\State {port, logger, eventStoreClientState } -> do
+        logInfo logger "Starting Server"
+        run port (application eventStoreClientState))
 
   where
-    application :: EventStoreClientManager  -> Application
-    application eventStoreClientManager = serve proxy $ server eventStoreClientManager
+    application :: EventStoreClientState  -> Application
+    application eventStoreClientState = serve proxy $ server eventStoreClientState
 
     proxy :: Proxy GSDMonitoringStreamingApi
     proxy = Proxy
 
-    server :: EventStoreClientManager  -> Server GSDMonitoringStreamingApi
-    server eventStoreSettings @ EventStoreClientManager {logger} =
+    server :: EventStoreClientState  -> Server GSDMonitoringStreamingApi
+    server eventStoreSettings @ EventStoreClientState {logger} =
         healthCheck
          :<|> streamCommand
          :<|> streamInfinitelyCommand

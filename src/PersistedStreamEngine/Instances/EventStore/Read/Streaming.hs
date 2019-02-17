@@ -22,7 +22,7 @@ import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Interface.Offset
 import Logger.Core
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import Data.Aeson
 import Data.Maybe
 import PersistedStreamEngine.Interface.Streamable
@@ -35,7 +35,7 @@ streamFromOffset :: Streamable stream monad item =>
                       Offset ->
                       stream monad (SafeResponse (Persisted item))
 streamFromOffset eventStoreStream @ EventStoreStream {
-                                       settings = EventStoreClientManager { logger, credentials, connection },
+                                       settings = EventStoreClientState { logger, credentials, connection },
                                        streamName = streamName } fromOffset = do
 
   liftIO $ logInfo logger $ "streaming [" ++ (show fromOffset) ++ "..] > " ++ show streamName

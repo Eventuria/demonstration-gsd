@@ -10,7 +10,7 @@ import qualified Database.EventStore as EventStore
 import Logger.Core
 import Control.Exception
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import PersistedStreamEngine.Interface.PersistedItem
 import Data.Maybe
 import Data.Aeson
@@ -19,7 +19,7 @@ import PersistedStreamEngine.Interface.Offset
 import System.SafeResponse
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (SafeResponse (Persisted item))
-subscribe eventStoreStream @ EventStoreStream {settings = EventStoreClientManager { logger, credentials, connection },
+subscribe eventStoreStream @ EventStoreStream {settings = EventStoreClientState { logger, credentials, connection },
                                                streamName = streamName} = do
   liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
 
@@ -48,7 +48,7 @@ subscribe eventStoreStream @ EventStoreStream {settings = EventStoreClientManage
         return subscription
 
 subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (SafeResponse (Persisted item))
-subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreClientManager { logger, credentials, connection },
+subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreClientState { logger, credentials, connection },
                                                streamName = streamName} offset = do
               logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
 
