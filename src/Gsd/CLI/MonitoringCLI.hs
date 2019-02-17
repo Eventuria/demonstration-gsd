@@ -19,7 +19,7 @@ import Gsd.Monitoring.API.Client.Client (streamGsdEventByWorkspaceId,
                               streamGsdCommandByWorkspaceId,
                               streamGsdCommandResponseByWorkspaceId,
                               streamGsdValidationStateByWorkspaceId)
-import Gsd.Clients
+import Gsd.Monitoring.API.Client.State
 import Logger.Core
 
 
@@ -31,15 +31,15 @@ data MonitoringCommand = ListCommandsReceived
 
 runMonitoringCommand :: forall stepType. Step stepType ->
                                          MonitoringCommand ->
-                                         ClientSetting ->
+                                         State ->
                                          Workspace ->
                                          Byline IO (Either StepError (Step stepType))
-runMonitoringCommand currentStep monitoringCommand settings @ ClientSetting { logger} Workspace {workspaceId} =
+runMonitoringCommand currentStep monitoringCommand state @ State { logger} Workspace {workspaceId} =
   (case monitoringCommand of
-    ListCommandsReceived ->         displayCallResult currentStep  logger "Commands"                 (streamGsdCommandByWorkspaceId         settings workspaceId)
-    ListCommandResponsesProduced -> displayCallResult currentStep  logger "Command Responses"        (streamGsdCommandResponseByWorkspaceId settings workspaceId)
-    ListEventsGenerated ->          displayCallResult currentStep  logger "Events"                   (streamGsdEventByWorkspaceId           settings workspaceId)
-    ListValidationStates ->         displayCallResult currentStep  logger "Validation State History" (streamGsdValidationStateByWorkspaceId settings workspaceId))
+    ListCommandsReceived ->         displayCallResult currentStep  logger "Commands"                 (streamGsdCommandByWorkspaceId         state workspaceId)
+    ListCommandResponsesProduced -> displayCallResult currentStep  logger "Command Responses"        (streamGsdCommandResponseByWorkspaceId state workspaceId)
+    ListEventsGenerated ->          displayCallResult currentStep  logger "Events"                   (streamGsdEventByWorkspaceId           state workspaceId)
+    ListValidationStates ->         displayCallResult currentStep  logger "Validation State History" (streamGsdValidationStateByWorkspaceId state workspaceId))
 
   where
     displayCallResult :: forall item stepType. Show item =>

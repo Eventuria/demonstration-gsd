@@ -2,12 +2,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module DevOps.MicroService.EventStore where
-
-import qualified Database.EventStore as EventStore
-import Data.ByteString
-import Control.Exception
-import DevOps.Core
-import Control.Concurrent.Async (wait)
+--
+--import qualified Database.EventStore as EventStore
+--import Data.ByteString
+--import Control.Exception
+--import DevOps.Core
+--import Control.Concurrent.Async (wait)
 
 
 --instance MicroService EventStoreClientSettings where

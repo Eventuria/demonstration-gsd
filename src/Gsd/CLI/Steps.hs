@@ -11,7 +11,7 @@ module Gsd.CLI.Steps where
 import System.Console.Byline
 import Data.Text
 import System.Exit (exitSuccess)
-import Gsd.Clients
+import Gsd.CLI.State
 import Gsd.Read.Workspace
 import Gsd.Read.Goal
 import Control.Monad.IO.Class (MonadIO(liftIO))
@@ -19,14 +19,14 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 
 type ErrorDescription = String
 
-type WorkOnWorkspacesStepHandle = ClientsSetting ->
+type WorkOnWorkspacesStepHandle = State ->
                                   Byline IO ()
 
-type WorkOnAWorkspaceStepHandle = ClientsSetting ->
+type WorkOnAWorkspaceStepHandle = State ->
                                   Workspace ->
                                   WorkOnWorkspacesStepHandle ->
                                   Byline IO ()
-type WorkOnAGoalStepHandle      = ClientsSetting ->
+type WorkOnAGoalStepHandle      = State ->
                                   Workspace ->
                                   Goal ->
                                   WorkOnAWorkspaceStepHandle ->
@@ -41,15 +41,15 @@ data StepType = WorkOnWorkspaces
 
 data Step stepType where
   WorkOnWorkspacesStep :: WorkOnWorkspacesStepHandle ->
-                          ClientsSetting ->
+                          State ->
                           Step WorkOnWorkspaces
   WorkOnAWorkspaceStep :: WorkOnAWorkspaceStepHandle ->
-                          ClientsSetting ->
+                          State ->
                           Workspace ->
                           WorkOnWorkspacesStepHandle ->
                           Step WorkOnAWorkspace
   WorkOnAGoalStep      :: WorkOnAGoalStepHandle ->
-                          ClientsSetting ->
+                          State ->
                           Workspace ->
                           Goal ->
                           WorkOnAWorkspaceStepHandle ->
@@ -62,22 +62,22 @@ data StepError = forall stepType. StepError { currentStep :: Step stepType , err
 runNextStep :: forall stepType. Either StepError (Step stepType) -> Byline IO ()
 runNextStep nextStepEither = case nextStepEither of
   Right (WorkOnWorkspacesStep workOnWorkspaces
-                              clients ) -> workOnWorkspaces
-                                            clients
+                              state ) -> workOnWorkspaces
+                                            state
   Right (WorkOnAWorkspaceStep workOnWorkspace
-                              clients
+                              state
                               workspace
                               workOnWorkspaces) -> workOnWorkspace
-                                                    clients
+                                                    state
                                                     workspace
                                                     workOnWorkspaces
   Right (WorkOnAGoalStep     workOnAGoal
-                             clients
+                             state
                              workspace
                              goal
                              workOnWorkspace
                              workOnWorkspaces) -> workOnAGoal
-                                                    clients
+                                                    state
                                                     workspace
                                                     goal
                                                     workOnWorkspace

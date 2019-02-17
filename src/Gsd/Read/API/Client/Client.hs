@@ -22,20 +22,20 @@ import Gsd.Read.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import System.SafeResponse
 import Servant.Pipes ()
-import Gsd.Clients
+import Gsd.Read.API.Client.State
 import qualified Streamly.Safe as StreamlySafe
 import Logger.Core
 import Control.Exception
 import Gsd.Read.API.Definition
 
-fetchWorkspaces :: ClientSetting ->
+fetchWorkspaces :: State ->
                    IO (SafeResponse [Persisted Workspace])
 fetchWorkspaces clientSetting =
   bindWithSettings
     clientSetting
     streamWorkspaceOnPipe
 
-fetchGoals :: ClientSetting ->
+fetchGoals :: State ->
               WorkspaceId ->
               IO (SafeResponse [Goal])
 fetchGoals clientSetting workspaceId =
@@ -43,7 +43,7 @@ fetchGoals clientSetting workspaceId =
     clientSetting
     (streamGoalOnPipe workspaceId)
 
-fetchActions :: ClientSetting ->
+fetchActions :: State ->
                 WorkspaceId ->
                 GoalId ->
                 IO (SafeResponse [Action])
@@ -52,13 +52,13 @@ fetchActions clientSetting workspaceId goalId =
     clientSetting
     (streamActionOnPipe workspaceId goalId)
 
-bindWithSettings :: ClientSetting ->
+bindWithSettings :: State ->
                     S.ClientM (P.Producer (SafeResponse (item)) IO ()) ->
                     IO (SafeResponse [item])
-bindWithSettings ClientSetting { manager, url, logger} call = do
+bindWithSettings State { httpClientManager, url, logger} call = do
   (S.withClientM
      (fromPipes <$> call )
-     (S.mkClientEnv manager url)
+     (S.mkClientEnv httpClientManager url)
      (\e -> case e of
         Left errorHttpLevel -> do
          logInfo logger "An http error occured with the monitoring microservice."
@@ -67,27 +67,27 @@ bindWithSettings ClientSetting { manager, url, logger} call = do
          safeResponse <- StreamlySafe.toList stream
          return safeResponse))
 
-fetchGoal :: ClientSetting ->
+fetchGoal :: State ->
               WorkspaceId ->
               GoalId ->
               IO (SafeResponse (Maybe Goal))
-fetchGoal ClientSetting { manager, url, logger} workspaceId goalId =
+fetchGoal State { httpClientManager, url, logger} workspaceId goalId =
   (S.withClientM
        (fetchGoalCall workspaceId goalId)
-       (S.mkClientEnv manager url)
+       (S.mkClientEnv httpClientManager url)
        (\e -> case e of
           Left errorHttpLevel -> do
            logInfo logger "An http error occured with the monitoring microservice."
            return $ Left $ toException errorHttpLevel
           Right safeResponse -> return safeResponse))
 
-fetchWorkspace :: ClientSetting ->
+fetchWorkspace :: State ->
               WorkspaceId ->
               IO (SafeResponse (Maybe Workspace))
-fetchWorkspace ClientSetting { manager, url, logger} workspaceId  =
+fetchWorkspace State { httpClientManager, url, logger} workspaceId  =
   (S.withClientM
        (fetchWorkspaceCall workspaceId)
-       (S.mkClientEnv manager url)
+       (S.mkClientEnv httpClientManager url)
        (\e -> case e of
           Left errorHttpLevel -> do
            logInfo logger "An http error occured with the monitoring microservice."

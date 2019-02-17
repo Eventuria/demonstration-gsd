@@ -19,8 +19,8 @@ import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import DevOps.Core (HealthCheckResult)
-import DevOps.MicroService.EventStore
+--import DevOps.Core (HealthCheckResult)
+--import DevOps.MicroService.EventStore
 import System.SafeResponse
 
 --healthCheck :: EventStoreMicroService -> IO HealthCheckResult

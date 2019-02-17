@@ -10,12 +10,16 @@ import Gsd.Write.API.Server.Server
 import Gsd.Monitoring.API.Server.Server
 import Gsd.Read.API.Server.Server
 import Gsd.CLI.CLI
-import Servant.Client hiding (manager)
-import Gsd.Clients
-import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Network.Core
+
 import Logger.Core
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientSettings
 import Gsd.Write.API.Server.Settings
+import qualified Gsd.CLI.Settings as CLI
+import qualified Gsd.Read.API.Client.Settings as Read.Client
+import qualified Gsd.Write.API.Client.Settings as Write.Client
+import qualified Gsd.Monitoring.API.Client.Settings as Monitoring.Client
+
 import qualified Gsd.Write.API.Server.Settings as WriteServer
 import qualified Gsd.Read.API.Server.ServerSettings as ReadServer
 import qualified Gsd.Monitoring.API.Server.Settings as MonitoringServer
@@ -32,15 +36,23 @@ import qualified Gsd.Write.Commands.Consumer.CommandConsumer as CommandConsumer
 -- | Client Command line : Allow you to use the gsd application
 --   (send commands and access to a specific gsd read model )
 gsdWriteClientCommandLineInterface :: IO ()
-gsdWriteClientCommandLineInterface = do
-  writeLogger <- getLogger "[gsd.cli.monitoring.client]"
-  readLogger <- getLogger "[gsd.cli.monitoring.client]"
-  monitoringLogger <- getLogger "[gsd.cli.monitoring.client]"
-  manager <- (newManager defaultManagerSettings)
-  Gsd.CLI.CLI.execute ClientsSetting {
-     write = ClientSetting {manager , url = BaseUrl Http "localhost" 3000 "", logger = writeLogger },
-     read = ClientSetting {manager , url = BaseUrl Http "localhost" 3001 "",logger = readLogger},
-     monitoring = ClientSetting {manager , url = BaseUrl Http "localhost" 3002 "",logger = monitoringLogger}}
+gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute CLI.Settings {
+                                                           loggerId = "[gsd.cli]",
+                                                           writeClientSettings = Write.Client.Settings {
+                                                                            loggerId = "[gsd.cli/write.client]" , 
+                                                                            url = URL { host = "localhost", 
+                                                                                        port = 3000,
+                                                                                        path = ""}},
+                                                           readClientSettings = Read.Client.Settings {
+                                                                            loggerId = "[gsd.cli/read.client]" , 
+                                                                            url = URL { host = "localhost", 
+                                                                                        port = 3001,
+                                                                                        path = ""}},
+                                                           monitoringClientSettings = Monitoring.Client.Settings {
+                                                                            loggerId = "[gsd.cli/monitoring.client]" , 
+                                                                            url = URL { host = "localhost", 
+                                                                                        port = 3002,
+                                                                                        path = ""}}}
 
 
 --------------------------------------------------------------------------------

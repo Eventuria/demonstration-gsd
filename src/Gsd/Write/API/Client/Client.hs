@@ -14,7 +14,7 @@ import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.PersistedItem
 import Cqrs.Write.PersistCommandResult
 import System.SafeResponse
-import Gsd.Clients
+import Gsd.Write.API.Client.State
 import qualified Servant.Client.Streaming as S
 import Control.Exception
 import Logger.Core
@@ -24,11 +24,11 @@ import Cqrs.Write.Serialization.CommandResponse ()
 
 data SendCommandAnWaitFailure =  SendCommandAnWaitFailure {reason :: String} deriving Show
 
-sendCommandAndWaitTillProcessed :: ClientSetting -> GsdCommand -> IO (Either SendCommandAnWaitFailure CommandResponse )
-sendCommandAndWaitTillProcessed clientSetting @ ClientSetting { manager, url, logger} gsdCommand =
+sendCommandAndWaitTillProcessed :: State -> GsdCommand -> IO (Either SendCommandAnWaitFailure CommandResponse )
+sendCommandAndWaitTillProcessed clientSetting @ State { httpClientManager, url, logger} gsdCommand =
    (S.withClientM
    (sendCommandCall gsdCommand )
-   (S.mkClientEnv manager url)
+   (S.mkClientEnv httpClientManager url)
    (\eitherServantErrorOrResponse -> case eitherServantErrorOrResponse of
       Left servantError -> do
        logInfo logger "An http error occured with the write microservice."
@@ -47,14 +47,14 @@ sendCommandAndWaitTillProcessed clientSetting @ ClientSetting { manager, url, lo
 
   where
 
-    waitTillCommandResponseProduced :: ClientSetting ->
+    waitTillCommandResponseProduced :: State ->
                                          AggregateId ->
                                               Offset ->
                                            CommandId -> IO (SafeResponse (Persisted CommandResponse))
-    waitTillCommandResponseProduced ClientSetting { manager, url, logger} aggregateId offset commandId =
+    waitTillCommandResponseProduced State { httpClientManager, url, logger} aggregateId offset commandId =
       (S.withClientM
        (waitTillCommandResponseProducedCall aggregateId offset commandId)
-       (S.mkClientEnv manager url)
+       (S.mkClientEnv httpClientManager url)
        (\e -> case e of
           Left servantError -> do
            logInfo logger "An http error occured with the write microservice."

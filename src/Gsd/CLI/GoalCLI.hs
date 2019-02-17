@@ -8,7 +8,7 @@
 module Gsd.CLI.GoalCLI (run)where
 
 import Data.Functor
-import Prelude hiding (length,read)
+import Prelude hiding (length,readClientState)
 import Data.Text hiding (foldr,map)
 import qualified  Data.List as List
 import Data.UUID.V4
@@ -18,7 +18,7 @@ import System.Console.Byline hiding (askWithMenuRepeatedly)
 import Gsd.CLI.ByLineWrapper
 import Gsd.Write.API.Client.Client
 import Gsd.CLI.QuitCLI (runQuitCLI)
-import Gsd.Clients
+import Gsd.CLI.State
 import Gsd.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)
 import Gsd.Read.Goal
 import Gsd.Read.Action
@@ -52,13 +52,13 @@ data GoalCommands = -- Goal Commands
                   | QuitCommand                 Text
 
 run :: WorkOnAGoalStepHandle
-run clientsSetting   @ ClientsSetting {write,monitoring,read}
+run cliState   @ State {writeClientState,monitoringClientState,readClientState}
            workspace @ Workspace {workspaceId}
            goal @ Goal {goalId}
            workOnWorkspace
            workOnWorkspaces = do
-  let currentStep = WorkOnAGoalStep run clientsSetting workspace goal workOnWorkspace workOnWorkspaces
-  safeResponse  <- liftIO $ fetchActions read workspaceId goalId
+  let currentStep = WorkOnAGoalStep run cliState workspace goal workOnWorkspace workOnWorkspaces
+  safeResponse  <- liftIO $ fetchActions readClientState workspaceId goalId
   case safeResponse of
     Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
     Right actions -> do
@@ -73,7 +73,7 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
                           menu (goalActions workspace goal) (stylizeAction goal)
           prompt     = "please choose a command (provide the index) : "
           onError    = "please enter a valid index..."
-          currentStep = WorkOnAGoalStep run clientsSetting workspace goal workOnWorkspace workOnWorkspaces
+          currentStep = WorkOnAGoalStep run cliState workspace goal workOnWorkspace workOnWorkspaces
 
       answer <- askWithMenuRepeatedly menuConfig prompt onError
       case answer of
@@ -83,19 +83,19 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
         NotifyActionCompletedCommand _ -> runNotifyActionCompletedCommand currentStep >>= runNextStep
         ListCommandsReceived         _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListCommandsReceived
-                                              monitoring
+                                              monitoringClientState
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListCommandResponsesProduced _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListCommandResponsesProduced
-                                              monitoring
+                                              monitoringClientState
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListEventsGenerated          _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListEventsGenerated
-                                              monitoring
+                                              monitoringClientState
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListValidationStates         _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListValidationStates
-                                              monitoring
+                                              monitoringClientState
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         GotoWorkOnAGoal               _ -> runWorkOnAGoal                 currentStep >>= runNextStep
         GotoWorkOnWorkspace           _ -> runWorkOnWorkspace             currentStep >>= runNextStep
@@ -171,19 +171,19 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
 
 
     runWorkOnWorkspaces :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnWorkspaces))
-    runWorkOnWorkspaces  (WorkOnAGoalStep _ clientsSetting _ _ _ workOnWorkspaces) = do
-      return $ Right $ WorkOnWorkspacesStep workOnWorkspaces clientsSetting
+    runWorkOnWorkspaces  (WorkOnAGoalStep _ cliState _ _ _ workOnWorkspaces) = do
+      return $ Right $ WorkOnWorkspacesStep workOnWorkspaces cliState
 
 
     runNotifyActionCompletedCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runNotifyActionCompletedCommand currentStep @ (WorkOnAGoalStep
                                                        workOnAGoalStepHandle
-                                                       clientsSetting @ ClientsSetting {read, write = ClientSetting {manager = writeManager}}
+                                                       cliState @ State {readClientState, writeClientState}
                                                        workspace @ Workspace {workspaceId}
                                                        goal @ Goal {goalId}
                                                        workOnWorkspace
                                                        workOnWorkspaces) = do
-      safeResponse <-  liftIO $ fetchActions read workspaceId goalId
+      safeResponse <-  liftIO $ fetchActions readClientState workspaceId goalId
       case safeResponse of
         Left error -> return $ Left StepError {currentStep, errorDescription = show error }
         Right actions -> do
@@ -193,7 +193,7 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
            Action {actionId} <- askWithMenuRepeatedly menuConfig prompt onError
            commandId <- liftIO $ nextRandom
            sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
-           response <- liftIO $ sendCommandAndWaitTillProcessed write NotifyActionCompleted {commandId ,
+           response <- liftIO $ sendCommandAndWaitTillProcessed writeClientState NotifyActionCompleted {commandId ,
                                                                                              workspaceId ,
                                                                                              goalId,
                                                                                              actionId}
@@ -215,13 +215,13 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
 
 
     runWorkOnWorkspace :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAWorkspace))
-    runWorkOnWorkspace (WorkOnAGoalStep _ clientsSetting workspace goal workOnWorkspace workOnWorkspaces) = do
-      return $ Right $ WorkOnAWorkspaceStep workOnWorkspace  clientsSetting workspace workOnWorkspaces
+    runWorkOnWorkspace (WorkOnAGoalStep _ cliState workspace goal workOnWorkspace workOnWorkspaces) = do
+      return $ Right $ WorkOnAWorkspaceStep workOnWorkspace  cliState workspace workOnWorkspaces
 
     runRefineGoalDescriptionCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runRefineGoalDescriptionCommand currentStep @ (WorkOnAGoalStep
                                                      workOnAGoalStepHandle
-                                                     clientsSetting @ ClientsSetting {read, write}
+                                                     cliState @ State {readClientState, writeClientState}
                                                      workspace @ Workspace {workspaceId}
                                                      goal @ Goal {goalId}
                                                      workOnWorkspace
@@ -229,7 +229,7 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
       commandId <- liftIO $ nextRandom
       sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
       refinedGoalDescription <- askUntil "Enter a new goal description : " Nothing atLeastThreeChars
-      response <- liftIO $ sendCommandAndWaitTillProcessed write RefineGoalDescription {commandId ,
+      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientState RefineGoalDescription {commandId ,
                                                                       workspaceId ,
                                                                       goalId,
                                                                       refinedGoalDescription}
@@ -242,14 +242,14 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
           Right CommandSuccessfullyProcessed {} ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
-            (liftIO $ (fetchGoal read workspaceId goalId))
+            (liftIO $ (fetchGoal readClientState workspaceId goalId))
              <&> either
                   (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                   (maybe
                     (Left $ StepError {currentStep ,errorDescription = "Goal asked does not exist"})
                     (\goal -> Right $ WorkOnAGoalStep
                                           run
-                                          clientsSetting
+                                          cliState
                                           workspace
                                           goal
                                           workOnWorkspace
@@ -262,7 +262,7 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
     runActionizeOnGoalCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runActionizeOnGoalCommand currentStep @ (WorkOnAGoalStep
                                                 workOnAGoalStepHandle
-                                                clientsSetting @ ClientsSetting {read , write}
+                                                cliState @ State {readClientState, writeClientState}
                                                 workspace @ Workspace {workspaceId}
                                                 goal @ Goal {goalId}
                                                 workOnWorkspace
@@ -272,7 +272,7 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
       actionId <- liftIO $ nextRandom
       sayLn $ fg green <> "generated a new Action Id (" <> text (toText commandId) <>") "
       actionDetails <- askUntil "Enter the details of the action : " Nothing atLeastThreeChars
-      response <- liftIO $ sendCommandAndWaitTillProcessed write ActionizeOnGoal {commandId ,
+      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientState ActionizeOnGoal {commandId ,
                                                                                   workspaceId ,
                                                                                   goalId,
                                                                                   actionId ,
@@ -286,14 +286,14 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
           Right CommandSuccessfullyProcessed {} ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
-            (liftIO $ (fetchGoal read workspaceId goalId))
+            (liftIO $ (fetchGoal readClientState workspaceId goalId))
              <&> either
                   (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                   (maybe
                     (Left $ StepError {currentStep ,errorDescription = "Goal asked does not exist"})
                     (\goal -> Right $ WorkOnAGoalStep
                                           run
-                                          clientsSetting
+                                          cliState
                                           workspace
                                           goal
                                           workOnWorkspace
@@ -303,13 +303,13 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
     runWorkOnAGoal :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runWorkOnAGoal currentStep @ (WorkOnAGoalStep
                                               workOnAGoalStepHandle
-                                              clientsSetting @ ClientsSetting {read, write = ClientSetting {manager = writeManager}}
+                                              cliState @ State {readClientState, writeClientState}
                                               workspace @ Workspace {workspaceId}
                                               goal @ Goal {goalId}
                                               workOnWorkspace
                                               workOnWorkspaces) = do
      displayBeginningOfACommand
-     safeResponse <-  liftIO $ fetchGoals read workspaceId
+     safeResponse <-  liftIO $ fetchGoals readClientState workspaceId
      case safeResponse of
       Left error -> return $ Left StepError {currentStep, errorDescription = show error }
       Right goals -> do
@@ -319,18 +319,18 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
              onError    = "> please enter a valid index..."
          goalSelected <- askWithMenuRepeatedly menuConfig prompt onError
          displayEndOfACommand
-         return $ Right $ WorkOnAGoalStep run clientsSetting workspace goalSelected workOnWorkspace workOnWorkspaces
+         return $ Right $ WorkOnAGoalStep run cliState workspace goalSelected workOnWorkspace workOnWorkspaces
 
 
     runChangeGoalStatus :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runChangeGoalStatus currentStep @ (WorkOnAGoalStep
                                           workOnAGoalStepHandle
-                                          clientsSetting @ ClientsSetting {read, write}
+                                          cliState @ State {readClientState, writeClientState}
                                           workspace @ Workspace {workspaceId}
                                           goal @ Goal {goalId}
                                           workOnWorkspace
                                           workOnWorkspaces) = do
-      safeResponse <- liftIO $ (fetchGoal read workspaceId goalId)
+      safeResponse <- liftIO $ (fetchGoal readClientState workspaceId goalId)
       case safeResponse of
         Left applicationError  -> return $ Left $ StepError {
                                                     currentStep ,
@@ -354,7 +354,7 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
                 commandId <- liftIO $ nextRandom
                 sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
                 commandToSent <- getCommandToSend nextStatus commandId goalId workspaceId
-                response <- liftIO $ sendCommandAndWaitTillProcessed write commandToSent
+                response <- liftIO $ sendCommandAndWaitTillProcessed writeClientState commandToSent
                 case response of
                   Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
                   Right CommandFailed {reason} ->  do
@@ -364,14 +364,14 @@ run clientsSetting   @ ClientsSetting {write,monitoring,read}
                   Right CommandSuccessfullyProcessed {} ->  do
                     sayLn $ fg green <> "> The command has been successfully processed... "
                     displayEndOfACommand
-                    (liftIO $ (fetchGoal read workspaceId goalId))
+                    (liftIO $ (fetchGoal readClientState workspaceId goalId))
                      <&> either
                           (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                           (maybe
                             (Left $ StepError {currentStep ,errorDescription = "Goal asked does not exist"})
                             (\goal -> Right $ WorkOnAGoalStep
                                                   run
-                                                  clientsSetting
+                                                  cliState
                                                   workspace
                                                   goal
                                                   workOnWorkspace

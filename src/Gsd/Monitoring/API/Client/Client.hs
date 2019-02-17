@@ -35,16 +35,16 @@ import Cqrs.Write.Serialization.CommandResponse ()
 import DevOps.Core
 import System.SafeResponse
 import Control.Exception
-import Gsd.Clients
+import Gsd.Monitoring.API.Client.State
 import Logger.Core
 import qualified Streamly.Safe as StreamlySafe
 
-streamGsdCommandByWorkspaceId ::           ClientSetting -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
-streamInfinitelyGsdCommandByWorkspaceId :: ClientSetting -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
-streamGsdCommandResponseByWorkspaceId ::   ClientSetting -> WorkspaceId -> IO (SafeResponse [Persisted CommandResponse])
-streamGsdEventByWorkspaceId ::             ClientSetting -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
-streamInfinitelyGsdEventByWorkspaceId ::   ClientSetting -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
-streamGsdValidationStateByWorkspaceId ::   ClientSetting -> WorkspaceId -> IO (SafeResponse [Persisted (ValidationState GsdState)])
+streamGsdCommandByWorkspaceId ::           State -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
+streamInfinitelyGsdCommandByWorkspaceId :: State -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
+streamGsdCommandResponseByWorkspaceId ::   State -> WorkspaceId -> IO (SafeResponse [Persisted CommandResponse])
+streamGsdEventByWorkspaceId ::             State -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
+streamInfinitelyGsdEventByWorkspaceId ::   State -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
+streamGsdValidationStateByWorkspaceId ::   State -> WorkspaceId -> IO (SafeResponse [Persisted (ValidationState GsdState)])
 
 streamGsdCommandByWorkspaceId =             bindWithSettings streamGsdCommandByWorkspaceIdOnPipe
 streamInfinitelyGsdCommandByWorkspaceId  =  bindWithSettings streamInfinitelyGsdCommandByWorkspaceIdOnPipe
@@ -55,13 +55,13 @@ streamGsdValidationStateByWorkspaceId  =    bindWithSettings streamGsdValidation
 
 
 bindWithSettings :: (WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted item)) IO ())) ->
-                    ClientSetting ->
+                    State ->
                     WorkspaceId ->
                     IO (SafeResponse [Persisted item])
-bindWithSettings call ClientSetting { manager, url, logger} workspaceId = do
+bindWithSettings call State { httpClientManager, url, logger} workspaceId = do
   (S.withClientM
      (fromPipes <$> (call workspaceId))
-     (S.mkClientEnv manager url)
+     (S.mkClientEnv httpClientManager url)
      (\e -> case e of
         Left errorHttpLevel -> do
          logInfo logger "An http error occured with the monitoring microservice."
