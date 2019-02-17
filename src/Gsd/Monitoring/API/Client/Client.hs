@@ -28,10 +28,10 @@ import Gsd.Write.Model.Events.Event
 import Gsd.Write.Model.Events.Serialization()
 import Servant.Pipes ()
 import Gsd.Write.Model.State
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.Write.Serialization.ValidationState ()
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import Cqrs.Write.Serialization.CommandResponse ()
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Serialization.ValidationState ()
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Serialization.CommandResponse ()
 import DevOps.Core
 import System.SafeResponse
 import Control.Exception

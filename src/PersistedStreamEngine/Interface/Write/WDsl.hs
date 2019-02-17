@@ -3,15 +3,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module PersistedStreamEngine.Interface.Write.WDsl where
 
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.Write.Aggregate.Events.Event
-import Cqrs.Write.Aggregate.Events.EventId
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Aggregate.Events.Event
+import CQRS.Write.Aggregate.Events.EventId
 
 import Data.Time
 import Control.Monad.Free
 import qualified Data.Set as Set
-import Cqrs.Write.Aggregate.Commands.CommandHeader
+import CQRS.Write.Aggregate.Commands.CommandHeader
 import System.SafeResponse
 
 type TransactionInterpreter applicationState a = WritePersistenceStreamLanguage applicationState a -> IO (SafeResponse a)

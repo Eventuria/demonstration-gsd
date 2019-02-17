@@ -7,8 +7,8 @@ import Data.UUID
 
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
-import Cqrs.Write.StreamRepository
-import Cqrs.Write.Aggregate.Ids.AggregateId
+import CQRS.Write.StreamRepository
+import CQRS.Write.Aggregate.Ids.AggregateId
 import Gsd.Write.Model.State
 
 getEventStoreStreamRepository :: EventStoreClientState -> CqrsStreamRepository EventStoreStream GsdState

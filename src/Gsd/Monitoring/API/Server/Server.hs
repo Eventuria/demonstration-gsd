@@ -30,18 +30,18 @@ import qualified Gsd.Monitoring.Service.OverEventStore as GsdMonitoring
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Model.Core
 
-import Cqrs.Write.Serialization.PersistenceResult ()
-import Cqrs.Write.Serialization.Command ()
-import Cqrs.Write.Serialization.Event ()
+import CQRS.Write.Serialization.PersistenceResult ()
+import CQRS.Write.Serialization.Command ()
+import CQRS.Write.Serialization.Event ()
 import Gsd.Write.Model.Commands.Command
 import Gsd.Write.Model.Commands.Serialization ()
 import Gsd.Write.Model.Events.Event
 import Gsd.Write.Model.Events.Serialization()
 import Gsd.Write.Model.State
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.Write.Serialization.ValidationState ()
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import Cqrs.Write.Serialization.CommandResponse ()
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Serialization.ValidationState ()
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Serialization.CommandResponse ()
 import DevOps.Core
 import System.SafeResponse
 import Gsd.Monitoring.API.Server.Settings

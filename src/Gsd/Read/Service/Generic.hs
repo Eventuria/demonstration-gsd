@@ -14,7 +14,7 @@ import Data.Maybe
 import Data.Text hiding (map,length,find)
 import Data.List (find)
 import PersistedStreamEngine.Interface.Streamable
-import Cqrs.Write.StreamRepository
+import CQRS.Write.StreamRepository
 import PersistedStreamEngine.Interface.PersistedItem
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
@@ -24,8 +24,8 @@ import Gsd.Read.Model.Goal
 import Gsd.Read.Model.Action
 import Gsd.Write.Model.Core
 import Gsd.Write.Model.Events.Event
-import Cqrs.Write.Aggregate.Events.Event
-import Cqrs.Write.Serialization.Event ()
+import CQRS.Write.Aggregate.Events.Event
+import CQRS.Write.Serialization.Event ()
 import Gsd.Read.Model.GoalStats
 import Gsd.Read.Model.ActionStats
 

@@ -14,14 +14,14 @@ import Data.Function ((&))
 import qualified Streamly.Prelude as S
 
 import PersistedStreamEngine.Interface.Streamable
-import Cqrs.Write.StreamRepository
+import CQRS.Write.StreamRepository
 import PersistedStreamEngine.Interface.PersistedItem
-import Cqrs.Write.Aggregate.Commands.Command
-import Cqrs.Write.Aggregate.Events.Event
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Aggregate.Commands.Command
+import CQRS.Write.Aggregate.Events.Event
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 
 import PersistedStreamEngine.Interface.Read.Reading
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import Gsd.Write.Model.State
 import Gsd.Write.Model.Commands.Command
 import Gsd.Write.Model.Events.Event

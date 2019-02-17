@@ -6,9 +6,9 @@ module Gsd.Write.Command.Handling.CommandHandler (commandHandler) where
 import Gsd.Write.Model.Commands.Command
 import Gsd.Write.CommandPredicates
 
-import Cqrs.Write.CommandConsumption.CommandHandler
-import Cqrs.EDsl
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.CommandConsumption.CommandHandler
+import CQRS.EDsl
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Gsd.Write.Model.State
 import PersistedStreamEngine.Interface.PersistedItem
 import qualified Gsd.Write.Command.Handling.CreateWorkspace as CreateWorkspace

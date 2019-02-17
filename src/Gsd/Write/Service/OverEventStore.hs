@@ -4,18 +4,18 @@ module Gsd.Write.Service.OverEventStore  where
 import Logger.Core
 
 import Gsd.Write.Model.Commands.Command
-import Cqrs.Write.StreamRepository
+import CQRS.Write.StreamRepository
 import Gsd.Write.Repository.EventStoreStreams
 import qualified Gsd.Write.Service.Generic as GenericGsd
-import Cqrs.Write.Aggregate.Ids.AggregateId
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Ids.AggregateId
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import PersistedStreamEngine.Instances.EventStore.TransactionInterpreter
 import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
 import PersistedStreamEngine.Instances.EventStore.Write.CqrsInstance
-import Cqrs.Write.PersistCommandResult
-import Cqrs.Write.Aggregate.Commands.CommandId
+import CQRS.Write.PersistCommandResult
+import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import System.SafeResponse
 

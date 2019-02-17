@@ -24,9 +24,9 @@ import Gsd.Read.Model.Goal
 import Gsd.Read.Model.Action
 import Gsd.CLI.Workflow.Steps
 import Gsd.Write.Model.Commands.Command
-import Cqrs.Write.Aggregate.Commands.CommandId
+import CQRS.Write.Aggregate.Commands.CommandId
 import Gsd.Write.Model.Core
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import Gsd.CLI.UI.Greetings
 import Gsd.Read.Model.Workspace
 import Gsd.Read.Model.ActionStats

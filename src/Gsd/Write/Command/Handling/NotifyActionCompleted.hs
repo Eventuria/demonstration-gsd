@@ -4,12 +4,12 @@
 module Gsd.Write.Command.Handling.NotifyActionCompleted where
 
 
-import Cqrs.EDsl hiding (Action)
+import CQRS.EDsl hiding (Action)
 import Gsd.Write.Model.Events.Event
 import Gsd.Write.Model.State
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Gsd.Write.Model.Core
-import Cqrs.Write.Aggregate.Commands.CommandId
+import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import qualified Data.Set as Set
 import Data.List hiding (union)

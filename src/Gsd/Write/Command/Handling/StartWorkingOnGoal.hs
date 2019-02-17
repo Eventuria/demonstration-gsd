@@ -4,13 +4,13 @@
 module Gsd.Write.Command.Handling.StartWorkingOnGoal where
 
 
-import Cqrs.EDsl
+import CQRS.EDsl
 import Gsd.Write.Model.Events.Event
 import Gsd.Write.Model.State
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Gsd.Write.Model.Core
 
-import Cqrs.Write.Aggregate.Commands.CommandId
+import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import Data.Set hiding (map)
 

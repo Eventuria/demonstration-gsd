@@ -13,8 +13,8 @@ import Gsd.Write.Model.Core
 import Gsd.Read.Model.Workspace
 import Gsd.Read.Model.Goal
 import Gsd.Read.Model.Action
-import Cqrs.Write.StreamRepository
-import Cqrs.Write.Aggregate.Events.Event
+import CQRS.Write.StreamRepository
+import CQRS.Write.Aggregate.Events.Event
 import Streamly (SerialT)
 import System.SafeResponse
 

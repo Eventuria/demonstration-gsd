@@ -23,7 +23,7 @@ import Gsd.CLI.UI.Quit (runQuitCLI)
 import Gsd.CLI.UI.Greetings
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Model.Workspace
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import qualified Gsd.CLI.UI.Workspace as WorkspaceActions (run)
 import Gsd.Read.Model.GoalStats
 

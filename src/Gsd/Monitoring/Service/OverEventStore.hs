@@ -5,20 +5,20 @@ module Gsd.Monitoring.Service.OverEventStore  where
 import PersistedStreamEngine.Interface.Streamable
 
 import PersistedStreamEngine.Interface.PersistedItem
-import Cqrs.Write.Aggregate.Commands.Command
-import Cqrs.Write.Aggregate.Events.Event
+import CQRS.Write.Aggregate.Commands.Command
+import CQRS.Write.Aggregate.Events.Event
 
 import Gsd.Write.Model.Commands.Command
 import Gsd.Write.Model.Events.Event
 import Gsd.Write.Model.Core
 import Gsd.Write.Repository.EventStoreStreams
-import Cqrs.Write.StreamRepository
+import CQRS.Write.StreamRepository
 import qualified Gsd.Monitoring.Service.Generic  as GenericGSDMonitoring
 import Gsd.Write.Model.State
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 --import DevOps.Core (HealthCheckResult)
 --import DevOps.MicroService.EventStore
 import System.SafeResponse

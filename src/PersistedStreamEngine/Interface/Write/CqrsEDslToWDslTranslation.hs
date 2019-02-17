@@ -1,7 +1,7 @@
 module PersistedStreamEngine.Interface.Write.CqrsEDslToWDslTranslation where
 
 import Control.Monad.Free
-import qualified Cqrs.EDsl as CqrsEDsl
+import qualified CQRS.EDsl as CqrsEDsl
 import qualified PersistedStreamEngine.Interface.Write.WDsl as WDsl
 
 translate :: CqrsEDsl.CommandTransaction applicationState () -> WDsl.WritePersistenceStreamLanguage applicationState ()

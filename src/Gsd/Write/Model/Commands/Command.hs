@@ -11,9 +11,9 @@ import Data.Text
 import Data.UUID
 import Gsd.Write.Model.Core
 import qualified Data.Map as Map
-import Cqrs.Write.Aggregate.Commands.CommandId
-import Cqrs.Write.Aggregate.Commands.Command
-import Cqrs.Write.Aggregate.Commands.CommandHeader
+import CQRS.Write.Aggregate.Commands.CommandId
+import CQRS.Write.Aggregate.Commands.Command
+import CQRS.Write.Aggregate.Commands.CommandHeader
 import Control.Lens
 import Data.Aeson.Lens
 import Control.Monad

@@ -13,11 +13,11 @@
 module Gsd.Write.API.Definition where
 
 import Servant
-import Cqrs.Write.PersistCommandResult
+import CQRS.Write.PersistCommandResult
 import Gsd.Write.Model.Commands.Command
-import Cqrs.Write.Aggregate.Ids.AggregateId
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import Cqrs.Write.Aggregate.Commands.CommandId
+import CQRS.Write.Aggregate.Ids.AggregateId
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import PersistedStreamEngine.Interface.PersistedItem
 import System.SafeResponse

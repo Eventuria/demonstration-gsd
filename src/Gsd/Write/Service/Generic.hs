@@ -5,25 +5,25 @@ module Gsd.Write.Service.Generic  where
 
 import Logger.Core
 
-import qualified Cqrs.Write.CommandConsumption.Main as Cqrs.Write.CommandConsumption
-import qualified Cqrs.Write.CqrsWrite as Cqrs.Write
-import Cqrs.Write.StreamRepository
+import qualified CQRS.Write.CommandConsumption.Main as CQRS.Write.CommandConsumption
+import qualified CQRS.Write.CqrsWrite as CQRS.Write
+import CQRS.Write.StreamRepository
 
 import PersistedStreamEngine.Interface.Write.Writing
 import PersistedStreamEngine.Interface.Read.Reading
 import PersistedStreamEngine.Interface.Write.WDsl
-import Cqrs.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)
-import Cqrs.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAggregate)
+import CQRS.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)
+import CQRS.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAggregate)
 import Gsd.Write.Command.Handling.CommandHandler (commandHandler)
 import Gsd.Write.Model.Commands.Command
 import Gsd.Write.Model.State
-import Cqrs.Write.PersistCommandResult
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.PersistCommandResult
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import PersistedStreamEngine.Interface.PersistedItem
-import Cqrs.Write.Aggregate.Ids.AggregateId
+import CQRS.Write.Aggregate.Ids.AggregateId
 import PersistedStreamEngine.Interface.Offset
-import Cqrs.Write.Aggregate.Commands.CommandId
-import Cqrs.Write.Serialization.CommandResponse()
+import CQRS.Write.Aggregate.Commands.CommandId
+import CQRS.Write.Serialization.CommandResponse()
 import System.SafeResponse
 
 persistCommand ::  AggregateIdStream persistedStream ->
@@ -33,7 +33,7 @@ persistCommand ::  AggregateIdStream persistedStream ->
                    GsdCommand ->
                    IO PersistCommandResult
 persistCommand aggregateIdStream getCommandStream querying writing gsdCommand =
-  Cqrs.Write.persistCommand
+  CQRS.Write.persistCommand
     writing
     querying
     getCommandStream
@@ -51,7 +51,7 @@ startCommandConsumption logger
                                                   getValidationStateStream}
                         reading @ Reading { streaming ,querying}
                         transactionInterpreter   =
-   Cqrs.Write.CommandConsumption.execute
+   CQRS.Write.CommandConsumption.execute
       logger
       aggregateIdStream
       streaming

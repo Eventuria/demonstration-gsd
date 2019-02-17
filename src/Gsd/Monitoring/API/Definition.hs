@@ -19,8 +19,8 @@ import Gsd.Write.Model.Events.Event
 import Gsd.Write.Model.Commands.Command
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Model.State
-import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import DevOps.Core
 import qualified Pipes as P
 import System.SafeResponse

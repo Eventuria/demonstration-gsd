@@ -27,7 +27,7 @@ import Gsd.Read.Model.Workspace
 import Gsd.Read.API.Client.Client (fetchGoals,fetchWorkspace)
 import Gsd.Read.Model.Goal
 import Gsd.CLI.Workflow.Steps
-import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
+import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import Gsd.CLI.UI.Greetings
 import Gsd.Read.Model.GoalStats
 import Gsd.Read.Model.ActionStats

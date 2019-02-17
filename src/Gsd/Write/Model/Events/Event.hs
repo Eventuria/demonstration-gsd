@@ -5,9 +5,9 @@ module Gsd.Write.Model.Events.Event where
 
 
 import Gsd.Write.Model.Core
-import Cqrs.Write.Aggregate.Events.Event
-import Cqrs.Write.Aggregate.Events.EventId
-import qualified Cqrs.Write.Aggregate.Events.Event as CoreEvent
+import CQRS.Write.Aggregate.Events.Event
+import CQRS.Write.Aggregate.Events.EventId
+import qualified CQRS.Write.Aggregate.Events.Event as CoreEvent
 import Data.Time
 import Data.Text
 import qualified Data.Map as Map

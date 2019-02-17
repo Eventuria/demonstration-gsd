@@ -8,18 +8,18 @@ import Control.Monad.IO.Class (MonadIO(..))
 import Logger.Core
 import Data.Aeson
 import PersistedStreamEngine.Interface.Write.WDsl
-import Cqrs.Write.Aggregate.Events.Event
-import Cqrs.Write.Aggregate.Core
-import Cqrs.Write.StreamRepository
+import CQRS.Write.Aggregate.Events.Event
+import CQRS.Write.Aggregate.Core
+import CQRS.Write.StreamRepository
 
 import PersistedStreamEngine.Instances.EventStore.Write.Persisting
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 
-import Cqrs.Write.Serialization.Command ()
-import Cqrs.Write.Serialization.AggregateId ()
-import Cqrs.Write.Serialization.Event ()
-import Cqrs.Write.Serialization.ValidationState ()
-import Cqrs.Write.Serialization.CommandResponse ()
+import CQRS.Write.Serialization.Command ()
+import CQRS.Write.Serialization.AggregateId ()
+import CQRS.Write.Serialization.Event ()
+import CQRS.Write.Serialization.ValidationState ()
+import CQRS.Write.Serialization.CommandResponse ()
 
 
 
