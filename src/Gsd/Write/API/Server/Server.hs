@@ -18,7 +18,7 @@ import Servant.Pipes ()
 
 import Control.Monad.IO.Class (MonadIO(..))
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
-import qualified Gsd.Write.GsdOverEventStore as Gsd.Write
+import qualified Gsd.Write.Service.OverEventStore as Gsd.Write
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Write.Aggregate.Ids.AggregateId
 
@@ -26,8 +26,8 @@ import Cqrs.Write.Serialization.PersistenceResult ()
 import Gsd.Write.API.Definition
 import Servant
 import Network.Wai.Handler.Warp hiding (Settings)
-import Gsd.Write.Commands.Command
-import Gsd.Write.Commands.Serialization ()
+import Gsd.Write.Model.Commands.Command
+import Gsd.Write.Model.Commands.Serialization ()
 import Cqrs.Write.PersistCommandResult
 import PersistedStreamEngine.Interface.PersistedItem
 import Cqrs.Write.Aggregate.Commands.CommandId

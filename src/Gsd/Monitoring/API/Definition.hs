@@ -14,11 +14,11 @@
 module Gsd.Monitoring.API.Definition where
 
 import Servant
-import Gsd.Write.Core
-import Gsd.Write.Events.Event
-import Gsd.Write.Commands.Command
+import Gsd.Write.Model.Core
+import Gsd.Write.Model.Events.Event
+import Gsd.Write.Model.Commands.Command
 import PersistedStreamEngine.Interface.PersistedItem
-import Gsd.Write.State
+import Gsd.Write.Model.State
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import DevOps.Core

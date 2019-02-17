@@ -12,13 +12,13 @@ module Gsd.Read.API.Client.Client (
 
 import Data.Proxy
 import Servant
-import Gsd.Read.Workspace
+import Gsd.Read.Model.Workspace
 import qualified Pipes as P
 import Streamly.Adapters
 import qualified Servant.Client.Streaming as S
-import Gsd.Write.Core
-import Gsd.Read.Goal
-import Gsd.Read.Action
+import Gsd.Write.Model.Core
+import Gsd.Read.Model.Goal
+import Gsd.Read.Model.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import System.SafeResponse
 import Servant.Pipes ()

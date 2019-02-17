@@ -21,13 +21,13 @@ import qualified Pipes as P
 import qualified Servant.Client.Streaming as S
 
 import PersistedStreamEngine.Interface.PersistedItem
-import Gsd.Write.Core
-import Gsd.Write.Commands.Command
-import Gsd.Write.Commands.Serialization ()
-import Gsd.Write.Events.Event
-import Gsd.Write.Events.Serialization()
+import Gsd.Write.Model.Core
+import Gsd.Write.Model.Commands.Command
+import Gsd.Write.Model.Commands.Serialization ()
+import Gsd.Write.Model.Events.Event
+import Gsd.Write.Model.Events.Serialization()
 import Servant.Pipes ()
-import Gsd.Write.State
+import Gsd.Write.Model.State
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Serialization.ValidationState ()
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse

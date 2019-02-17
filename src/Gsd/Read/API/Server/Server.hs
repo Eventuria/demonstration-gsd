@@ -26,13 +26,13 @@ import Logger.Core
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
-import qualified Gsd.Read.ReadOverEventStore as GsdRead
+import qualified Gsd.Read.Service.OverEventStore as GsdRead
 
-import Gsd.Write.Core
-import Gsd.Read.Goal
-import Gsd.Read.Action
+import Gsd.Write.Model.Core
+import Gsd.Read.Model.Goal
+import Gsd.Read.Model.Action
 import PersistedStreamEngine.Interface.PersistedItem
-import Gsd.Read.Workspace
+import Gsd.Read.Model.Workspace
 import Gsd.Read.API.Definition
 import System.SafeResponse
 import Gsd.Read.API.Server.Settings

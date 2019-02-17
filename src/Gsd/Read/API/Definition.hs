@@ -13,11 +13,11 @@ module Gsd.Read.API.Definition where
 
 import Servant
 import qualified Pipes as P
-import Gsd.Read.Workspace
-import Gsd.Read.Goal
-import Gsd.Read.Action
+import Gsd.Read.Model.Workspace
+import Gsd.Read.Model.Goal
+import Gsd.Read.Model.Action
 import PersistedStreamEngine.Interface.PersistedItem
-import Gsd.Write.Core
+import Gsd.Write.Model.Core
 import System.SafeResponse
 
 type GSDReadApi =   StreamWorkspace

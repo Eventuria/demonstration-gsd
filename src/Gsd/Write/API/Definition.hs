@@ -14,7 +14,7 @@ module Gsd.Write.API.Definition where
 
 import Servant
 import Cqrs.Write.PersistCommandResult
-import Gsd.Write.Commands.Command
+import Gsd.Write.Model.Commands.Command
 import Cqrs.Write.Aggregate.Ids.AggregateId
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Cqrs.Write.Aggregate.Commands.CommandId

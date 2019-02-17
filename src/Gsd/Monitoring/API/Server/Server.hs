@@ -25,19 +25,19 @@ import Network.Wai.Handler.Warp hiding (Settings)
 import Gsd.Monitoring.API.Definition
 
 import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
-import qualified Gsd.Monitoring.MonitoringOverEventStore as GsdMonitoring
+import qualified Gsd.Monitoring.Service.OverEventStore as GsdMonitoring
 
 import PersistedStreamEngine.Interface.PersistedItem
-import Gsd.Write.Core
+import Gsd.Write.Model.Core
 
 import Cqrs.Write.Serialization.PersistenceResult ()
 import Cqrs.Write.Serialization.Command ()
 import Cqrs.Write.Serialization.Event ()
-import Gsd.Write.Commands.Command
-import Gsd.Write.Commands.Serialization ()
-import Gsd.Write.Events.Event
-import Gsd.Write.Events.Serialization()
-import Gsd.Write.State
+import Gsd.Write.Model.Commands.Command
+import Gsd.Write.Model.Commands.Serialization ()
+import Gsd.Write.Model.Events.Event
+import Gsd.Write.Model.Events.Serialization()
+import Gsd.Write.Model.State
 import Cqrs.Write.Aggregate.Commands.ValidationStates.ValidationState
 import Cqrs.Write.Serialization.ValidationState ()
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse

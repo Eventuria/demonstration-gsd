@@ -7,7 +7,7 @@ module Gsd.Write.API.Client.Client where
 
 import Servant
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import Gsd.Write.Commands.Command
+import Gsd.Write.Model.Commands.Command
 import Cqrs.Write.Aggregate.Ids.AggregateId
 import PersistedStreamEngine.Interface.Offset
 import Cqrs.Write.Aggregate.Commands.CommandId
@@ -19,7 +19,7 @@ import qualified Servant.Client.Streaming as S
 import Control.Exception
 import Logger.Core
 import Gsd.Write.API.Definition
-import Gsd.Write.Commands.Serialization ()
+import Gsd.Write.Model.Commands.Serialization ()
 import Cqrs.Write.Serialization.CommandResponse ()
 
 data SendCommandAnWaitFailure =  SendCommandAnWaitFailure {reason :: String} deriving Show

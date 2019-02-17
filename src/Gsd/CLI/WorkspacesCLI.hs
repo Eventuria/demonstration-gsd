@@ -15,17 +15,17 @@ import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.API.Client.Client
-import Gsd.Write.Commands.Command
+import Gsd.Write.Model.Commands.Command
 import Gsd.Read.API.Client.Client (fetchWorkspaces )
 import Gsd.CLI.State
 import Gsd.CLI.Steps
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Gsd.CLI.Greetings
 import PersistedStreamEngine.Interface.PersistedItem
-import Gsd.Read.Workspace
+import Gsd.Read.Model.Workspace
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import qualified Gsd.CLI.WorkspaceCLI as WorkspaceActions (run)
-import Gsd.Read.GoalStats
+import Gsd.Read.Model.GoalStats
 
 
 data WorkspacesCommand = -- Workspaces Command

@@ -12,8 +12,8 @@ import System.Console.Byline
 import Data.Text
 import System.Exit (exitSuccess)
 import Gsd.CLI.State
-import Gsd.Read.Workspace
-import Gsd.Read.Goal
+import Gsd.Read.Model.Workspace
+import Gsd.Read.Model.Goal
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
 

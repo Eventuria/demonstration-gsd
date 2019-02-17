@@ -20,17 +20,17 @@ import Gsd.Write.API.Client.Client
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Gsd.CLI.State
 import Gsd.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)
-import Gsd.Read.Goal
-import Gsd.Read.Action
+import Gsd.Read.Model.Goal
+import Gsd.Read.Model.Action
 import Gsd.CLI.Steps
-import Gsd.Write.Commands.Command
+import Gsd.Write.Model.Commands.Command
 import Cqrs.Write.Aggregate.Commands.CommandId
-import Gsd.Write.Core
+import Gsd.Write.Model.Core
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Gsd.CLI.Greetings
-import Gsd.Read.Workspace
-import Gsd.Read.ActionStats
-import Gsd.Read.GoalStats
+import Gsd.Read.Model.Workspace
+import Gsd.Read.Model.ActionStats
+import Gsd.Read.Model.GoalStats
 import qualified Gsd.CLI.MonitoringCLI as MonitoringCLI
 import Gsd.CLI.MonitoringCLI (runMonitoringCommand)
 

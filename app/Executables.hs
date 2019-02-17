@@ -23,8 +23,8 @@ import qualified Gsd.Monitoring.API.Client.Settings as Monitoring.Client
 import qualified Gsd.Write.API.Server.Settings as Write.Server
 import qualified Gsd.Read.API.Server.Settings as Read.Server
 import qualified Gsd.Monitoring.API.Server.Settings as Monitoring.Server
-import qualified Gsd.Write.Commands.Consumer.Settings as Command.Consumer
-import qualified Gsd.Write.Commands.Consumer.CommandConsumer as Command.Consumer
+import qualified Gsd.Write.Command.Consumer.Settings as Command.Consumer
+import qualified Gsd.Write.Command.Consumer.CommandConsumer as Command.Consumer
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------

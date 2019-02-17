@@ -11,7 +11,7 @@ import System.SafeResponse
 import Data.Text
 import Data.Function ((&))
 import Gsd.CLI.Steps
-import Gsd.Read.Workspace
+import Gsd.Read.Model.Workspace
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.CLI.Greetings
 

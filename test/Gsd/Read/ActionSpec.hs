@@ -6,7 +6,7 @@ import Test.Hspec
 import Test.QuickCheck
 import Generic.Random
 import Data.Aeson
-import Gsd.Read.Action
+import Gsd.Read.Model.Action
 import Test.QuickCheck.Instances.UUID ()
 import Test.QuickCheck.Instances.UnorderedContainers ()
 import Test.QuickCheck.Instances.Vector ()
