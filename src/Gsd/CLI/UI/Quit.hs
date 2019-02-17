@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
-module Gsd.CLI.QuitCLI where
+module Gsd.CLI.UI.Quit where
 
-import Gsd.CLI.Steps
+import Gsd.CLI.Workflow.Steps
 import System.Console.Byline
 
 runQuitCLI :: Byline IO (Either StepError (Step Quit))

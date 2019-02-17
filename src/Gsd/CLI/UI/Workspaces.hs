@@ -4,11 +4,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
-module Gsd.CLI.WorkspacesCLI (run)where
+module Gsd.CLI.UI.Workspaces (run)where
 
 import Prelude hiding (length)
 import System.Console.Byline hiding (askWithMenuRepeatedly)
-import Gsd.CLI.ByLineWrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
+import ByLine.Wrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
 import qualified  Data.List as List
 import Data.Text hiding (map,foldr)
 import Data.UUID.V4
@@ -18,13 +18,13 @@ import Gsd.Write.API.Client.Client
 import Gsd.Write.Model.Commands.Command
 import Gsd.Read.API.Client.Client (fetchWorkspaces )
 import Gsd.CLI.State
-import Gsd.CLI.Steps
-import Gsd.CLI.QuitCLI (runQuitCLI)
-import Gsd.CLI.Greetings
+import Gsd.CLI.Workflow.Steps
+import Gsd.CLI.UI.Quit (runQuitCLI)
+import Gsd.CLI.UI.Greetings
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Model.Workspace
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import qualified Gsd.CLI.WorkspaceCLI as WorkspaceActions (run)
+import qualified Gsd.CLI.UI.Workspace as WorkspaceActions (run)
 import Gsd.Read.Model.GoalStats
 
 

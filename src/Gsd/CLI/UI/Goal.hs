@@ -5,7 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RecordWildCards #-}
-module Gsd.CLI.GoalCLI (run)where
+module Gsd.CLI.UI.Goal (run)where
 
 import Data.Functor
 import Prelude hiding (length,readClientState)
@@ -15,24 +15,24 @@ import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Console.Byline hiding (askWithMenuRepeatedly)
-import Gsd.CLI.ByLineWrapper
+import ByLine.Wrapper
 import Gsd.Write.API.Client.Client
-import Gsd.CLI.QuitCLI (runQuitCLI)
+import Gsd.CLI.UI.Quit (runQuitCLI)
 import Gsd.CLI.State
 import Gsd.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)
 import Gsd.Read.Model.Goal
 import Gsd.Read.Model.Action
-import Gsd.CLI.Steps
+import Gsd.CLI.Workflow.Steps
 import Gsd.Write.Model.Commands.Command
 import Cqrs.Write.Aggregate.Commands.CommandId
 import Gsd.Write.Model.Core
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import Gsd.CLI.Greetings
+import Gsd.CLI.UI.Greetings
 import Gsd.Read.Model.Workspace
 import Gsd.Read.Model.ActionStats
 import Gsd.Read.Model.GoalStats
-import qualified Gsd.CLI.MonitoringCLI as MonitoringCLI
-import Gsd.CLI.MonitoringCLI (runMonitoringCommand)
+import qualified Gsd.CLI.UI.Monitoring as MonitoringCLI
+import Gsd.CLI.UI.Monitoring (runMonitoringCommand)
 
 data GoalCommands = -- Goal Commands
                     RefineGoalDescriptionCommand  Text

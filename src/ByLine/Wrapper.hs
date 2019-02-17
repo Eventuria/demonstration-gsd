@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Gsd.CLI.ByLineWrapper where
+module ByLine.Wrapper where
 
 import qualified System.Console.Byline as ByLine (askWithMenuRepeatedly)
 import System.Console.Byline hiding (askWithMenuRepeatedly)

@@ -6,7 +6,7 @@
 {-# LANGUAGE Rank2Types #-}
 
 
-module Gsd.CLI.Steps where
+module Gsd.CLI.Workflow.Steps where
 
 import System.Console.Byline
 import Data.Text

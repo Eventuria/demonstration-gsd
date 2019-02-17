@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Gsd.CLI.Greetings  where
+module Gsd.CLI.UI.Greetings  where
 
 import System.Console.Byline
 

@@ -3,17 +3,17 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE Rank2Types #-}
-module Gsd.CLI.MonitoringCLI where
+module Gsd.CLI.UI.Monitoring where
 
 import System.Console.Byline
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.SafeResponse
 import Data.Text
 import Data.Function ((&))
-import Gsd.CLI.Steps
+import Gsd.CLI.Workflow.Steps
 import Gsd.Read.Model.Workspace
 import PersistedStreamEngine.Interface.PersistedItem
-import Gsd.CLI.Greetings
+import Gsd.CLI.UI.Greetings
 
 import Gsd.Monitoring.API.Client.Client (streamGsdEventByWorkspaceId,
                               streamGsdCommandByWorkspaceId,
