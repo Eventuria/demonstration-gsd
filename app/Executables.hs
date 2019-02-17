@@ -23,8 +23,8 @@ import qualified Gsd.Monitoring.API.Client.Settings as Monitoring.Client
 import qualified Gsd.Write.API.Server.Settings as Write.Server
 import qualified Gsd.Read.API.Server.Settings as Read.Server
 import qualified Gsd.Monitoring.API.Server.Settings as Monitoring.Server
-import qualified Gsd.Write.Commands.Consumer.CommandConsumerSettings as CommandConsumer
-import qualified Gsd.Write.Commands.Consumer.CommandConsumer as CommandConsumer
+import qualified Gsd.Write.Commands.Consumer.Settings as Command.Consumer
+import qualified Gsd.Write.Commands.Consumer.CommandConsumer as Command.Consumer
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------
@@ -71,7 +71,11 @@ gsdWriteApi = Gsd.Write.API.Server.Server.start
 -- | Command consumption streamer :
 --  Processes commands stored in the EventStore and produces command responses and events
 gsdCommandConsumptionStreamer :: IO ()
-gsdCommandConsumptionStreamer = getLogger "[gsd.Write.CommandConsummer]" >>= (\logger -> CommandConsumer.start CommandConsumer.CommandConsumerSettings { eventStoreClientSettings = getEventStoreSettings "[command.consummer/event.store.client]", logger})
+gsdCommandConsumptionStreamer = Command.Consumer.start
+                                  Command.Consumer.Settings {
+                                    loggerId = "[gsd.write.command.consummer]",
+                                    eventStoreClientSettings = getEventStoreSettings
+                                                                  "[gsd.write.command.consummer/event.store.client]"}
 
   
 --------------------------------------------------------------------------------
