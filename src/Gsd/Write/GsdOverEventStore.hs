@@ -9,7 +9,7 @@ import Gsd.Write.EventStoreStreamRepository
 import qualified Gsd.Write.GenericGsd as GenericGsd
 import Cqrs.Write.Aggregate.Ids.AggregateId
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
-import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
 import PersistedStreamEngine.Instances.EventStore.TransactionInterpreter
 import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
@@ -19,7 +19,7 @@ import Cqrs.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import System.SafeResponse
 
-persistCommand ::  EventStoreSettings -> GsdCommand -> IO PersistCommandResult
+persistCommand ::  EventStoreClientManager -> GsdCommand -> IO PersistCommandResult
 persistCommand settings gsdCommand =
   GenericGsd.persistCommand
     (aggregateIdStream $ getEventStoreStreamRepository settings)
@@ -28,7 +28,7 @@ persistCommand settings gsdCommand =
     getEventStoreWriting
     gsdCommand
 
-startCommandConsumption :: EventStoreSettings -> Logger ->  IO (SafeResponse())
+startCommandConsumption :: EventStoreClientManager -> Logger ->  IO (SafeResponse())
 startCommandConsumption settings logger  =
    GenericGsd.startCommandConsumption
       logger
@@ -37,7 +37,7 @@ startCommandConsumption settings logger  =
       (transactionInterpreterForEventStore logger (getEventStoreStreamRepository settings))
 
 
-waitTillCommandResponseProduced :: EventStoreSettings ->
+waitTillCommandResponseProduced :: EventStoreClientManager ->
                               AggregateId ->
                               Offset ->
                               CommandId -> IO (SafeResponse (Persisted CommandResponse))

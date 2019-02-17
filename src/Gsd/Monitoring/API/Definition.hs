@@ -11,7 +11,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Gsd.Monitoring.WebStreamingApiDefinition where
+module Gsd.Monitoring.API.Definition where
 
 import Servant
 import Gsd.Write.Core
@@ -25,8 +25,6 @@ import DevOps.Core
 import qualified Pipes as P
 import System.SafeResponse
 
-proxy :: Proxy GSDMonitoringStreamingApi
-proxy = Proxy
 
 type GSDMonitoringStreamingApi =   HealthCheck
                              :<|>  StreamGsdCommandsByWorkspaceId

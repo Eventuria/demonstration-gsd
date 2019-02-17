@@ -16,10 +16,10 @@ import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Console.Byline hiding (askWithMenuRepeatedly)
 import Gsd.CLI.ByLineWrapper
-import Gsd.Write.Client
+import Gsd.Write.API.Client.Client
 import Gsd.CLI.QuitCLI (runQuitCLI)
 import Gsd.Clients
-import Gsd.Read.Client (fetchActions,fetchGoal,fetchGoals)
+import Gsd.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)
 import Gsd.Read.Goal
 import Gsd.Read.Action
 import Gsd.CLI.Steps

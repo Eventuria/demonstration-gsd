@@ -9,7 +9,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Gsd.Read.WebApiDefinition where
+module Gsd.Read.API.Definition where
 
 import Servant
 import qualified Pipes as P

@@ -15,7 +15,7 @@ import Data.Text hiding (foldr,map)
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Gsd.Write.Client
+import Gsd.Write.API.Client.Client
 
 import qualified Gsd.CLI.GoalCLI as GoalCLI (run)
 import qualified Gsd.CLI.MonitoringCLI as MonitoringCLI
@@ -24,7 +24,7 @@ import Gsd.CLI.QuitCLI (runQuitCLI)
 import Gsd.Clients
 import Gsd.Write.Commands.Command
 import Gsd.Read.Workspace
-import Gsd.Read.Client (fetchGoals,fetchWorkspace)
+import Gsd.Read.API.Client.Client (fetchGoals,fetchWorkspace)
 import Gsd.Read.Goal
 import Gsd.CLI.Steps
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse

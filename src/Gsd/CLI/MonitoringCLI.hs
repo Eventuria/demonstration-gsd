@@ -15,7 +15,7 @@ import Gsd.Read.Workspace
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.CLI.Greetings
 
-import Gsd.Monitoring.Client (streamGsdEventByWorkspaceId,
+import Gsd.Monitoring.API.Client.Client (streamGsdEventByWorkspaceId,
                               streamGsdCommandByWorkspaceId,
                               streamGsdCommandResponseByWorkspaceId,
                               streamGsdValidationStateByWorkspaceId)

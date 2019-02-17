@@ -3,12 +3,11 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Gsd.Write.Client where
+module Gsd.Write.API.Client.Client where
 
 import Servant
 import Cqrs.Write.Aggregate.Commands.Responses.CommandResponse
 import Gsd.Write.Commands.Command
-import Gsd.Write.Server
 import Cqrs.Write.Aggregate.Ids.AggregateId
 import PersistedStreamEngine.Interface.Offset
 import Cqrs.Write.Aggregate.Commands.CommandId
@@ -19,6 +18,9 @@ import Gsd.Clients
 import qualified Servant.Client.Streaming as S
 import Control.Exception
 import Logger.Core
+import Gsd.Write.API.Definition
+import Gsd.Write.Commands.Serialization ()
+import Cqrs.Write.Serialization.CommandResponse ()
 
 data SendCommandAnWaitFailure =  SendCommandAnWaitFailure {reason :: String} deriving Show
 

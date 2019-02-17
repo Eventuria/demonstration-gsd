@@ -10,9 +10,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
-module Gsd.Write.WebApiDefinition where
-
-
+module Gsd.Write.API.Definition where
 
 import Servant
 import Cqrs.Write.PersistCommandResult

@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Gsd.Read.Client (
+module Gsd.Read.API.Client.Client (
   fetchWorkspaces,
   fetchWorkspace,
   fetchGoals,
@@ -15,7 +15,6 @@ import Servant
 import Gsd.Read.Workspace
 import qualified Pipes as P
 import Streamly.Adapters
-import Gsd.Read.Server
 import qualified Servant.Client.Streaming as S
 import Gsd.Write.Core
 import Gsd.Read.Goal
@@ -27,6 +26,7 @@ import Gsd.Clients
 import qualified Streamly.Safe as StreamlySafe
 import Logger.Core
 import Control.Exception
+import Gsd.Read.API.Definition
 
 fetchWorkspaces :: ClientSetting ->
                    IO (SafeResponse [Persisted Workspace])

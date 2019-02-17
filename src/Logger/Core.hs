@@ -1,18 +1,23 @@
-module Logger.Core where
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
+module Logger.Core (getLogger,Logger,LoggerId,LoggerMessage,logInfo) where
 import qualified System.Log.Logger as LoggerUsed
 import Control.Concurrent
 
 type LoggerId = String
-type ExecutableName = String
 type LoggerMessage = String
 
-data Logger = Logger { loggerId :: LoggerId , executableName :: ExecutableName }
+data Logger = Logger { loggerId :: LoggerId }
 
-initLogger :: Logger -> IO()
-initLogger logger = do
-  LoggerUsed.updateGlobalLogger (loggerId logger) $ LoggerUsed.setLevel LoggerUsed.INFO
+getLogger :: LoggerId -> IO (Logger)
+getLogger loggerId  =
+  LoggerUsed.updateGlobalLogger
+    loggerId
+    (LoggerUsed.setLevel LoggerUsed.INFO) >> return Logger {..}
 
 logInfo :: Logger -> LoggerMessage -> IO ()
-logInfo logger message = do
+logInfo Logger {loggerId}  message = do
   threadId <- myThreadId
-  LoggerUsed.infoM (loggerId logger) $ (executableName logger) ++ " - "++ (show threadId) ++ " - " ++ message
+  LoggerUsed.infoM
+    loggerId
+    (loggerId ++ " - "++ (show threadId) ++ " - " ++ message)

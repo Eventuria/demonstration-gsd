@@ -8,13 +8,13 @@ import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 import qualified Database.EventStore as EventStore
 import Control.Concurrent.Async (wait)
 import PersistedStreamEngine.Interface.PersistedItem
-import PersistedStreamEngine.Instances.EventStore.EventStoreSettings
+import PersistedStreamEngine.Instances.EventStore.EventStoreClientManager
 import Data.Aeson
 import PersistedStreamEngine.Interface.Offset
 import System.SafeResponse
 
 isStreamNotFound :: EventStoreStream item -> IO (SafeResponse Bool)
-isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },
+isStreamNotFound EventStoreStream { settings = EventStoreClientManager { logger, credentials, connection },
                                            streamName = streamName} = do
 
 
@@ -31,7 +31,7 @@ isStreamNotFound EventStoreStream { settings = EventStoreSettings { logger, cred
         _ -> False
 
 retrieveLast :: FromJSON item => EventStoreStream item -> IO( SafeResponse (Maybe (Persisted item)))
-retrieveLast EventStoreStream { settings = EventStoreSettings { logger, credentials, connection },
+retrieveLast EventStoreStream { settings = EventStoreClientManager { logger, credentials, connection },
                                 streamName = streamName} =  do
         let resolveLinkTos = False
 

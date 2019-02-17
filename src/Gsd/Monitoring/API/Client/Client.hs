@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Gsd.Monitoring.Client (
+module Gsd.Monitoring.API.Client.Client (
   streamGsdCommandByWorkspaceId,
   streamInfinitelyGsdCommandByWorkspaceId,
   streamGsdCommandResponseByWorkspaceId,
@@ -12,7 +12,7 @@ module Gsd.Monitoring.Client (
   streamGsdValidationStateByWorkspaceId) where
 
 import Data.Proxy
-import Gsd.Monitoring.WebStreamingApiDefinition
+import Gsd.Monitoring.API.Definition
 
 import Servant
 import Streamly.Adapters
