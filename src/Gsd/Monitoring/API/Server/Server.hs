@@ -49,6 +49,7 @@ import qualified Gsd.Monitoring.API.Server.State as Server.State
 import Gsd.Monitoring.API.Server.State
 import Logger.Core
 
+
 start :: Settings -> IO ()
 start settings   = do
 
@@ -77,7 +78,7 @@ start settings   = do
       where
 
         healthCheck :: Handler HealthCheckResult
-        healthCheck = return Healthy
+        healthCheck = return healthy
 
         streamCommandResponse :: WorkspaceId -> Handler (P.Producer (SafeResponse (Persisted CommandResponse)) IO ())
         streamCommandResponse workspaceId = return $ toPipes $ GsdMonitoring.streamCommandResponse

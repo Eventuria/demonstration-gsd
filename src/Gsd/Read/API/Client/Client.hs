@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Gsd.Read.API.Client.Client (
+  healthCheck,
   fetchWorkspaces,
   fetchWorkspace,
   fetchGoals,
@@ -27,6 +28,7 @@ import qualified Streamly.Safe as StreamlySafe
 import Logger.Core
 import Control.Exception
 import Gsd.Read.API.Definition
+import DevOps.Core
 
 fetchWorkspaces :: State ->
                    IO (SafeResponse [Persisted Workspace])
@@ -94,12 +96,24 @@ fetchWorkspace State { httpClientManager, url, logger} workspaceId  =
            return $ Left $ toException errorHttpLevel
           Right safeResponse -> return safeResponse))
 
+healthCheck :: State -> IO (HealthCheckResult)
+healthCheck State { httpClientManager, url, logger}  = do
+  S.withClientM
+     healthCheckCall
+     (S.mkClientEnv httpClientManager url)
+     (\e -> do
+        case e of
+          Left errorHttpLevel -> return $ unhealthy $ show errorHttpLevel
+          Right healthCheckResult  -> return healthCheckResult )
+
+healthCheckCall :: S.ClientM HealthCheckResult
 fetchWorkspaceCall :: WorkspaceId ->            S.ClientM (SafeResponse (Maybe Workspace))
 fetchGoalCall ::      WorkspaceId -> GoalId ->  S.ClientM (SafeResponse (Maybe Goal))
 streamWorkspaceOnPipe ::                        S.ClientM (P.Producer (SafeResponse (Persisted Workspace)) IO () )
 streamGoalOnPipe ::   WorkspaceId ->            S.ClientM (P.Producer (SafeResponse Goal )IO () )
 streamActionOnPipe :: WorkspaceId -> GoalId ->  S.ClientM (P.Producer (SafeResponse Action) IO () )
-streamWorkspaceOnPipe
+healthCheckCall
+  :<|> streamWorkspaceOnPipe
   :<|> streamGoalOnPipe
   :<|> streamActionOnPipe
   :<|> fetchWorkspaceCall

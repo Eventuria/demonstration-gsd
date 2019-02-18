@@ -36,7 +36,7 @@ import System.SafeResponse
 import Gsd.Write.API.Server.Settings
 import qualified Gsd.Write.API.Server.State as Server.State
 import Gsd.Write.API.Server.State
-
+import DevOps.Core
 
 start :: Settings -> IO ()
 start settings   = do
@@ -55,8 +55,11 @@ start settings   = do
     proxy = Proxy
 
     server :: EventStoreClientState  -> Server GsdWriteApi
-    server eventStoreClientState = sendGsdCommand :<|> waitTillCommandResponseProduced
+    server eventStoreClientState = healthCheck :<|> sendGsdCommand :<|> waitTillCommandResponseProduced
      where
+      healthCheck :: Handler HealthCheckResult
+      healthCheck = return healthy
+
       sendGsdCommand :: GsdCommand -> Handler PersistCommandResult
       sendGsdCommand gsdCommand = (liftIO $ Gsd.Write.persistCommand eventStoreClientState gsdCommand )
 

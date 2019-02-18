@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 module Gsd.Monitoring.API.Client.Client (
+  healthCheck,
   streamGsdCommandByWorkspaceId,
   streamInfinitelyGsdCommandByWorkspaceId,
   streamGsdCommandResponseByWorkspaceId,
@@ -71,14 +72,25 @@ bindWithSettings call State { httpClientManager, url, logger} workspaceId = do
          return safeResponse))
 
 
-healthCheck :: S.ClientM HealthCheckResult
+healthCheck :: State -> IO (HealthCheckResult)
+healthCheck State { httpClientManager, url, logger}  = do
+  S.withClientM
+     healthCheckCall
+     (S.mkClientEnv httpClientManager url)
+     (\e -> do
+        case e of
+          Left errorHttpLevel -> return $ unhealthy $ show errorHttpLevel
+          Right healthCheckResult  -> return healthCheckResult )
+
+
+healthCheckCall :: S.ClientM HealthCheckResult
 streamGsdCommandByWorkspaceIdOnPipe ::           WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdCommand))                 IO ())
 streamInfinitelyGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdCommand))                 IO ())
 streamGsdCommandResponseByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted CommandResponse))            IO ())
 streamGsdEventByWorkspaceIdOnPipe ::             WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdEvent))                   IO ())
 streamInfinitelyGsdEventByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted GsdEvent))                   IO ())
 streamGsdValidationStateByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted (ValidationState GsdState))) IO ())
-healthCheck
+healthCheckCall
   :<|> streamGsdCommandByWorkspaceIdOnPipe
   :<|> streamInfinitelyGsdCommandByWorkspaceIdOnPipe
   :<|> streamGsdCommandResponseByWorkspaceIdOnPipe

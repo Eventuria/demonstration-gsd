@@ -53,6 +53,7 @@ dependencies:
   - lens-aeson == 1.0.2
   - byline == 0.3.2.0
   - mtl == 2.2.2
+  - validation == 1
 library:
   source-dirs: src
 ghc-options:

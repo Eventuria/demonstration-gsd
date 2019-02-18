@@ -1,20 +1,23 @@
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 module Gsd.CLI.CLI where
 
+import Prelude hiding (map)
 import System.Console.Byline
 import Control.Monad (void)
-import Control.Monad.IO.Class (MonadIO(liftIO))
-
-import qualified Gsd.CLI.UI.Workspaces as WorkspacesCLI (run)
-import Gsd.CLI.UI.Greetings (greetings)
-
+import qualified Gsd.CLI.UI.Workspaces as WorkspacesUI (run)
+import Gsd.CLI.UI.Greetings
 import Gsd.CLI.Settings
-import Gsd.CLI.State
+import Gsd.CLI.UI.HealthChecking
 
 execute :: Settings -> IO ()
-execute settings = void $ runByline $ do
+execute settings = do
   greetings
-  state <- liftIO $ getState settings
-  WorkspacesCLI.run state
+  cliState <- runHealthChecking settings
+  WorkspacesUI.run cliState
+
+
 
 
 

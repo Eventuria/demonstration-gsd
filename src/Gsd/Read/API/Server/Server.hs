@@ -38,6 +38,7 @@ import System.SafeResponse
 import Gsd.Read.API.Server.Settings
 import qualified Gsd.Read.API.Server.State as Server.State
 import Gsd.Read.API.Server.State
+import DevOps.Core
 
 start :: Settings -> IO ()
 start settings   = do
@@ -56,12 +57,16 @@ start settings   = do
     proxy = Proxy
 
     server :: EventStoreClientState  -> Server GSDReadApi
-    server eventStoreClientState = streamWorkspace
+    server eventStoreClientState = healthCheck
+                                            :<|> streamWorkspace
                                             :<|> streamGoal
                                             :<|> streamAction
                                             :<|> fetchWorkspace
                                             :<|> fetchGoal
      where
+      healthCheck :: Handler HealthCheckResult
+      healthCheck = return healthy
+
       streamWorkspace :: Handler (P.Producer (SafeResponse (Persisted Workspace)) IO ())
       streamWorkspace = (return . toPipes) $  GsdRead.streamWorkspace
                                                         eventStoreClientState

@@ -21,8 +21,11 @@ import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import PersistedStreamEngine.Interface.PersistedItem
 import System.SafeResponse
+import DevOps.Core
 
-type GsdWriteApi =   SendGsdCommand :<|>  WaitTillCommandResponseProduced
+type GsdWriteApi =  HealthCheck :<|>  SendGsdCommand :<|>  WaitTillCommandResponseProduced
+
+type HealthCheck =      "health" :> Get '[JSON]  HealthCheckResult
 
 type SendGsdCommand = "gsd" :> "write" :> "sendCommand"
                                        :> ReqBody '[JSON] GsdCommand

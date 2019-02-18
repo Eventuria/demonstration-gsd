@@ -19,12 +19,16 @@ import Gsd.Read.Model.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Model.Core
 import System.SafeResponse
+import DevOps.Core
 
-type GSDReadApi =   StreamWorkspace
+type GSDReadApi =   HealthCheck
+                      :<|> StreamWorkspace
                       :<|>   StreamGoal
                       :<|>   StreamAction
                       :<|>   FetchWorkspace
                       :<|>   FetchGoal
+
+type HealthCheck =      "health" :> Get '[JSON]  HealthCheckResult
 
 type StreamWorkspace =   "gsd" :> "read" :> "streamWorkspace"
                                          :> StreamGet NewlineFraming JSON (P.Producer (SafeResponse (Persisted Workspace)) IO () )

@@ -3,7 +3,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Gsd.Write.API.Client.Client where
+module Gsd.Write.API.Client.Client (
+  healthCheck,
+  sendCommandAndWaitTillProcessed) where
 
 import Servant
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
@@ -21,8 +23,18 @@ import Logger.Core
 import Gsd.Write.API.Definition
 import Gsd.Write.Model.Commands.Serialization ()
 import CQRS.Write.Serialization.CommandResponse ()
-
+import DevOps.Core
 data SendCommandAnWaitFailure =  SendCommandAnWaitFailure {reason :: String} deriving Show
+
+healthCheck :: State -> IO (HealthCheckResult)
+healthCheck State { httpClientManager, url, logger}  = do
+  S.withClientM
+     healthCheckCall
+     (S.mkClientEnv httpClientManager url)
+     (\e -> do
+        case e of
+          Left errorHttpLevel -> return $ unhealthy $ show errorHttpLevel
+          Right healthCheckResult  -> return healthCheckResult )
 
 sendCommandAndWaitTillProcessed :: State -> GsdCommand -> IO (Either SendCommandAnWaitFailure CommandResponse )
 sendCommandAndWaitTillProcessed clientSetting @ State { httpClientManager, url, logger} gsdCommand =
@@ -61,16 +73,18 @@ sendCommandAndWaitTillProcessed clientSetting @ State { httpClientManager, url, 
            return $ Left $ toException servantError
           Right safeResponse -> return safeResponse))
 
-    sendCommandCall :: GsdCommand -> S.ClientM PersistCommandResult
-    waitTillCommandResponseProducedCall :: AggregateId ->
-                                           Offset ->
-                                           CommandId ->
-                                           S.ClientM (SafeResponse (Persisted CommandResponse))
-    sendCommandCall
-      :<|> waitTillCommandResponseProducedCall = S.client api
-      where
-       api :: Proxy GsdWriteApi
-       api = Proxy
+healthCheckCall :: S.ClientM HealthCheckResult
+sendCommandCall :: GsdCommand -> S.ClientM PersistCommandResult
+waitTillCommandResponseProducedCall :: AggregateId ->
+                                       Offset ->
+                                       CommandId ->
+                                       S.ClientM (SafeResponse (Persisted CommandResponse))
+healthCheckCall
+  :<|> sendCommandCall
+  :<|> waitTillCommandResponseProducedCall = S.client api
+  where
+   api :: Proxy GsdWriteApi
+   api = Proxy
 
 
 
