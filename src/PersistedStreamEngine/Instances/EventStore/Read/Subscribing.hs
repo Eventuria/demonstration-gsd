@@ -1,5 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
-
+{-# LANGUAGE RecordWildCards #-}
 module PersistedStreamEngine.Instances.EventStore.Read.Subscribing where
 
 import qualified Streamly.Prelude as S
@@ -10,7 +10,7 @@ import qualified Database.EventStore as EventStore
 import Logger.Core
 import Control.Exception
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
+import PersistedStreamEngine.Instances.EventStore.Client.Dependencies
 import PersistedStreamEngine.Interface.PersistedItem
 import Data.Maybe
 import Data.Aeson
@@ -19,8 +19,8 @@ import PersistedStreamEngine.Interface.Offset
 import System.SafeResponse
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (SafeResponse (Persisted item))
-subscribe eventStoreStream @ EventStoreStream {settings = EventStoreClientState { logger, credentials, connection },
-                                               streamName = streamName} = do
+subscribe eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },
+                                               streamName} = do
   liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
 
   result <- liftIO $ try (askForSubscription)
@@ -48,21 +48,27 @@ subscribe eventStoreStream @ EventStoreStream {settings = EventStoreClientState 
         return subscription
 
 subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (SafeResponse (Persisted item))
-subscribeOnOffset eventStoreStream @ EventStoreStream {settings = EventStoreClientState { logger, credentials, connection },
-                                               streamName = streamName} offset = do
-              logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
+subscribeOnOffset eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },
+                                                       streamName}
+                  offset = do
+  logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
 
-              subscription <- EventStore.subscribeFrom connection streamName EventStore.NoResolveLink (Just $ EventStore.rawEventNumber (fromInteger offset)) Nothing Nothing
-              result <- (try $ EventStore.waitConfirmation subscription )
-              case result of
-                Left e @ SomeException {} -> do
-                           logInfo logger "subscription to stream failed - retrying..."
-                           threadDelay (5 * 1000000) -- 5 seconds
-                           subscribeOnOffset eventStoreStream offset
-                Right _ -> do
-                        resolvedEvent <- EventStore.nextEvent subscription
-                        logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
-                        return $ Right $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)
+  subscription <- EventStore.subscribeFrom
+                    connection
+                    streamName
+                    EventStore.NoResolveLink (Just $ EventStore.rawEventNumber (fromInteger offset))
+                    Nothing
+                    Nothing
+  result <- (try $ EventStore.waitConfirmation subscription )
+  case result of
+    Left e @ SomeException {} -> do
+               logInfo logger "subscription to stream failed - retrying..."
+               threadDelay (5 * 1000000) -- 5 seconds
+               subscribeOnOffset eventStoreStream offset
+    Right _ -> do
+            resolvedEvent <- EventStore.nextEvent subscription
+            logInfo logger $ "subscription triggered on " ++ show streamName ++ " with event > " ++ (show resolvedEvent)
+            return $ Right $ recordedEventToPersistedItem $ (EventStore.resolvedEventOriginal resolvedEvent)
 
 recordedEventToPersistedItem :: FromJSON item => EventStore.RecordedEvent -> Persisted item
 recordedEventToPersistedItem recordedEvent =

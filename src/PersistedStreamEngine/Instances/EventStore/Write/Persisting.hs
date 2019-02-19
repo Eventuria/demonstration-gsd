@@ -14,11 +14,11 @@ import PersistedStreamEngine.Interface.Write.Writable
 import PersistedStreamEngine.Interface.Write.PersistenceResult
 
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
+import PersistedStreamEngine.Instances.EventStore.Client.Dependencies
 
 
 persist :: Writable item =>  EventStoreStream item -> item -> IO PersistenceResult
-persist eventStoreStream @ EventStoreStream {  settings = EventStoreClientState { logger, credentials, connection },
+persist eventStoreStream @ EventStoreStream {  dependencies = Dependencies { logger, credentials, connection },
                                                streamName = streamName } itemToPersist =  do
 
     eventIdInEventStoreDomain <- liftIO $ Uuid.nextRandom

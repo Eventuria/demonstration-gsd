@@ -4,10 +4,11 @@ module Gsd.Read.API.Server.Settings where
 
 import Logger.Core
 import Network.Core
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientSettings
+import qualified PersistedStreamEngine.Instances.EventStore.Client.Settings as EventStoreClient
 
 
-data Settings = Settings {loggerId :: LoggerId,
-                          port :: URLPort,
-                          eventStoreClientSettings :: EventStoreClientSettings}
+data Settings = Settings { serviceLoggerId :: LoggerId,
+                           healthCheckLoggerId :: LoggerId,
+                           port :: URLPort,
+                           eventStoreClientSettings :: EventStoreClient.Settings}
 

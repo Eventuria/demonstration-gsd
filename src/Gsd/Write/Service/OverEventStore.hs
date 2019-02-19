@@ -9,7 +9,7 @@ import Gsd.Write.Repository.EventStoreStreams
 import qualified Gsd.Write.Service.Generic as GenericGsd
 import CQRS.Write.Aggregate.Ids.AggregateId
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
+import qualified PersistedStreamEngine.Instances.EventStore.Client.Dependencies as EventStoreClient
 import PersistedStreamEngine.Instances.EventStore.TransactionInterpreter
 import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
@@ -19,31 +19,32 @@ import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import System.SafeResponse
 
-persistCommand ::  EventStoreClientState -> GsdCommand -> IO PersistCommandResult
-persistCommand settings gsdCommand =
+persistCommand ::  EventStoreClient.Dependencies -> GsdCommand -> IO PersistCommandResult
+persistCommand eventStoreClientDependencies gsdCommand =
   GenericGsd.persistCommand
-    (aggregateIdStream $ getEventStoreStreamRepository settings)
-    (getCommandStream $ getEventStoreStreamRepository settings)
+    (aggregateIdStream $ getEventStoreStreamRepository eventStoreClientDependencies)
+    (getCommandStream $ getEventStoreStreamRepository eventStoreClientDependencies)
     getEventStoreQuerying
     getEventStoreWriting
     gsdCommand
 
-startCommandConsumption :: EventStoreClientState -> Logger ->  IO (SafeResponse())
-startCommandConsumption settings logger  =
+startCommandConsumption :: Logger -> EventStoreClient.Dependencies -> IO (SafeResponse())
+startCommandConsumption logger eventStoreClientDependencies =
    GenericGsd.startCommandConsumption
       logger
-      (getEventStoreStreamRepository settings)
+      (getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreReading
-      (transactionInterpreterForEventStore logger (getEventStoreStreamRepository settings))
+      (transactionInterpreterForEventStore logger (getEventStoreStreamRepository eventStoreClientDependencies))
 
 
-waitTillCommandResponseProduced :: EventStoreClientState ->
-                              AggregateId ->
-                              Offset ->
-                              CommandId -> IO (SafeResponse (Persisted CommandResponse))
-waitTillCommandResponseProduced settings aggregateId offset commandId =
+waitTillCommandResponseProduced :: EventStoreClient.Dependencies ->
+                                   AggregateId ->
+                                   Offset ->
+                                   CommandId ->
+                                   IO (SafeResponse (Persisted CommandResponse))
+waitTillCommandResponseProduced eventStoreClientDependencies aggregateId offset commandId =
   GenericGsd.waitTillCommandResponseProduced
-    (getCommandResponseStream $ getEventStoreStreamRepository settings)
+    (getCommandResponseStream $ getEventStoreStreamRepository eventStoreClientDependencies)
     getEventStoreSubscribing
     aggregateId
     offset

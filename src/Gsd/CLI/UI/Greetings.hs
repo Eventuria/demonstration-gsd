@@ -5,10 +5,10 @@ module Gsd.CLI.UI.Greetings  where
 import System.Console.Byline
 
 
-greetings :: IO ()
-greetings = void $ runByline $ do
+greetings :: Byline IO ()
+greetings = do
   sayLn $ fg green <> "###############################################"
-  sayLn $ fg green <> bold <> "Welcome to the gsd client !"
+  sayLn $ fg green <> "||       Welcome to the gsd client !         ||"
   sayLn $ fg green <> "###############################################"
 
 

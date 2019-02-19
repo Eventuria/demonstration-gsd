@@ -11,7 +11,7 @@ module Gsd.CLI.Workflow.Steps where
 import System.Console.Byline
 import Data.Text
 import System.Exit (exitSuccess)
-import Gsd.CLI.State
+import Gsd.CLI.Dependencies
 import Gsd.Read.Model.Workspace
 import Gsd.Read.Model.Goal
 import Control.Monad.IO.Class (MonadIO(liftIO))
@@ -19,14 +19,14 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 
 type ErrorDescription = String
 
-type WorkOnWorkspacesStepHandle = State ->
+type WorkOnWorkspacesStepHandle = Dependencies ->
                                   Byline IO ()
 
-type WorkOnAWorkspaceStepHandle = State ->
+type WorkOnAWorkspaceStepHandle = Dependencies ->
                                   Workspace ->
                                   WorkOnWorkspacesStepHandle ->
                                   Byline IO ()
-type WorkOnAGoalStepHandle      = State ->
+type WorkOnAGoalStepHandle      = Dependencies ->
                                   Workspace ->
                                   Goal ->
                                   WorkOnAWorkspaceStepHandle ->
@@ -41,15 +41,15 @@ data StepType = WorkOnWorkspaces
 
 data Step stepType where
   WorkOnWorkspacesStep :: WorkOnWorkspacesStepHandle ->
-                          State ->
+                          Dependencies ->
                           Step WorkOnWorkspaces
   WorkOnAWorkspaceStep :: WorkOnAWorkspaceStepHandle ->
-                          State ->
+                          Dependencies ->
                           Workspace ->
                           WorkOnWorkspacesStepHandle ->
                           Step WorkOnAWorkspace
   WorkOnAGoalStep      :: WorkOnAGoalStepHandle ->
-                          State ->
+                          Dependencies ->
                           Workspace ->
                           Goal ->
                           WorkOnAWorkspaceStepHandle ->
@@ -62,22 +62,22 @@ data StepError = forall stepType. StepError { currentStep :: Step stepType , err
 runNextStep :: forall stepType. Either StepError (Step stepType) -> Byline IO ()
 runNextStep nextStepEither = case nextStepEither of
   Right (WorkOnWorkspacesStep workOnWorkspaces
-                              state ) -> workOnWorkspaces
-                                            state
+                              cliDependencies ) -> workOnWorkspaces
+                                            cliDependencies
   Right (WorkOnAWorkspaceStep workOnWorkspace
-                              state
+                              cliDependencies
                               workspace
                               workOnWorkspaces) -> workOnWorkspace
-                                                    state
+                                                    cliDependencies
                                                     workspace
                                                     workOnWorkspaces
   Right (WorkOnAGoalStep     workOnAGoal
-                             state
+                             cliDependencies
                              workspace
                              goal
                              workOnWorkspace
                              workOnWorkspaces) -> workOnAGoal
-                                                    state
+                                                    cliDependencies
                                                     workspace
                                                     goal
                                                     workOnWorkspace

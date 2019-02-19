@@ -13,7 +13,7 @@ import Gsd.CLI.CLI
 import Network.Core
 
 import Logger.Core
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientSettings
+import qualified PersistedStreamEngine.Instances.EventStore.Client.Settings as EventStoreClient
 import Gsd.Write.API.Server.Settings
 import qualified Gsd.CLI.Settings as CLI
 import qualified Gsd.Read.API.Client.Settings as Read.Client
@@ -63,17 +63,19 @@ gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute CLI.Settings {
 -- | Gsd Web Write Api : Web Api that receives commands and persist them per Aggregate into the EventStore
 gsdWriteApi :: IO ()
 gsdWriteApi = Gsd.Write.API.Server.Server.start
-                Write.Server.Settings { loggerId = "[write.server]",
+                Write.Server.Settings { serviceLoggerId = "[gsd.write.server]",
+                                        healthCheckLoggerId = "[gsd.write.server/healthcheck]",
                                         port = 3000,
                                         eventStoreClientSettings = getEventStoreSettings
-                                                                       "[write.server/event.store.client]"}
+                                                                       "[gsd.write.server/event.store.client]"}
 
 -- | Command consumption streamer :
 --  Processes commands stored in the EventStore and produces command responses and events
 gsdCommandConsumptionStreamer :: IO ()
 gsdCommandConsumptionStreamer = Command.Consumer.start
                                   Command.Consumer.Settings {
-                                    loggerId = "[gsd.write.command.consummer]",
+                                    serviceLoggerId = "[gsd.write.command.consummer]",
+                                    healthCheckLoggerId = "[gsd.write.command.consummer/healthcheck]",
                                     eventStoreClientSettings = getEventStoreSettings
                                                                   "[gsd.write.command.consummer/event.store.client]"}
 
@@ -86,9 +88,10 @@ gsdCommandConsumptionStreamer = Command.Consumer.start
 gsdReadApi :: IO ()
 gsdReadApi = Gsd.Read.API.Server.Server.start
                     Read.Server.Settings {
-                      loggerId = "[gsd.read.server]",
+                      serviceLoggerId = "[gsd.read.server]",
+                      healthCheckLoggerId = "[gsd.read.server/healthcheck]",
                       port = 3001, 
-                      eventStoreClientSettings = getEventStoreSettings "[read.server/event.store.client]"}
+                      eventStoreClientSettings = getEventStoreSettings "[gsd.read.server/event.store.client]"}
 
 
 -- | Monitoring Api : Tool to read directly what the Write Channel stored in the EventStore
@@ -96,12 +99,13 @@ gsdReadApi = Gsd.Read.API.Server.Server.start
 gsdMonitoringApi :: IO ()
 gsdMonitoringApi = Gsd.Monitoring.API.Server.Server.start
                     Monitoring.Server.Settings {
-                      loggerId = "[gsd.monitoring.server]",
+                      serviceLoggerId = "[gsd.monitoring.server]",
+                      healthCheckLoggerId = "[gsd.monitoring.server/healthcheck]",
                       port = 3002,
-                      eventStoreClientSettings = getEventStoreSettings "[monitoring.server/event.store.client]"}
+                      eventStoreClientSettings = getEventStoreSettings "[gsd.monitoring.server/event.store.client]"}
 
-getEventStoreSettings :: LoggerId -> EventStoreClientSettings
-getEventStoreSettings loggerId = EventStoreClientSettings {
+getEventStoreSettings :: LoggerId -> EventStoreClient.Settings
+getEventStoreSettings loggerId = EventStoreClient.Settings {
                                                     urlHost = "127.0.0.1",
                                                     port = 1113,
                                                     path = "",

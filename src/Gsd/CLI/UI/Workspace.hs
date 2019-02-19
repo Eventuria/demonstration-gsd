@@ -7,7 +7,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Gsd.CLI.UI.Workspace (run)where
 
-import Prelude hiding (length,readClientState)
+import Prelude hiding (length,readClientDependencies)
 import System.Console.Byline hiding (askWithMenuRepeatedly)
 import ByLine.Wrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
 
@@ -21,7 +21,7 @@ import qualified Gsd.CLI.UI.Goal as GoalCLI (run)
 import qualified Gsd.CLI.UI.Monitoring as MonitoringCLI
 import Gsd.CLI.UI.Monitoring (runMonitoringCommand)
 import Gsd.CLI.UI.Quit (runQuitCLI)
-import Gsd.CLI.State
+import Gsd.CLI.Dependencies
 import Gsd.Write.Model.Commands.Command
 import Gsd.Read.Model.Workspace
 import Gsd.Read.API.Client.Client (fetchGoals,fetchWorkspace)
@@ -49,11 +49,11 @@ data WorkspaceCommand = -- Workspace Commands
 
 
 run :: WorkOnAWorkspaceStepHandle
-run cliState   @ State {writeClientState,monitoringClientState,readClientState}
+run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDependencies,readClientDependencies}
                 workspace @ Workspace {workspaceId}
                 workOnWorkspaces =  do
- let currentStep = WorkOnAWorkspaceStep run cliState workspace workOnWorkspaces
- safeResponse  <- liftIO $ fetchGoals readClientState workspaceId
+ let currentStep = WorkOnAWorkspaceStep run cliDependencies workspace workOnWorkspaces
+ safeResponse  <- liftIO $ fetchGoals readClientDependencies workspaceId
  case safeResponse of
   Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
   Right goals -> do
@@ -69,7 +69,7 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
                           menu (workspaceActions workspace) (stylizeAction workspace)
           prompt     = "> please choose an action (provide the index) : "
           onError    = "> please enter a valid index..."
-          currentStep = WorkOnAWorkspaceStep run cliState workspace workOnWorkspaces
+          currentStep = WorkOnAWorkspaceStep run cliDependencies workspace workOnWorkspaces
 
 
       answer <- askWithMenuRepeatedly menuConfig prompt onError
@@ -79,19 +79,19 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
         ListCommandsReceived          _ -> runMonitoringCommand
                                             currentStep
                                             MonitoringCLI.ListCommandsReceived
-                                            monitoringClientState
+                                            monitoringClientDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         ListCommandResponsesProduced  _ -> runMonitoringCommand currentStep
                                             MonitoringCLI.ListCommandResponsesProduced
-                                            monitoringClientState
+                                            monitoringClientDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         ListEventsGenerated           _ -> runMonitoringCommand currentStep
                                             MonitoringCLI.ListEventsGenerated
-                                            monitoringClientState
+                                            monitoringClientDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         ListValidationStates          _ -> runMonitoringCommand currentStep
                                             MonitoringCLI.ListValidationStates
-                                            monitoringClientState
+                                            monitoringClientDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         GotoWorkOnAGoal               _ -> runWorkOnAGoal      currentStep >>= runNextStep
         GotoWorkOnWorkspaces          _ -> runWorkOnWorkspaces currentStep >>= runNextStep
@@ -105,7 +105,7 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
             ListCommandsReceived          "List Commands Received",
             ListCommandResponsesProduced  "List Command Responses Produced",
             ListEventsGenerated           "List Events Generated",
-            ListValidationStates          "List Validation State History",
+            ListValidationStates          "List Validation Dependencies History",
             GotoWorkOnAGoal               "Work On A Goal",
             GotoWorkOnWorkspaces          "Work On Another Workspace",
             QuitCommand                   "Quit"]
@@ -115,7 +115,7 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
                   ListCommandsReceived         "List Commands Received",
                   ListCommandResponsesProduced "List Command Responses Produced",
                   ListEventsGenerated          "List Events Generated",
-                  ListValidationStates         "List Validation State History",
+                  ListValidationStates         "List Validation Dependencies History",
                   GotoWorkOnWorkspaces         "Work On Another Workspace",
                   QuitCommand                  "Quit"]
 
@@ -145,13 +145,13 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
     runRenameWorkspace :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runRenameWorkspace currentStep @ (WorkOnAWorkspaceStep
                                         workOnAWorkspace
-                                        (cliState @ clientsSetting @ State {readClientState, writeClientState})
+                                        (cliDependencies @ clientsSetting @ Dependencies {readClientDependencies, writeClientDependencies})
                                         workspace @ Workspace {workspaceId}
                                         workOnWorkspaces) = do
       commandId <- liftIO $ nextRandom
       sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceNewName <- askUntil "Enter a new workspace name : " Nothing atLeastThreeChars
-      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientState RenameWorkspace {commandId ,
+      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies RenameWorkspace {commandId ,
                                                                                   workspaceId,
                                                                                   workspaceNewName}
       case response of
@@ -163,17 +163,17 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
         Right CommandSuccessfullyProcessed {} ->  do
           sayLn $ fg green <> "> The command has been successfully processed... "
           displayEndOfACommand
-          (liftIO $ fetchWorkspace readClientState workspaceId)
+          (liftIO $ fetchWorkspace readClientDependencies workspaceId)
            <&> either
                 (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                 (maybe
                   (Left $ StepError {currentStep ,errorDescription = "Workspace asked does not exist"})
-                  (\workspace -> Right $ WorkOnAWorkspaceStep run cliState workspace workOnWorkspaces))
+                  (\workspace -> Right $ WorkOnAWorkspaceStep run cliDependencies workspace workOnWorkspaces))
 
     runSetNewGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runSetNewGoal currentStep @ (WorkOnAWorkspaceStep
                                     workOnAWorkspace
-                                    (cliState @ clientsSetting @ State {readClientState ,writeClientState})
+                                    (cliDependencies @ clientsSetting @ Dependencies {readClientDependencies ,writeClientDependencies})
                                     workspace @ Workspace {workspaceId}
                                     workOnWorkspaces) = do
         commandId <- liftIO $ nextRandom
@@ -181,7 +181,7 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
         goalId <- liftIO $ nextRandom
         sayLn $ fg green <> "generating a new goal Id (" <> text (toText goalId) <>") "
         goalDescription <- askUntil "Enter a goal description : " Nothing atLeastThreeChars
-        response <- liftIO $ sendCommandAndWaitTillProcessed writeClientState SetGoal {commandId,
+        response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies SetGoal {commandId,
                                                                             workspaceId,
                                                                             goalId,
                                                                             goalDescription}
@@ -194,23 +194,23 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
           Right CommandSuccessfullyProcessed {} ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
-            (liftIO $ fetchWorkspace readClientState workspaceId)
+            (liftIO $ fetchWorkspace readClientDependencies workspaceId)
              <&> either
                   (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                   (maybe
                     (Left $ StepError {currentStep ,errorDescription = "Workspace asked does not exist"})
-                    (\workspace -> Right $ WorkOnAWorkspaceStep run cliState workspace workOnWorkspaces))
+                    (\workspace -> Right $ WorkOnAWorkspaceStep run cliDependencies workspace workOnWorkspaces))
 
 
 
     runWorkOnAGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAGoal))
     runWorkOnAGoal currentStep @ (WorkOnAWorkspaceStep
                                     workOnAWorkspace
-                                    (cliState @ clientsSetting @ State {readClientState , writeClientState})
+                                    (cliDependencies @ clientsSetting @ Dependencies {readClientDependencies , writeClientDependencies})
                                     workspace @ Workspace {workspaceId}
                                     workOnWorkspaces) = do
      displayBeginningOfACommand
-     safeResponse <-  liftIO $ fetchGoals readClientState workspaceId
+     safeResponse <-  liftIO $ fetchGoals readClientDependencies workspaceId
      case safeResponse of
       Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
       Right goals -> do
@@ -220,11 +220,11 @@ run cliState   @ State {writeClientState,monitoringClientState,readClientState}
              onError    = "> please enter a valid index..."
          goal <- askWithMenuRepeatedly menuConfig prompt onError
          displayEndOfACommand
-         return $ Right $ WorkOnAGoalStep GoalCLI.run cliState workspace goal workOnAWorkspace workOnWorkspaces
+         return $ Right $ WorkOnAGoalStep GoalCLI.run cliDependencies workspace goal workOnAWorkspace workOnWorkspaces
 
     runWorkOnWorkspaces :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnWorkspaces))
-    runWorkOnWorkspaces (WorkOnAWorkspaceStep workOnAWorkspace cliState  workspace workOnWorkspaces) = do
-      return $ Right $ WorkOnWorkspacesStep workOnWorkspaces cliState
+    runWorkOnWorkspaces (WorkOnAWorkspaceStep workOnAWorkspace cliDependencies  workspace workOnWorkspaces) = do
+      return $ Right $ WorkOnWorkspacesStep workOnWorkspaces cliDependencies
 
 
     displayWorkspace :: Workspace -> [Goal] ->  Stylized

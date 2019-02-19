@@ -17,7 +17,7 @@ import Control.Monad.IO.Class (MonadIO(liftIO))
 import Gsd.Write.API.Client.Client
 import Gsd.Write.Model.Commands.Command
 import Gsd.Read.API.Client.Client (fetchWorkspaces )
-import Gsd.CLI.State
+import Gsd.CLI.Dependencies
 import Gsd.CLI.Workflow.Steps
 import Gsd.CLI.UI.Quit (runQuitCLI)
 import Gsd.CLI.UI.Greetings
@@ -36,9 +36,9 @@ data WorkspacesCommand = -- Workspaces Command
 
 
 run :: WorkOnWorkspacesStepHandle
-run cliState @ State {readClientState , writeClientState} = do
-  let currentStep = WorkOnWorkspacesStep run cliState
-  safeResponse <- liftIO $ fetchWorkspaces readClientState
+run cliDependencies @ Dependencies {readClientDependencies , writeClientDependencies} = do
+  let currentStep = WorkOnWorkspacesStep run cliDependencies
+  safeResponse <- liftIO $ fetchWorkspaces readClientDependencies
   case safeResponse of
     Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
     Right persistedWorkspaces -> do
@@ -49,7 +49,7 @@ run cliState @ State {readClientState , writeClientState} = do
                         menu (workspacesActions workspaces) stylizeAction
           prompt     = "> please choose an action (provide the index) : "
           onError    = "> please enter a valid index..."
-          currentStep = WorkOnWorkspacesStep run cliState
+          currentStep = WorkOnWorkspacesStep run cliDependencies
 
       answer <- askWithMenuRepeatedly menuConfig prompt onError
       case answer of
@@ -83,7 +83,7 @@ run cliState @ State {readClientState , writeClientState} = do
       sayLn $ fg cyan <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceName <- askUntil ("> enter a workspace name : " ) Nothing atLeastThreeChars
 
-      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientState  CreateWorkspace {
+      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies  CreateWorkspace {
                                                                     commandId ,
                                                                     workspaceId ,
                                                                     workspaceName}
@@ -102,9 +102,9 @@ run cliState @ State {readClientState , writeClientState} = do
     runWorkOnAWorkspace :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep
                                             workOnWorkspaces
-                                            cliState @ State {readClientState,writeClientState})  = do
+                                            cliDependencies @ Dependencies {readClientDependencies,writeClientDependencies})  = do
       displayBeginningOfACommand
-      safeResponse <- liftIO $ fetchWorkspaces readClientState
+      safeResponse <- liftIO $ fetchWorkspaces readClientDependencies
       case safeResponse of
         Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
         Right persistedWorkspaces -> do
@@ -118,7 +118,7 @@ run cliState @ State {readClientState , writeClientState} = do
                           prompt
                           onError
           displayEndOfACommand
-          return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run cliState workspace workOnWorkspaces
+          return $ Right $ WorkOnAWorkspaceStep WorkspaceActions.run cliDependencies workspace workOnWorkspaces
 
 
     displayWorkspacesState :: [Workspace] -> Byline IO ()

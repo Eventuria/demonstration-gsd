@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 module Gsd.Monitoring.Service.OverEventStore  where
 
 import PersistedStreamEngine.Interface.Streamable
@@ -16,83 +18,79 @@ import CQRS.Write.StreamRepository
 import qualified Gsd.Monitoring.Service.Generic  as GenericGSDMonitoring
 import Gsd.Write.Model.State
 import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
+import qualified PersistedStreamEngine.Instances.EventStore.Client.Dependencies as EventStoreClient
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
---import DevOps.Core (HealthCheckResult)
---import DevOps.MicroService.EventStore
+
 import System.SafeResponse
 
---healthCheck :: EventStoreMicroService -> IO HealthCheckResult
---healthCheck eventStoreMicroService = healthCheck eventStoreMicroService
-
 streamWorkspaceId :: Streamable stream monad WorkspaceId =>
-                      EventStoreClientState ->
+                      EventStoreClient.Dependencies ->
                       stream monad (SafeResponse (Persisted WorkspaceId))
-streamWorkspaceId settings =
+streamWorkspaceId eventStoreClientDependencies =
     GenericGSDMonitoring.streamWorkspaceId
-      (aggregateIdStream $ getEventStoreStreamRepository settings)
+      (aggregateIdStream $ getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreStreaming
 
 
 streamCommand :: Streamable stream monad Command =>
-                  EventStoreClientState ->
+                  EventStoreClient.Dependencies ->
                   WorkspaceId ->
                   stream monad (SafeResponse (Persisted GsdCommand))
-streamCommand settings workspaceId =
+streamCommand eventStoreClientDependencies workspaceId =
    GenericGSDMonitoring.streamCommand
-     (getCommandStream $ getEventStoreStreamRepository settings)
+     (getCommandStream $ getEventStoreStreamRepository eventStoreClientDependencies)
      getEventStoreStreaming
      workspaceId
 
 
 
 streamInfinitelyCommand :: Streamable stream monad Command =>
-                            EventStoreClientState ->
+                            EventStoreClient.Dependencies ->
                             WorkspaceId ->
                             stream monad (SafeResponse (Persisted GsdCommand))
-streamInfinitelyCommand settings workspaceId =
+streamInfinitelyCommand eventStoreClientDependencies workspaceId =
     GenericGSDMonitoring.streamInfinitelyCommand
-      (getCommandStream $ getEventStoreStreamRepository settings)
+      (getCommandStream $ getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreStreaming
       workspaceId
 
 streamCommandResponse :: Streamable stream monad CommandResponse =>
-                          EventStoreClientState ->
+                          EventStoreClient.Dependencies ->
                           WorkspaceId ->
                           stream monad (SafeResponse (Persisted CommandResponse))
-streamCommandResponse settings workspaceId =
+streamCommandResponse eventStoreClientDependencies workspaceId =
     GenericGSDMonitoring.streamCommandResponse
-      (getCommandResponseStream $ getEventStoreStreamRepository settings)
+      (getCommandResponseStream $ getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreStreaming
       workspaceId
 
 streamEvent :: Streamable stream monad Event =>
-                EventStoreClientState ->
+                EventStoreClient.Dependencies ->
                 WorkspaceId ->
                 stream monad (SafeResponse (Persisted GsdEvent))
-streamEvent settings workspaceId =
+streamEvent eventStoreClientDependencies workspaceId =
     GenericGSDMonitoring.streamEvent
-      (getEventStream $ getEventStoreStreamRepository settings)
+      (getEventStream $ getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreStreaming
       workspaceId
 
 streamInfinitelyEvent :: Streamable stream monad Event =>
-                          EventStoreClientState ->
+                          EventStoreClient.Dependencies ->
                           WorkspaceId ->
                           stream monad (SafeResponse (Persisted GsdEvent))
-streamInfinitelyEvent settings workspaceId =
+streamInfinitelyEvent eventStoreClientDependencies workspaceId =
     GenericGSDMonitoring.streamInfinitelyEvent
-      (getEventStream $ getEventStoreStreamRepository settings)
+      (getEventStream $ getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreStreaming
       workspaceId
 
 streamValidationState :: Streamable stream monad (ValidationState GsdState) =>
-                          EventStoreClientState ->
+                          EventStoreClient.Dependencies ->
                           WorkspaceId ->
                           stream monad (SafeResponse (Persisted (ValidationState GsdState)))
-streamValidationState settings workspaceId =
+streamValidationState eventStoreClientDependencies workspaceId =
     GenericGSDMonitoring.streamValidationState
-      (getValidationStateStream $ getEventStoreStreamRepository settings)
+      (getValidationStateStream $ getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreStreaming
       workspaceId

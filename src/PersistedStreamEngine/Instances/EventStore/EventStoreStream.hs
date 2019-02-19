@@ -4,10 +4,10 @@
 module PersistedStreamEngine.Instances.EventStore.EventStoreStream where
 
 import qualified Database.EventStore as EventStore
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
+import PersistedStreamEngine.Instances.EventStore.Client.Dependencies
 
 data EventStoreStream item = EventStoreStream {
-                                           settings :: EventStoreClientState,
+                                           dependencies :: Dependencies,
                                            streamName :: EventStore.StreamName}
 
 

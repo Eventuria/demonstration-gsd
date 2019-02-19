@@ -8,6 +8,6 @@ import System.Console.Byline
 runQuitCLI :: Byline IO (Either StepError (Step Quit))
 runQuitCLI = do
   sayLn $ fg green <> "###############################################"
-  sayLn $ fg green <> "You're leaving gsd, See you soon !! "
+  sayLn $ fg green <> "||    You're leaving gsd, See you soon !!    ||"
   sayLn $ fg green <> "###############################################"
   return $ Right QuitStep

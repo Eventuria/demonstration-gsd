@@ -4,9 +4,10 @@ module Gsd.Write.API.Server.Settings where
 
 import Logger.Core
 import Network.Core
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientSettings
+import qualified PersistedStreamEngine.Instances.EventStore.Client.Settings as EventStore
 
 
-data Settings = Settings {loggerId :: LoggerId,
+data Settings = Settings {serviceLoggerId :: LoggerId,
+                          healthCheckLoggerId :: LoggerId,
                           port :: URLPort,
-                          eventStoreClientSettings :: EventStoreClientSettings}
+                          eventStoreClientSettings :: EventStore.Settings}

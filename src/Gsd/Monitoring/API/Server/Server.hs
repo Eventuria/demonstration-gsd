@@ -14,17 +14,15 @@
 
 module Gsd.Monitoring.API.Server.Server  where
 
+import Prelude hiding (foldr)
 
 import Servant
-
-import Streamly.Adapters
+import Servant.Wrapper
 import Servant.Pipes ()
-import qualified Pipes as P
-import Prelude hiding (foldr)
+import Streamly.Adapters
 import Network.Wai.Handler.Warp hiding (Settings)
 import Gsd.Monitoring.API.Definition
 
-import PersistedStreamEngine.Instances.EventStore.EventStoreClientState
 import qualified Gsd.Monitoring.Service.OverEventStore as GsdMonitoring
 
 import PersistedStreamEngine.Interface.PersistedItem
@@ -43,69 +41,83 @@ import CQRS.Write.Serialization.ValidationState ()
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import CQRS.Write.Serialization.CommandResponse ()
 import DevOps.Core
-import System.SafeResponse
 import Gsd.Monitoring.API.Server.Settings
-import qualified Gsd.Monitoring.API.Server.State as Server.State
-import Gsd.Monitoring.API.Server.State
+import qualified Gsd.Monitoring.API.Server.Dependencies as Server.State
+import qualified Gsd.Monitoring.API.Server.Dependencies as Server
 import Logger.Core
-
+import Dependencies.RetrieveByHealthChecking
+import System.SafeResponse
 
 start :: Settings -> IO ()
-start settings   = do
-
-  Server.State.getState
+start settings @ Settings {healthCheckLoggerId}  =
+  checkHealthAndRetrieveDependencies
+    healthCheckLoggerId
     settings
-    (\State {port, logger, eventStoreClientState } -> do
-        logInfo logger "Starting Server"
-        run port (application eventStoreClientState))
+    Server.retrieveDependencies
+    runServerOnWarp
 
   where
-    application :: EventStoreClientState  -> Application
-    application eventStoreClientState = serve proxy $ server eventStoreClientState
 
-    proxy :: Proxy GSDMonitoringStreamingApi
-    proxy = Proxy
+    runServerOnWarp :: Server.Dependencies -> IO()
+    runServerOnWarp dependencies @ Server.Dependencies {logger,port} = do
+       logInfo logger "Starting Server"
+       run port $ application
+                    (proxy :: Proxy GSDMonitoringStreamingApi)
+                    monitoringServer
+                    dependencies
 
-    server :: EventStoreClientState  -> Server GSDMonitoringStreamingApi
-    server eventStoreSettings @ EventStoreClientState {logger} =
-        healthCheck
-         :<|> streamCommand
-         :<|> streamInfinitelyCommand
-         :<|> streamCommandResponse
-         :<|> streamEvent
-         :<|> streamInfinitelyEvent
-         :<|> streamGsdValidationStateByWorkspaceId
+    {-- N.B : Servant does not support Streamly,
+              so Streamly is converted to Pipe at the Servant Level (see toPipes )
+    --}
+    monitoringServer :: ServantServer GSDMonitoringStreamingApi Server.Dependencies
+    monitoringServer dependencies = healthCheck
+         :<|> streamCommand                         dependencies
+         :<|> streamInfinitelyCommand               dependencies
+         :<|> streamCommandResponse                 dependencies
+         :<|> streamEvent                           dependencies
+         :<|> streamInfinitelyEvent                 dependencies
+         :<|> streamGsdValidationStateByWorkspaceId dependencies
       where
 
         healthCheck :: Handler HealthCheckResult
         healthCheck = return healthy
 
-        streamCommandResponse :: WorkspaceId -> Handler (P.Producer (SafeResponse (Persisted CommandResponse)) IO ())
-        streamCommandResponse workspaceId = return $ toPipes $ GsdMonitoring.streamCommandResponse
-                                                                  eventStoreSettings
-                                                                  workspaceId
-
-        streamInfinitelyCommand :: WorkspaceId -> Handler (P.Producer (SafeResponse (Persisted GsdCommand)) IO ())
-        streamInfinitelyCommand workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyCommand
-                                                                    eventStoreSettings
-                                                                    workspaceId
-
-        streamCommand :: WorkspaceId -> Handler (P.Producer (SafeResponse (Persisted GsdCommand)) IO ())
-        streamCommand workspaceId =
-            return $ toPipes $ GsdMonitoring.streamCommand eventStoreSettings workspaceId
+        streamCommandResponse :: Server.Dependencies ->
+                                 WorkspaceId ->
+                                 Handler (PipeStream (SafeResponse (Persisted CommandResponse)))
+        streamCommandResponse Server.Dependencies {eventStoreClientDependencies} =
+          return . toPipes . GsdMonitoring.streamCommandResponse eventStoreClientDependencies
 
 
-        streamEvent :: WorkspaceId -> Handler (P.Producer (SafeResponse (Persisted GsdEvent)) IO ())
-        streamEvent workspaceId = return $ toPipes $ GsdMonitoring.streamEvent eventStoreSettings workspaceId
+        streamInfinitelyCommand :: Server.Dependencies ->
+                                   WorkspaceId ->
+                                   Handler (PipeStream (SafeResponse (Persisted GsdCommand)))
+        streamInfinitelyCommand Server.Dependencies {eventStoreClientDependencies} =
+          return . toPipes . GsdMonitoring.streamInfinitelyCommand eventStoreClientDependencies
 
-        streamInfinitelyEvent :: WorkspaceId -> Handler (P.Producer (SafeResponse (Persisted GsdEvent)) IO ())
-        streamInfinitelyEvent workspaceId = return $ toPipes $ GsdMonitoring.streamInfinitelyEvent
-                                                                  eventStoreSettings
-                                                                  workspaceId
 
-        streamGsdValidationStateByWorkspaceId :: WorkspaceId ->
-                                                 Handler (P.Producer (SafeResponse (Persisted (ValidationState GsdState))) IO ())
-        streamGsdValidationStateByWorkspaceId workspaceId = return $ toPipes $ GsdMonitoring.streamValidationState
-                                                                                  eventStoreSettings
-                                                                                  workspaceId
+        streamCommand :: Server.Dependencies ->
+                         WorkspaceId ->
+                         Handler (PipeStream (SafeResponse (Persisted GsdCommand)))
+        streamCommand Server.Dependencies {eventStoreClientDependencies} =
+          return . toPipes .  GsdMonitoring.streamCommand eventStoreClientDependencies
+
+        streamEvent :: Server.Dependencies ->
+                       WorkspaceId ->
+                       Handler (PipeStream (SafeResponse (Persisted GsdEvent)))
+        streamEvent Server.Dependencies {eventStoreClientDependencies} =
+          return . toPipes .  GsdMonitoring.streamEvent eventStoreClientDependencies
+
+        streamInfinitelyEvent :: Server.Dependencies ->
+                                 WorkspaceId ->
+                                 Handler (PipeStream (SafeResponse (Persisted GsdEvent)))
+        streamInfinitelyEvent Server.Dependencies {eventStoreClientDependencies} =
+          return . toPipes . GsdMonitoring.streamInfinitelyEvent eventStoreClientDependencies
+
+        streamGsdValidationStateByWorkspaceId :: Server.Dependencies ->
+                                                 WorkspaceId ->
+                                                 Handler (PipeStream (SafeResponse (Persisted (ValidationState GsdState))))
+        streamGsdValidationStateByWorkspaceId Server.Dependencies {eventStoreClientDependencies} =
+          return . toPipes . GsdMonitoring.streamValidationState eventStoreClientDependencies
+
 

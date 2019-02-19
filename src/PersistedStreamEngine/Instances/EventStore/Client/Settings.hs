@@ -1,10 +1,10 @@
-module PersistedStreamEngine.Instances.EventStore.EventStoreClientSettings where
+module PersistedStreamEngine.Instances.EventStore.Client.Settings where
 
 import Logger.Core
 import Network.Core
 import Data.ByteString
 
-data EventStoreClientSettings = EventStoreClientSettings {
+data Settings = Settings {
                                     loggerId :: LoggerId,
                                     urlHost :: URLHost,
                                     port :: URLPort,
