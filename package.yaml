@@ -64,51 +64,51 @@ ghc-options:
 
 
 executables:
-  gsd-read-api:
+  gsd-read:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdReadApi
+    - -main-is Executables.read
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  gsd-monitoring-api:
+  gsd-monitoring:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdMonitoringApi
+    - -main-is Executables.monitoring
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  gsd-write-client-cli:
+  gsd-cli:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdWriteClientCommandLineInterface
+    - -main-is Executables.cli
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  gsd-write-api:
+  gsd-command-sourcer:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdWriteApi
+    - -main-is Executables.commandSourcer
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
     - gsdFlow
-  gsd-write-command-consumption-streamer:
+  gsd-command-consumer:
     main:                Executables.hs
     source-dirs:         app
     ghc-options:
-    - -main-is Executables.gsdCommandConsumptionStreamer
+    - -main-is Executables.commandConsumer
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
