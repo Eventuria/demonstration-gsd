@@ -1,5 +1,5 @@
 {-# LANGUAGE InstanceSigs, TypeApplications #-}
-module Eventuria.GSD.Write.Flow.Arbitrary where
+module Eventuria.GSD.Write.Arbitrary where
 
 import Test.QuickCheck
 import Generic.Random

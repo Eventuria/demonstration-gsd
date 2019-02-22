@@ -6,13 +6,13 @@ module Eventuria.GSD.CLI.Dependencies where
 
 import Eventuria.Commons.Logger.Core
 import qualified Eventuria.GSD.Read.API.Client.Dependencies as Read.Client
-import qualified Eventuria.GSD.Write.Flow.Sourcer.Client.Dependencies as Write.Client
-import qualified Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.Dependencies as Write.Command.Consumer.Client
+import qualified Eventuria.GSD.Write.CommandSourcer.Client.Dependencies as Write.Client
+import qualified Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Dependencies as Write.Command.Consumer.Client
 import qualified Eventuria.GSD.Monitoring.API.Client.Dependencies as Monitoring.Client
 import qualified Eventuria.GSD.Monitoring.API.Client.Client as Monitoring.Client
 import qualified Eventuria.GSD.Read.API.Client.Client as Read.Client
-import qualified Eventuria.GSD.Write.Flow.Sourcer.Client.Client as Write.Client
-import qualified Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.Client as Write.Command.Consumer.Client
+import qualified Eventuria.GSD.Write.CommandSourcer.Client.Client as Write.Client
+import qualified Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Client as Write.Command.Consumer.Client
 
 import Eventuria.Commons.DevOps.Core
 import Eventuria.GSD.CLI.Settings

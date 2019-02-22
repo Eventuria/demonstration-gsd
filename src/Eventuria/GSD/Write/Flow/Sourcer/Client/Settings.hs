@@ -1,8 +1,0 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE RecordWildCards #-}
-module Eventuria.GSD.Write.Flow.Sourcer.Client.Settings where
-
-import Eventuria.Commons.Logger.Core
-import Eventuria.Commons.Network.Core
-
-data Settings = Settings {loggerId :: LoggerId , url :: URL}

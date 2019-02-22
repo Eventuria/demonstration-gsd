@@ -16,7 +16,7 @@ import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Console.Byline hiding (askWithMenuRepeatedly)
 import Eventuria.Adapters.ByLine.Wrapper
-import Eventuria.GSD.Write.Flow.Sourcer.Client.Client
+import Eventuria.GSD.Write.CommandSourcer.Client.Client
 import Eventuria.GSD.CLI.UI.Quit (runQuitCLI)
 import Eventuria.GSD.CLI.Dependencies
 import Eventuria.GSD.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)

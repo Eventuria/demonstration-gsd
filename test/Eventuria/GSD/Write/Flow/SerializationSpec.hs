@@ -1,5 +1,5 @@
 {-# LANGUAGE InstanceSigs, TypeApplications #-}
-module Eventuria.GSD.Write.Flow.SerializationSpec (main, spec)  where
+module Eventuria.GSD.Write.SerializationSpec (main, spec)  where
 
 
 import Test.Hspec
@@ -7,7 +7,7 @@ import Test.QuickCheck
 import Eventuria.GSD.Write.Model.Commands.Serialization ()
 import Eventuria.GSD.Write.Model.Commands.Command
 import Data.Aeson
-import Eventuria.GSD.Write.Flow.Arbitrary ()
+import Eventuria.GSD.Write.Arbitrary ()
 
 main :: IO ()
 main = hspec spec

@@ -15,7 +15,7 @@ import Data.Text hiding (foldr,map)
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Eventuria.GSD.Write.Flow.Sourcer.Client.Client
+import Eventuria.GSD.Write.CommandSourcer.Client.Client
 
 import qualified Eventuria.GSD.CLI.UI.Goal as GoalCLI (run)
 import qualified Eventuria.GSD.CLI.UI.Monitoring as MonitoringCLI

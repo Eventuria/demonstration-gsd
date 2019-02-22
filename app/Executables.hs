@@ -6,7 +6,7 @@ module Executables where
 
 import Prelude hiding (read)
 
-import Eventuria.GSD.Write.Flow.Sourcer.Server.Server
+import Eventuria.GSD.Write.CommandSourcer.Server.Server
 import Eventuria.GSD.Monitoring.API.Server.Server
 import Eventuria.GSD.Read.API.Server.Server
 import Eventuria.GSD.CLI.CLI
@@ -14,20 +14,20 @@ import Eventuria.Commons.Network.Core
 
 import Eventuria.Commons.Logger.Core
 import qualified Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Client.Settings as EventStoreClient
-import Eventuria.GSD.Write.Flow.Sourcer.Server.Settings
+import Eventuria.GSD.Write.CommandSourcer.Server.Settings
 import qualified Eventuria.GSD.CLI.Settings as CLI
 
-import qualified Eventuria.GSD.Write.Flow.Sourcer.Client.Settings as Write.Client
-import qualified Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.Settings as Write.Command.Consumer.Client
+import qualified Eventuria.GSD.Write.CommandSourcer.Client.Settings as Write.Client
+import qualified Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Settings as Write.Command.Consumer.Client
 import qualified Eventuria.GSD.Read.API.Client.Settings as Read.Client
 import qualified Eventuria.GSD.Monitoring.API.Client.Settings as Monitoring.Client
 
-import qualified Eventuria.GSD.Write.Flow.Sourcer.Server.Settings as Write.Server
+import qualified Eventuria.GSD.Write.CommandSourcer.Server.Settings as Write.Server
 
 import qualified Eventuria.GSD.Read.API.Server.Settings as Read.Server
 import qualified Eventuria.GSD.Monitoring.API.Server.Settings as Monitoring.Server
-import qualified Eventuria.GSD.Write.Flow.CommandConsumer.Settings as Command.Consumer
-import qualified Eventuria.GSD.Write.Flow.CommandConsumer.Consumer as Command.Consumer
+import qualified Eventuria.GSD.Write.CommandConsumer.Settings as Command.Consumer
+import qualified Eventuria.GSD.Write.CommandConsumer.Consumer as Command.Consumer
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ gsdWriteClientCommandLineInterface = Eventuria.GSD.CLI.CLI.execute CLI.Settings 
 
 -- | Gsd Web Write Api : Web Api that receives commands and persist them per Aggregate into the EventStore
 gsdWriteApi :: IO ()
-gsdWriteApi = Eventuria.GSD.Write.Flow.Sourcer.Server.Server.start
+gsdWriteApi = Eventuria.GSD.Write.CommandSourcer.Server.Server.start
                 Write.Server.Settings { serviceLoggerId = "[gsd.write.server]",
                                         healthCheckLoggerId = "[gsd.write.server/healthcheck]",
                                         port = 3000,
