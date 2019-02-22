@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 module Gsd.CLI.Settings where
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import qualified Gsd.Read.API.Client.Settings as Read.Client
 import qualified Gsd.Write.Flow.Sourcer.Client.Settings as Write.Client
 import qualified Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Client.Settings as Write.Command.Consumer.Client

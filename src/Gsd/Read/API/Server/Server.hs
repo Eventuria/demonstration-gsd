@@ -15,14 +15,14 @@ module Gsd.Read.API.Server.Server  (start) where
 
 
 import Servant
-import Servant.Wrapper
+import Eventuria.Adapters.Servant.Wrapper
 import Servant.Pipes ()
 import Network.Wai.Handler.Warp hiding (Settings)
-import Streamly.Adapters
+import Eventuria.Adapters.Streamly.Adapters
 
 
 import Prelude hiding (foldr)
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
 import qualified Gsd.Read.Service.OverEventStore as GsdRead
@@ -33,11 +33,11 @@ import Gsd.Read.Model.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Read.Model.Workspace
 import Gsd.Read.API.Definition
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Gsd.Read.API.Server.Settings
 import qualified Gsd.Read.API.Server.Dependencies as Server
-import DevOps.Core
-import Dependencies.RetrieveByHealthChecking
+import Eventuria.Commons.DevOps.Core
+import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
 
 
 start :: Settings -> IO ()

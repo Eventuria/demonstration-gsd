@@ -2,13 +2,13 @@
 {-# LANGUAGE RecordWildCards #-}
 module PersistedStreamEngine.Instances.EventStore.Client.Dependencies  where
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import qualified Database.EventStore as EventStore
 import PersistedStreamEngine.Instances.EventStore.Client.Settings
 import Control.Exception
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 import Control.Concurrent.Async (waitCatch)
-import Dependencies.Core
+import Eventuria.Commons.Dependencies.Core
 
 data Dependencies = Dependencies {logger :: Logger,
                                   credentials :: EventStore.Credentials,

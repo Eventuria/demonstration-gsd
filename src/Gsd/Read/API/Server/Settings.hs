@@ -2,8 +2,8 @@
 {-# LANGUAGE RecordWildCards #-}
 module Gsd.Read.API.Server.Settings where
 
-import Logger.Core
-import Network.Core
+import Eventuria.Commons.Logger.Core
+import Eventuria.Commons.Network.Core
 import qualified PersistedStreamEngine.Instances.EventStore.Client.Settings as EventStoreClient
 
 

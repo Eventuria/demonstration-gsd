@@ -1,4 +1,4 @@
-module Network.Core where
+module Eventuria.Commons.Network.Core where
 
 type URLHost = String
 type URLPort = Int

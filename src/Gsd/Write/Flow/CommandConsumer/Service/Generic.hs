@@ -3,7 +3,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Gsd.Write.Flow.CommandConsumer.Service.Generic  where
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 
 import qualified CQRS.Write.CommandConsumption.Main as CQRS.Write.CommandConsumption
 import CQRS.Write.StreamRepository
@@ -15,7 +15,7 @@ import CQRS.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAgg
 import Gsd.Write.Flow.CommandConsumer.Handling.CommandHandler (commandHandler)
 import Gsd.Write.Model.State
 import CQRS.Write.Serialization.CommandResponse()
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 
 consumeCommands :: Logger ->

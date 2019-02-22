@@ -7,7 +7,7 @@ import PersistedStreamEngine.Interface.PersistedItem
 import Control.Monad.IO.Class
 import Streamly
 import Data.Aeson
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 class (FromJSON item,
        Monad monad,

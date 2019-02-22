@@ -12,7 +12,7 @@ import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Instances.EventStore.Client.Dependencies
 import Data.Aeson
 import PersistedStreamEngine.Interface.Offset
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 isStreamNotFound :: EventStoreStream item -> IO (SafeResponse Bool)
 isStreamNotFound EventStoreStream { dependencies = Dependencies { logger, credentials, connection },

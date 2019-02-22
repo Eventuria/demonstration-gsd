@@ -13,8 +13,8 @@ import Gsd.CLI.Dependencies
 import Data.Function ((&))
 import Control.Concurrent
 import Data.Text hiding (map)
-import Time.Core
-import Dependencies.Core
+import Eventuria.Adapters.Time.Core
+import Eventuria.Commons.Dependencies.Core
 
 runHealthChecking :: Settings -> IO (Dependencies)
 runHealthChecking settings = do

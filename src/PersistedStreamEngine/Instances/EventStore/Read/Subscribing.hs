@@ -7,7 +7,7 @@ import Control.Concurrent
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import qualified Database.EventStore as EventStore
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import Control.Exception
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 import PersistedStreamEngine.Instances.EventStore.Client.Dependencies
@@ -16,7 +16,7 @@ import Data.Maybe
 import Data.Aeson
 import PersistedStreamEngine.Interface.Streamable
 import PersistedStreamEngine.Interface.Offset
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (SafeResponse (Persisted item))
 subscribe eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },

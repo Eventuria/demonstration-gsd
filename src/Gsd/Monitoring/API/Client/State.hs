@@ -4,8 +4,8 @@ module Gsd.Monitoring.API.Client.State where
 
 import Servant.Client
 import Network.HTTP.Client (Manager, newManager, defaultManagerSettings)
-import Logger.Core
-import Network.Core
+import Eventuria.Commons.Logger.Core
+import Eventuria.Commons.Network.Core
 import Gsd.Monitoring.API.Client.Settings
 
 data State = State {logger :: Logger ,

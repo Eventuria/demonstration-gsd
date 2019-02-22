@@ -1,5 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
-module Streamly.Adapters where
+module Eventuria.Adapters.Streamly.Adapters where
 
 import Streamly
 import qualified Streamly.Prelude as S

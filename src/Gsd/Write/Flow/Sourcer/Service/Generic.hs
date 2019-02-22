@@ -16,7 +16,7 @@ import CQRS.Write.Aggregate.Ids.AggregateId
 import PersistedStreamEngine.Interface.Offset
 import CQRS.Write.Aggregate.Commands.CommandId
 import CQRS.Write.Serialization.CommandResponse()
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 persistCommand ::  AggregateIdStream persistedStream ->
                    GetCommandStream persistedStream->

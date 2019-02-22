@@ -12,7 +12,7 @@ import Data.Time
 import Control.Monad.Free
 import qualified Data.Set as Set
 import CQRS.Write.Aggregate.Commands.CommandHeader
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 type TransactionInterpreter applicationState a = WritePersistenceStreamLanguage applicationState a -> IO (SafeResponse a)
 

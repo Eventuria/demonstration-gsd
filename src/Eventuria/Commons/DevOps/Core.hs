@@ -1,4 +1,4 @@
-module DevOps.Core where
+module Eventuria.Commons.DevOps.Core where
 
 type UnhealthyReason = String
 

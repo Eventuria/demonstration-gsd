@@ -20,8 +20,8 @@ import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
 import PersistedStreamEngine.Interface.PersistedItem
-import System.SafeResponse
-import DevOps.Core
+import Eventuria.Commons.System.SafeResponse
+import Eventuria.Commons.DevOps.Core
 
 type GsdWriteApi =  HealthCheck :<|>  SendGsdCommand :<|>  WaitTillCommandResponseProduced
 

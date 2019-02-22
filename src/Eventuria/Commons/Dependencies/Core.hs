@@ -1,6 +1,6 @@
-module Dependencies.Core where
+module Eventuria.Commons.Dependencies.Core where
 
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 import Data.List.NonEmpty
 
 type Name = String

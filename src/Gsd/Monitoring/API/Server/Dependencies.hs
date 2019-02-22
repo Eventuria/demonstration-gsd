@@ -2,11 +2,11 @@
 {-# LANGUAGE RecordWildCards #-}
 module Gsd.Monitoring.API.Server.Dependencies where
 
-import Logger.Core
-import Network.Core
+import Eventuria.Commons.Logger.Core
+import Eventuria.Commons.Network.Core
 import qualified PersistedStreamEngine.Instances.EventStore.Client.Dependencies as EventStoreClient
 import Gsd.Monitoring.API.Server.Settings
-import Dependencies.Core
+import Eventuria.Commons.Dependencies.Core
 
 data Dependencies = Dependencies { logger :: Logger ,
                                    port :: URLPort,

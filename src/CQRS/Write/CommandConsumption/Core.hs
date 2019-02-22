@@ -1,10 +1,10 @@
 module CQRS.Write.CommandConsumption.Core where
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import PersistedStreamEngine.Interface.PersistedItem
 import CQRS.Write.Aggregate.Commands.Command
 import CQRS.Write.Aggregate.Ids.AggregateId
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import CQRS.Write.StreamRepository
 import PersistedStreamEngine.Interface.Read.Reading
 import Streamly (SerialT)

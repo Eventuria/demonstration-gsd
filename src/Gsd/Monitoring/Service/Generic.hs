@@ -26,7 +26,7 @@ import Gsd.Write.Model.State
 import Gsd.Write.Model.Commands.Command
 import Gsd.Write.Model.Events.Event
 import Gsd.Write.Model.Core
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Control.Lens
 
 streamWorkspaceId :: Streamable stream monad WorkspaceId =>

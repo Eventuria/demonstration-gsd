@@ -1,12 +1,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
-module Dependencies.RetrieveByHealthChecking where
+module Eventuria.Commons.Dependencies.RetrieveByHealthChecking where
 
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import Control.Concurrent
-import Time.Core
-import Dependencies.Core
+import Eventuria.Adapters.Time.Core
+import Eventuria.Commons.Dependencies.Core
 import Data.Function ((&))
 
 checkHealthAndRetrieveDependencies ::

@@ -14,7 +14,7 @@ import PersistedStreamEngine.Instances.EventStore.Write.CqrsInstance
 import CQRS.Write.PersistCommandResult
 import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 persistCommand ::  EventStoreClient.Dependencies -> GsdCommand -> IO PersistCommandResult
 persistCommand eventStoreClientDependencies gsdCommand =

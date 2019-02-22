@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module System.SafeResponse where
+module Eventuria.Commons.System.SafeResponse where
 
 import Control.Exception
 import Data.Aeson

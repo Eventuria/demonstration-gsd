@@ -17,9 +17,9 @@ module Gsd.Monitoring.API.Server.Server  where
 import Prelude hiding (foldr)
 
 import Servant
-import Servant.Wrapper
+import Eventuria.Adapters.Servant.Wrapper
 import Servant.Pipes ()
-import Streamly.Adapters
+import Eventuria.Adapters.Streamly.Adapters
 import Network.Wai.Handler.Warp hiding (Settings)
 import Gsd.Monitoring.API.Definition
 
@@ -40,13 +40,13 @@ import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import CQRS.Write.Serialization.ValidationState ()
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import CQRS.Write.Serialization.CommandResponse ()
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 import Gsd.Monitoring.API.Server.Settings
 import qualified Gsd.Monitoring.API.Server.Dependencies as Server.State
 import qualified Gsd.Monitoring.API.Server.Dependencies as Server
-import Logger.Core
-import Dependencies.RetrieveByHealthChecking
-import System.SafeResponse
+import Eventuria.Commons.Logger.Core
+import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
+import Eventuria.Commons.System.SafeResponse
 
 start :: Settings -> IO ()
 start settings @ Settings {healthCheckLoggerId}  =

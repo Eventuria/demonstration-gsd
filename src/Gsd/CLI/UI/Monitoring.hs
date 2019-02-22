@@ -7,7 +7,7 @@ module Gsd.CLI.UI.Monitoring where
 
 import System.Console.Byline
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Data.Text
 import Data.Function ((&))
 import Gsd.CLI.Workflow.Steps
@@ -20,7 +20,7 @@ import Gsd.Monitoring.API.Client.Client (streamGsdEventByWorkspaceId,
                               streamGsdCommandResponseByWorkspaceId,
                               streamGsdValidationStateByWorkspaceId)
 import Gsd.Monitoring.API.Client.State
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 
 
 data MonitoringCommand = ListCommandsReceived

@@ -16,7 +16,7 @@ import Gsd.Read.Model.Action
 import CQRS.Write.StreamRepository
 import CQRS.Write.Aggregate.Events.Event
 import Streamly (SerialT)
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT monad Event) =>
                       Dependencies ->

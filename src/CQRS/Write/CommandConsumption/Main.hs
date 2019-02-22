@@ -9,14 +9,14 @@ import Streamly (parallely)
 import Data.Function ((&))
 import Control.Concurrent
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import CQRS.Write.StreamRepository
 import PersistedStreamEngine.Interface.Read.Reading
 
 import CQRS.Write.Serialization.Command ()
 import CQRS.Write.Serialization.ValidationState ()
-import qualified Streamly.Safe as StreamlySafe
-import System.SafeResponse
+import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
+import Eventuria.Commons.System.SafeResponse
 import Control.Exception
 import CQRS.Write.CommandConsumption.Core
 

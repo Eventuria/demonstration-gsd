@@ -16,7 +16,7 @@ import Data.Proxy
 import Gsd.Monitoring.API.Definition
 
 import Servant
-import Streamly.Adapters
+import Eventuria.Adapters.Streamly.Adapters
 import qualified Pipes as P
 
 import qualified Servant.Client.Streaming as S
@@ -33,12 +33,12 @@ import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import CQRS.Write.Serialization.ValidationState ()
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import CQRS.Write.Serialization.CommandResponse ()
-import DevOps.Core
-import System.SafeResponse
+import Eventuria.Commons.DevOps.Core
+import Eventuria.Commons.System.SafeResponse
 import Control.Exception
 import Gsd.Monitoring.API.Client.State
-import Logger.Core
-import qualified Streamly.Safe as StreamlySafe
+import Eventuria.Commons.Logger.Core
+import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
 
 streamGsdCommandByWorkspaceId ::           State -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
 streamInfinitelyGsdCommandByWorkspaceId :: State -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])

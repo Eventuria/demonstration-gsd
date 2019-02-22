@@ -22,7 +22,7 @@ import qualified PersistedStreamEngine.Instances.EventStore.Client.Dependencies 
 import PersistedStreamEngine.Instances.EventStore.Read.CqrsInstance
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 streamWorkspaceId :: Streamable stream monad WorkspaceId =>
                       EventStoreClient.Dependencies ->

@@ -10,9 +10,9 @@ import Gsd.Write.Flow.Sourcer.Server.Server
 import Gsd.Monitoring.API.Server.Server
 import Gsd.Read.API.Server.Server
 import Gsd.CLI.CLI
-import Network.Core
+import Eventuria.Commons.Network.Core
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import qualified PersistedStreamEngine.Instances.EventStore.Client.Settings as EventStoreClient
 import Gsd.Write.Flow.Sourcer.Server.Settings
 import qualified Gsd.CLI.Settings as CLI

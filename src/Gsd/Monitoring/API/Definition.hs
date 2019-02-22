@@ -21,9 +21,9 @@ import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Model.State
 import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 import qualified Pipes as P
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 
 type GSDMonitoringStreamingApi =   HealthCheck

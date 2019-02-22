@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
-module Logger.Core (getLogger,Logger,LoggerId,LoggerMessage,logInfo) where
+module Eventuria.Commons.Logger.Core (getLogger,Logger,LoggerId,LoggerMessage,logInfo) where
 import qualified System.Log.Logger as LoggerUsed
 import Control.Concurrent
 

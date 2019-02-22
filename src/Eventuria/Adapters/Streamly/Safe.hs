@@ -1,11 +1,11 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ExistentialQuantification #-}
-module Streamly.Safe where
+module Eventuria.Adapters.Streamly.Safe where
 
 import qualified Streamly.Prelude as S
 import Streamly
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Data.Either
 import Data.Function ((&))
 import Control.Concurrent (ThreadId)

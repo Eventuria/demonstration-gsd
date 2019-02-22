@@ -8,8 +8,8 @@ module Gsd.Read.Service.Generic where
 
 import Streamly hiding (Streaming)
 import Data.Function ((&))
-import qualified Streamly.Safe as StreamlySafe
-import System.SafeResponse
+import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
+import Eventuria.Commons.System.SafeResponse
 import Data.Maybe
 import Data.Text hiding (map,length,find)
 import Data.List (find)

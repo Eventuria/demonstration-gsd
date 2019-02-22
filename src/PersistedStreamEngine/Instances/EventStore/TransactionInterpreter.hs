@@ -5,7 +5,7 @@ import qualified Data.Time as Time
 import qualified Data.UUID.V4 as Uuid
 import Control.Monad.IO.Class (MonadIO(..))
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import Data.Aeson
 import PersistedStreamEngine.Interface.Write.WDsl
 import CQRS.Write.Aggregate.Events.Event

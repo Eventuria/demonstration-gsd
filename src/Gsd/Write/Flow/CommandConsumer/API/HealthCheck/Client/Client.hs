@@ -6,14 +6,14 @@
 module Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Client.Client where
 
 import Servant
-import Servant.Wrapper
+import Eventuria.Adapters.Servant.Wrapper
 
 import Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Client.State
 import qualified Servant.Client.Streaming as S
 import Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Definition
 import Gsd.Write.Model.Commands.Serialization ()
 import CQRS.Write.Serialization.CommandResponse ()
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 
 
 healthCheck :: State -> IO (HealthCheckResult)

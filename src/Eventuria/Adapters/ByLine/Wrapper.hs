@@ -1,5 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module ByLine.Wrapper where
+module Eventuria.Adapters.ByLine.Wrapper where
 
 import qualified System.Console.Byline as ByLine (askWithMenuRepeatedly)
 import System.Console.Byline hiding (askWithMenuRepeatedly)

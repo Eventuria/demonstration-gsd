@@ -18,8 +18,8 @@ import Gsd.Read.Model.Goal
 import Gsd.Read.Model.Action
 import PersistedStreamEngine.Interface.PersistedItem
 import Gsd.Write.Model.Core
-import System.SafeResponse
-import DevOps.Core
+import Eventuria.Commons.System.SafeResponse
+import Eventuria.Commons.DevOps.Core
 
 type GSDReadApi =   HealthCheck
                       :<|> StreamWorkspace

@@ -15,15 +15,15 @@ import PersistedStreamEngine.Interface.Offset
 import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.PersistedItem
 import CQRS.Write.PersistCommandResult
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Gsd.Write.Flow.Sourcer.Client.State
 import qualified Servant.Client.Streaming as S
 import Control.Exception
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import Gsd.Write.Flow.Sourcer.Definition
 import Gsd.Write.Model.Commands.Serialization ()
 import CQRS.Write.Serialization.CommandResponse ()
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 data SendCommandAnWaitFailure =  SendCommandAnWaitFailure {reason :: String} deriving Show
 
 healthCheck :: State -> IO (HealthCheckResult)

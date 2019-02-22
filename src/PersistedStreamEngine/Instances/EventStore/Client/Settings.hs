@@ -1,7 +1,7 @@
 module PersistedStreamEngine.Instances.EventStore.Client.Settings where
 
-import Logger.Core
-import Network.Core
+import Eventuria.Commons.Logger.Core
+import Eventuria.Commons.Network.Core
 import Data.ByteString
 
 data Settings = Settings {

@@ -1,7 +1,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module CQRS.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAggregate) where
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import PersistedStreamEngine.Interface.PersistedItem
 import CQRS.Write.Aggregate.Commands.Command
 import CQRS.Write.StreamRepository

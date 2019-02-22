@@ -15,20 +15,20 @@ import Data.Proxy
 import Servant
 import Gsd.Read.Model.Workspace
 import qualified Pipes as P
-import Streamly.Adapters
+import Eventuria.Adapters.Streamly.Adapters
 import qualified Servant.Client.Streaming as S
 import Gsd.Write.Model.Core
 import Gsd.Read.Model.Goal
 import Gsd.Read.Model.Action
 import PersistedStreamEngine.Interface.PersistedItem
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Servant.Pipes ()
 import Gsd.Read.API.Client.State
-import qualified Streamly.Safe as StreamlySafe
-import Logger.Core
+import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
+import Eventuria.Commons.Logger.Core
 import Control.Exception
 import Gsd.Read.API.Definition
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 
 fetchWorkspaces :: State ->
                    IO (SafeResponse [Persisted Workspace])

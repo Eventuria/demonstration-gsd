@@ -9,7 +9,7 @@ module Gsd.CLI.UI.Workspace (run)where
 
 import Prelude hiding (length,readClientDependencies)
 import System.Console.Byline hiding (askWithMenuRepeatedly)
-import ByLine.Wrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
+import Eventuria.Adapters.ByLine.Wrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
 
 import Data.Text hiding (foldr,map)
 import Data.UUID.V4

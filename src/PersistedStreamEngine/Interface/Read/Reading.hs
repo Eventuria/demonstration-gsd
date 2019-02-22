@@ -8,7 +8,7 @@ import PersistedStreamEngine.Interface.Streamable
 
 import PersistedStreamEngine.Interface.Offset
 import PersistedStreamEngine.Interface.PersistedItem
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 data Reading persistedStream = Reading {
     streaming :: Streaming persistedStream,

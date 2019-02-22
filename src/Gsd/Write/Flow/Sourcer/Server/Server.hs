@@ -13,7 +13,7 @@
 module Gsd.Write.Flow.Sourcer.Server.Server (start) where
 
 import Prelude hiding (foldr)
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import Servant.Pipes ()
 
 import Control.Monad.IO.Class (MonadIO(..))
@@ -24,7 +24,7 @@ import CQRS.Write.Aggregate.Ids.AggregateId
 import CQRS.Write.Serialization.PersistenceResult ()
 import Gsd.Write.Flow.Sourcer.Definition
 import Servant
-import Servant.Wrapper
+import Eventuria.Adapters.Servant.Wrapper
 import Network.Wai.Handler.Warp hiding (Settings)
 import Gsd.Write.Model.Commands.Command
 import Gsd.Write.Model.Commands.Serialization ()
@@ -32,11 +32,11 @@ import CQRS.Write.PersistCommandResult
 import PersistedStreamEngine.Interface.PersistedItem
 import CQRS.Write.Aggregate.Commands.CommandId
 import PersistedStreamEngine.Interface.Offset
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Gsd.Write.Flow.Sourcer.Server.Settings
 import qualified Gsd.Write.Flow.Sourcer.Server.Dependencies as Server
-import DevOps.Core
-import Dependencies.RetrieveByHealthChecking
+import Eventuria.Commons.DevOps.Core
+import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
 
 start :: Settings -> IO ()
 start settings @ Settings {healthCheckLoggerId}  =

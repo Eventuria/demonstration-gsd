@@ -1,4 +1,4 @@
-module Time.Core where
+module Eventuria.Adapters.Time.Core where
 
 type Seconds = Int
 type MilliSeconds = Int

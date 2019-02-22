@@ -2,11 +2,11 @@
 {-# LANGUAGE RecordWildCards #-}
 module Gsd.Write.Flow.CommandConsumer.Consumer where
 
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import qualified Gsd.Write.Flow.CommandConsumer.Service.OverEventStore as Gsd.Write.Flow.CommandConsumer.Service
 import qualified Gsd.Write.Flow.CommandConsumer.Settings as Consumer
 import qualified Gsd.Write.Flow.CommandConsumer.Dependencies as Consumer
-import Dependencies.RetrieveByHealthChecking
+import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
 import Control.Concurrent
 import qualified Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Server as Consumer.HealthCheck
 

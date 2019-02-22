@@ -3,12 +3,12 @@
 module Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Server where
 
 import Servant
-import Servant.Wrapper
+import Eventuria.Adapters.Servant.Wrapper
 import Network.Wai.Handler.Warp hiding (Settings)
 import Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Definition
 import qualified Gsd.Write.Flow.CommandConsumer.Dependencies as Consumer
-import DevOps.Core
-import Logger.Core
+import Eventuria.Commons.DevOps.Core
+import Eventuria.Commons.Logger.Core
 
 runServerOnWarp :: Consumer.Dependencies -> IO()
 runServerOnWarp dependencies @ Consumer.Dependencies {logger,port} = do

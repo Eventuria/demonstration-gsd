@@ -4,8 +4,8 @@ module Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Client.State where
 
 import Servant.Client
 import Network.HTTP.Client (Manager, newManager, defaultManagerSettings)
-import Logger.Core
-import Network.Core
+import Eventuria.Commons.Logger.Core
+import Eventuria.Commons.Network.Core
 import Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Client.Settings
 
 data State = State {logger :: Logger ,

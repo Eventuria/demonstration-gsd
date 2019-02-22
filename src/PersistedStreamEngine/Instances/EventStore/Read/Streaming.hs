@@ -20,14 +20,14 @@ import qualified Database.EventStore as EventStore
 import qualified PersistedStreamEngine.Instances.EventStore.Read.Subscribing as EventStore.Subscribing
 import PersistedStreamEngine.Interface.PersistedItem
 import PersistedStreamEngine.Interface.Offset
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import PersistedStreamEngine.Instances.EventStore.EventStoreStream
 import PersistedStreamEngine.Instances.EventStore.Client.Dependencies
 import Data.Aeson
 import Data.Maybe
 import PersistedStreamEngine.Interface.Streamable
 import Control.Exception
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 
 
 streamFromOffset :: Streamable stream monad item =>

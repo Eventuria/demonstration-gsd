@@ -3,7 +3,7 @@
 module CQRS.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)where
 
 import Data.Aeson
-import Logger.Core
+import Eventuria.Commons.Logger.Core
 import PersistedStreamEngine.Interface.PersistedItem
 import CQRS.Write.Aggregate.Commands.Command
 import CQRS.Write.StreamRepository
@@ -14,13 +14,13 @@ import CQRS.Write.CommandConsumption.Core
 import Control.Monad.IO.Class (MonadIO(..))
 import CQRS.Write.Serialization.ValidationState ()
 import CQRS.Write.Aggregate.Ids.AggregateId
-import qualified Streamly.Safe as StreamlySafe
+import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
 import Control.Concurrent
 import Control.Exception
 import PersistedStreamEngine.Interface.Offset
 import CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import PersistedStreamEngine.Interface.Streamable
-import System.SafeResponse
+import Eventuria.Commons.System.SafeResponse
 import Data.Function ((&))
 import Data.Maybe
 import CQRS.Write.Serialization.Command ()

@@ -13,7 +13,7 @@
 module Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Definition where
 
 import Servant
-import DevOps.Core
+import Eventuria.Commons.DevOps.Core
 
 type GsdCommandConsumerApi =  HealthCheck
 

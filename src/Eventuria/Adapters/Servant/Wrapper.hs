@@ -1,6 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Servant.Wrapper where
+module Eventuria.Adapters.Servant.Wrapper where
 
 import Servant
 import qualified Pipes as P
