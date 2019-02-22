@@ -18,7 +18,7 @@ GSD  is a basic todo list command-line application
 - Learning and Practicing the Haskell language and environnement
 - Demonstrating skills in the following areas
     - Distributed Domain Driven Design
-      - CQRS (Microservice Architecture)
+      - Eventuria.CQRS (Microservice Architecture)
       - Event Sourcing
       - Command Sourcing
       - Domain Driven Design
