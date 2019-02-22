@@ -23,41 +23,41 @@ import Eventuria.GSD.Read.Model.Action
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Commons.System.SafeResponse
 import Servant.Pipes ()
-import Eventuria.GSD.Read.API.Client.State
+import Eventuria.GSD.Read.API.Client.Dependencies
 import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
 import Eventuria.Commons.Logger.Core
 import Control.Exception
 import Eventuria.GSD.Read.API.Definition
 import Eventuria.Commons.DevOps.Core
 
-fetchWorkspaces :: State ->
+fetchWorkspaces :: Dependencies ->
                    IO (SafeResponse [Persisted Workspace])
-fetchWorkspaces clientSetting =
+fetchWorkspaces dependencies =
   bindWithSettings
-    clientSetting
+    dependencies
     streamWorkspaceOnPipe
 
-fetchGoals :: State ->
+fetchGoals :: Dependencies ->
               WorkspaceId ->
               IO (SafeResponse [Goal])
-fetchGoals clientSetting workspaceId =
+fetchGoals dependencies workspaceId =
   bindWithSettings
-    clientSetting
+    dependencies
     (streamGoalOnPipe workspaceId)
 
-fetchActions :: State ->
+fetchActions :: Dependencies ->
                 WorkspaceId ->
                 GoalId ->
                 IO (SafeResponse [Action])
-fetchActions clientSetting workspaceId goalId =
+fetchActions dependencies workspaceId goalId =
   bindWithSettings
-    clientSetting
+    dependencies
     (streamActionOnPipe workspaceId goalId)
 
-bindWithSettings :: State ->
+bindWithSettings :: Dependencies ->
                     S.ClientM (P.Producer (SafeResponse (item)) IO ()) ->
                     IO (SafeResponse [item])
-bindWithSettings State { httpClientManager, url, logger} call = do
+bindWithSettings Dependencies { httpClientManager, url, logger} call = do
   (S.withClientM
      (fromPipes <$> call )
      (S.mkClientEnv httpClientManager url)
@@ -69,11 +69,11 @@ bindWithSettings State { httpClientManager, url, logger} call = do
          safeResponse <- StreamlySafe.toList stream
          return safeResponse))
 
-fetchGoal :: State ->
+fetchGoal :: Dependencies ->
               WorkspaceId ->
               GoalId ->
               IO (SafeResponse (Maybe Goal))
-fetchGoal State { httpClientManager, url, logger} workspaceId goalId =
+fetchGoal Dependencies { httpClientManager, url, logger} workspaceId goalId =
   (S.withClientM
        (fetchGoalCall workspaceId goalId)
        (S.mkClientEnv httpClientManager url)
@@ -83,10 +83,10 @@ fetchGoal State { httpClientManager, url, logger} workspaceId goalId =
            return $ Left $ toException errorHttpLevel
           Right safeResponse -> return safeResponse))
 
-fetchWorkspace :: State ->
+fetchWorkspace :: Dependencies ->
               WorkspaceId ->
               IO (SafeResponse (Maybe Workspace))
-fetchWorkspace State { httpClientManager, url, logger} workspaceId  =
+fetchWorkspace Dependencies { httpClientManager, url, logger} workspaceId  =
   (S.withClientM
        (fetchWorkspaceCall workspaceId)
        (S.mkClientEnv httpClientManager url)
@@ -96,8 +96,8 @@ fetchWorkspace State { httpClientManager, url, logger} workspaceId  =
            return $ Left $ toException errorHttpLevel
           Right safeResponse -> return safeResponse))
 
-healthCheck :: State -> IO (HealthCheckResult)
-healthCheck State { httpClientManager, url, logger}  = do
+healthCheck :: Dependencies -> IO (HealthCheckResult)
+healthCheck Dependencies { httpClientManager, url, logger}  = do
   S.withClientM
      healthCheckCall
      (S.mkClientEnv httpClientManager url)

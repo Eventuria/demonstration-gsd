@@ -5,10 +5,10 @@ module Eventuria.GSD.CLI.Dependencies where
 
 
 import Eventuria.Commons.Logger.Core
-import qualified Eventuria.GSD.Read.API.Client.State as Read.Client
-import qualified Eventuria.GSD.Write.Flow.Sourcer.Client.State as Write.Client
-import qualified Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.State as Write.Command.Consumer.Client
-import qualified Eventuria.GSD.Monitoring.API.Client.State as Monitoring.Client
+import qualified Eventuria.GSD.Read.API.Client.Dependencies as Read.Client
+import qualified Eventuria.GSD.Write.Flow.Sourcer.Client.Dependencies as Write.Client
+import qualified Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.Dependencies as Write.Command.Consumer.Client
+import qualified Eventuria.GSD.Monitoring.API.Client.Dependencies as Monitoring.Client
 import qualified Eventuria.GSD.Monitoring.API.Client.Client as Monitoring.Client
 import qualified Eventuria.GSD.Read.API.Client.Client as Read.Client
 import qualified Eventuria.GSD.Write.Flow.Sourcer.Client.Client as Write.Client
@@ -22,10 +22,10 @@ import Data.List.NonEmpty
 import Eventuria.Commons.Dependencies.Core
 
 data Dependencies = Dependencies { logger :: Logger,
-                                   writeClientDependencies :: Write.Client.State,
-                                   writeCommandConsumerClientDependencies :: Write.Command.Consumer.Client.State,
-                                   readClientDependencies :: Read.Client.State,
-                                   monitoringClientDependencies :: Monitoring.Client.State}
+                                   writeClientDependencies :: Write.Client.Dependencies,
+                                   writeCommandConsumerClientDependencies :: Write.Command.Consumer.Client.Dependencies,
+                                   readClientDependencies :: Read.Client.Dependencies,
+                                   monitoringClientDependencies :: Monitoring.Client.Dependencies}
 
 
 retrieveDependencies :: Settings -> IO(Validation (NonEmpty UnhealthyDependency) Dependencies)
@@ -35,10 +35,10 @@ retrieveDependencies Settings {loggerId,
                    readClientSettings,
                    monitoringClientSettings} = do
   logger           <- getLogger loggerId
-  writeClientDependencies                <- Write.Client.getState                   writeClientSettings
-  writeCommandConsumerClientDependencies <- Write.Command.Consumer.Client.getState  writeCommandConsumerClientSettings
-  readClientDependencies                 <- Read.Client.getState                    readClientSettings
-  monitoringClientDependencies           <- Monitoring.Client.getState              monitoringClientSettings
+  writeClientDependencies                <- Write.Client.getDependencies                   writeClientSettings
+  writeCommandConsumerClientDependencies <- Write.Command.Consumer.Client.getDependencies  writeCommandConsumerClientSettings
+  readClientDependencies                 <- Read.Client.getDependencies                    readClientSettings
+  monitoringClientDependencies           <- Monitoring.Client.getDependencies              monitoringClientSettings
 
   writeHealth <- Write.Client.healthCheck writeClientDependencies
                     <&> toAccValidation (\unhealthyReason -> UnhealthyDependency {name = "Write / Command Sourcer", ..})

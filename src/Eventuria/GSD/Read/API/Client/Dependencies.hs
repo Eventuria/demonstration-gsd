@@ -1,6 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
-module Eventuria.GSD.Read.API.Client.State where
+module Eventuria.GSD.Read.API.Client.Dependencies where
 
 import Servant.Client
 import Network.HTTP.Client (Manager, newManager, defaultManagerSettings)
@@ -8,12 +8,12 @@ import Eventuria.Commons.Logger.Core
 import Eventuria.Commons.Network.Core
 import Eventuria.GSD.Read.API.Client.Settings
 
-data State = State {logger :: Logger ,
+data Dependencies = Dependencies {logger :: Logger ,
                     url :: BaseUrl,
                     httpClientManager :: Manager}
 
-getState :: Settings -> IO(State)
-getState Settings { url = URL {host,port,path}, loggerId} = do
+getDependencies :: Settings -> IO(Dependencies)
+getDependencies Settings { url = URL {host,port,path}, loggerId} = do
   logger <- getLogger loggerId
   httpClientManager <- (newManager defaultManagerSettings)
-  return State {url = BaseUrl Http host port path ,..}
+  return Dependencies {url = BaseUrl Http host port path ,..}

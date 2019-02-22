@@ -16,7 +16,7 @@ import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Libraries.CQRS.Write.PersistCommandResult
 import Eventuria.Commons.System.SafeResponse
-import Eventuria.GSD.Write.Flow.Sourcer.Client.State
+import Eventuria.GSD.Write.Flow.Sourcer.Client.Dependencies
 import qualified Servant.Client.Streaming as S
 import Control.Exception
 import Eventuria.Commons.Logger.Core
@@ -26,8 +26,8 @@ import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
 import Eventuria.Commons.DevOps.Core
 data SendCommandAnWaitFailure =  SendCommandAnWaitFailure {reason :: String} deriving Show
 
-healthCheck :: State -> IO (HealthCheckResult)
-healthCheck State { httpClientManager, url, logger}  = do
+healthCheck :: Dependencies -> IO (HealthCheckResult)
+healthCheck Dependencies { httpClientManager, url, logger}  = do
   S.withClientM
      healthCheckCall
      (S.mkClientEnv httpClientManager url)
@@ -36,8 +36,8 @@ healthCheck State { httpClientManager, url, logger}  = do
           Left errorHttpLevel -> return $ unhealthy $ show errorHttpLevel
           Right healthCheckResult  -> return healthCheckResult )
 
-sendCommandAndWaitTillProcessed :: State -> GsdCommand -> IO (Either SendCommandAnWaitFailure CommandResponse )
-sendCommandAndWaitTillProcessed clientSetting @ State { httpClientManager, url, logger} gsdCommand =
+sendCommandAndWaitTillProcessed :: Dependencies -> GsdCommand -> IO (Either SendCommandAnWaitFailure CommandResponse )
+sendCommandAndWaitTillProcessed dependencies @ Dependencies { httpClientManager, url, logger} gsdCommand =
    (S.withClientM
    (sendCommandCall gsdCommand )
    (S.mkClientEnv httpClientManager url)
@@ -49,7 +49,7 @@ sendCommandAndWaitTillProcessed clientSetting @ State { httpClientManager, url, 
             FailedToPersist {reason } -> return $ Left $ SendCommandAnWaitFailure {reason}
             SuccessfullyPersisted {aggregateId, commandId,lastOffsetPersisted} -> do
               safeResponse <- waitTillCommandResponseProduced
-                                clientSetting
+                                dependencies
                                 aggregateId
                                 lastOffsetPersisted
                                 commandId
@@ -59,11 +59,11 @@ sendCommandAndWaitTillProcessed clientSetting @ State { httpClientManager, url, 
 
   where
 
-    waitTillCommandResponseProduced :: State ->
+    waitTillCommandResponseProduced :: Dependencies ->
                                          AggregateId ->
                                               Offset ->
                                            CommandId -> IO (SafeResponse (Persisted CommandResponse))
-    waitTillCommandResponseProduced State { httpClientManager, url, logger} aggregateId offset commandId =
+    waitTillCommandResponseProduced Dependencies { httpClientManager, url, logger} aggregateId offset commandId =
       (S.withClientM
        (waitTillCommandResponseProducedCall aggregateId offset commandId)
        (S.mkClientEnv httpClientManager url)

@@ -36,16 +36,16 @@ import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
 import Eventuria.Commons.DevOps.Core
 import Eventuria.Commons.System.SafeResponse
 import Control.Exception
-import Eventuria.GSD.Monitoring.API.Client.State
+import Eventuria.GSD.Monitoring.API.Client.Dependencies
 import Eventuria.Commons.Logger.Core
 import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
 
-streamGsdCommandByWorkspaceId ::           State -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
-streamInfinitelyGsdCommandByWorkspaceId :: State -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
-streamGsdCommandResponseByWorkspaceId ::   State -> WorkspaceId -> IO (SafeResponse [Persisted CommandResponse])
-streamGsdEventByWorkspaceId ::             State -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
-streamInfinitelyGsdEventByWorkspaceId ::   State -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
-streamGsdValidationStateByWorkspaceId ::   State -> WorkspaceId -> IO (SafeResponse [Persisted (ValidationState GsdState)])
+streamGsdCommandByWorkspaceId ::           Dependencies -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
+streamInfinitelyGsdCommandByWorkspaceId :: Dependencies -> WorkspaceId -> IO (SafeResponse [Persisted GsdCommand])
+streamGsdCommandResponseByWorkspaceId ::   Dependencies -> WorkspaceId -> IO (SafeResponse [Persisted CommandResponse])
+streamGsdEventByWorkspaceId ::             Dependencies -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
+streamInfinitelyGsdEventByWorkspaceId ::   Dependencies -> WorkspaceId -> IO (SafeResponse [Persisted GsdEvent])
+streamGsdValidationStateByWorkspaceId ::   Dependencies -> WorkspaceId -> IO (SafeResponse [Persisted (ValidationState GsdState)])
 
 streamGsdCommandByWorkspaceId =             bindWithSettings streamGsdCommandByWorkspaceIdOnPipe
 streamInfinitelyGsdCommandByWorkspaceId  =  bindWithSettings streamInfinitelyGsdCommandByWorkspaceIdOnPipe
@@ -56,10 +56,10 @@ streamGsdValidationStateByWorkspaceId  =    bindWithSettings streamGsdValidation
 
 
 bindWithSettings :: (WorkspaceId -> S.ClientM (P.Producer (SafeResponse (Persisted item)) IO ())) ->
-                    State ->
+                    Dependencies ->
                     WorkspaceId ->
                     IO (SafeResponse [Persisted item])
-bindWithSettings call State { httpClientManager, url, logger} workspaceId = do
+bindWithSettings call Dependencies { httpClientManager, url, logger} workspaceId = do
   (S.withClientM
      (fromPipes <$> (call workspaceId))
      (S.mkClientEnv httpClientManager url)
@@ -72,8 +72,8 @@ bindWithSettings call State { httpClientManager, url, logger} workspaceId = do
          return safeResponse))
 
 
-healthCheck :: State -> IO (HealthCheckResult)
-healthCheck State { httpClientManager, url, logger}  = do
+healthCheck :: Dependencies -> IO (HealthCheckResult)
+healthCheck Dependencies { httpClientManager, url, logger}  = do
   S.withClientM
      healthCheckCall
      (S.mkClientEnv httpClientManager url)

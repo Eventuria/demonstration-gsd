@@ -8,7 +8,7 @@ module Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.Client wh
 import Servant
 import Eventuria.Adapters.Servant.Wrapper
 
-import Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.State
+import Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Client.Dependencies
 import qualified Servant.Client.Streaming as S
 import Eventuria.GSD.Write.Flow.CommandConsumer.API.HealthCheck.Definition
 import Eventuria.GSD.Write.Model.Commands.Serialization ()
@@ -16,8 +16,8 @@ import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
 import Eventuria.Commons.DevOps.Core
 
 
-healthCheck :: State -> IO (HealthCheckResult)
-healthCheck State { httpClientManager, url, logger}  = do
+healthCheck :: Dependencies -> IO (HealthCheckResult)
+healthCheck Dependencies { httpClientManager, url, logger}  = do
   S.withClientM
      healthCheckCall
      (S.mkClientEnv httpClientManager url)
