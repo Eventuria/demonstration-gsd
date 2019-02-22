@@ -60,7 +60,7 @@ start settings @ Settings {healthCheckLoggerId}  =
 
     runServerOnWarp :: Server.Dependencies -> IO()
     runServerOnWarp dependencies @ Server.Dependencies {logger,port} = do
-       logInfo logger "Starting Server"
+       logInfo logger "Server Started"
        run port $ application
                     (proxy :: Proxy GSDMonitoringStreamingApi)
                     monitoringServer

@@ -15,10 +15,10 @@ module Gsd.Read.API.Server.Server  (start) where
 
 
 import Servant
+import Servant.Wrapper
+import Servant.Pipes ()
 import Network.Wai.Handler.Warp hiding (Settings)
 import Streamly.Adapters
-import Servant.Pipes ()
-import Servant.Wrapper
 
 
 import Prelude hiding (foldr)
@@ -50,7 +50,7 @@ start settings @ Settings {healthCheckLoggerId}  =
   where
     runServerOnWarp :: Server.Dependencies -> IO()
     runServerOnWarp dependencies @ Server.Dependencies {logger,port} = do
-       logInfo logger "Starting Server"
+       logInfo logger "Server Started"
        run port $ application
                     (proxy :: Proxy GSDReadApi)
                     readServer

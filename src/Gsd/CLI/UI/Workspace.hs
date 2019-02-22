@@ -15,7 +15,7 @@ import Data.Text hiding (foldr,map)
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Gsd.Write.API.Client.Client
+import Gsd.Write.Flow.Sourcer.Client.Client
 
 import qualified Gsd.CLI.UI.Goal as GoalCLI (run)
 import qualified Gsd.CLI.UI.Monitoring as MonitoringCLI

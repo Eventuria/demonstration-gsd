@@ -14,7 +14,7 @@ import Data.Text hiding (map,foldr)
 import Data.UUID.V4
 import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Gsd.Write.API.Client.Client
+import Gsd.Write.Flow.Sourcer.Client.Client
 import Gsd.Write.Model.Commands.Command
 import Gsd.Read.API.Client.Client (fetchWorkspaces )
 import Gsd.CLI.Dependencies

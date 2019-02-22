@@ -6,7 +6,7 @@ module Executables where
 
 import Prelude hiding (read)
 
-import Gsd.Write.API.Server.Server
+import Gsd.Write.Flow.Sourcer.Server.Server
 import Gsd.Monitoring.API.Server.Server
 import Gsd.Read.API.Server.Server
 import Gsd.CLI.CLI
@@ -14,17 +14,20 @@ import Network.Core
 
 import Logger.Core
 import qualified PersistedStreamEngine.Instances.EventStore.Client.Settings as EventStoreClient
-import Gsd.Write.API.Server.Settings
+import Gsd.Write.Flow.Sourcer.Server.Settings
 import qualified Gsd.CLI.Settings as CLI
+
+import qualified Gsd.Write.Flow.Sourcer.Client.Settings as Write.Client
+import qualified Gsd.Write.Flow.CommandConsumer.API.HealthCheck.Client.Settings as Write.Command.Consumer.Client
 import qualified Gsd.Read.API.Client.Settings as Read.Client
-import qualified Gsd.Write.API.Client.Settings as Write.Client
 import qualified Gsd.Monitoring.API.Client.Settings as Monitoring.Client
 
-import qualified Gsd.Write.API.Server.Settings as Write.Server
+import qualified Gsd.Write.Flow.Sourcer.Server.Settings as Write.Server
+
 import qualified Gsd.Read.API.Server.Settings as Read.Server
 import qualified Gsd.Monitoring.API.Server.Settings as Monitoring.Server
-import qualified Gsd.Write.Command.Consumer.Settings as Command.Consumer
-import qualified Gsd.Write.Command.Consumer.CommandConsumer as Command.Consumer
+import qualified Gsd.Write.Flow.CommandConsumer.Settings as Command.Consumer
+import qualified Gsd.Write.Flow.CommandConsumer.Consumer as Command.Consumer
 --------------------------------------------------------------------------------
 -- * GSD Micro Services (Client + Backend)
 --------------------------------------------------------------------------------
@@ -43,15 +46,20 @@ gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute CLI.Settings {
                                                                             url = URL { host = "localhost", 
                                                                                         port = 3000,
                                                                                         path = ""}},
+                                                           writeCommandConsumerClientSettings = Write.Command.Consumer.Client.Settings {
+                                                                            loggerId = "[gsd.cli/write.command.consumer.client]" ,
+                                                                            url = URL { host = "localhost",
+                                                                                        port = 3001,
+                                                                                        path = ""}},
                                                            readClientSettings = Read.Client.Settings {
                                                                             loggerId = "[gsd.cli/read.client]" , 
                                                                             url = URL { host = "localhost", 
-                                                                                        port = 3001,
+                                                                                        port = 3002,
                                                                                         path = ""}},
                                                            monitoringClientSettings = Monitoring.Client.Settings {
                                                                             loggerId = "[gsd.cli/monitoring.client]" , 
                                                                             url = URL { host = "localhost", 
-                                                                                        port = 3002,
+                                                                                        port = 3003,
                                                                                         path = ""}}}
 
 
@@ -62,7 +70,7 @@ gsdWriteClientCommandLineInterface = Gsd.CLI.CLI.execute CLI.Settings {
 
 -- | Gsd Web Write Api : Web Api that receives commands and persist them per Aggregate into the EventStore
 gsdWriteApi :: IO ()
-gsdWriteApi = Gsd.Write.API.Server.Server.start
+gsdWriteApi = Gsd.Write.Flow.Sourcer.Server.Server.start
                 Write.Server.Settings { serviceLoggerId = "[gsd.write.server]",
                                         healthCheckLoggerId = "[gsd.write.server/healthcheck]",
                                         port = 3000,
@@ -76,6 +84,7 @@ gsdCommandConsumptionStreamer = Command.Consumer.start
                                   Command.Consumer.Settings {
                                     serviceLoggerId = "[gsd.write.command.consummer]",
                                     healthCheckLoggerId = "[gsd.write.command.consummer/healthcheck]",
+                                    port = 3001,
                                     eventStoreClientSettings = getEventStoreSettings
                                                                   "[gsd.write.command.consummer/event.store.client]"}
 
@@ -90,7 +99,7 @@ gsdReadApi = Gsd.Read.API.Server.Server.start
                     Read.Server.Settings {
                       serviceLoggerId = "[gsd.read.server]",
                       healthCheckLoggerId = "[gsd.read.server/healthcheck]",
-                      port = 3001, 
+                      port = 3002, 
                       eventStoreClientSettings = getEventStoreSettings "[gsd.read.server/event.store.client]"}
 
 
@@ -101,7 +110,7 @@ gsdMonitoringApi = Gsd.Monitoring.API.Server.Server.start
                     Monitoring.Server.Settings {
                       serviceLoggerId = "[gsd.monitoring.server]",
                       healthCheckLoggerId = "[gsd.monitoring.server/healthcheck]",
-                      port = 3002,
+                      port = 3003,
                       eventStoreClientSettings = getEventStoreSettings "[gsd.monitoring.server/event.store.client]"}
 
 getEventStoreSettings :: LoggerId -> EventStoreClient.Settings

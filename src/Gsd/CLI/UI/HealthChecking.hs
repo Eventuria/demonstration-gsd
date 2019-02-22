@@ -39,7 +39,7 @@ runHealthChecking settings = do
               sayLn $ fg red <> "> The Service can't be up and running."
               sayLn $ fg red <> "> Some Dependencies are unhealthy :"
               errors & mapM_ (\UnhealthyDependency {name} ->
-                  sayLn $ fg red <> "    [x] " <> fg cyan <> (text . pack) name <> " Service")
+                  sayLn $ fg red <> "    [x] " <> fg cyan <> (text . pack) name)
               sayLn $ fg white <> "------------------------------------------"
               sayLn "Retrying in 10s"
               sayLn $ fg white <> "------------------------------------------")

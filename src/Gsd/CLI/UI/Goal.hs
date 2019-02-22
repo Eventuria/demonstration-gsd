@@ -16,7 +16,7 @@ import Data.UUID
 import Control.Monad.IO.Class (MonadIO(liftIO))
 import System.Console.Byline hiding (askWithMenuRepeatedly)
 import ByLine.Wrapper
-import Gsd.Write.API.Client.Client
+import Gsd.Write.Flow.Sourcer.Client.Client
 import Gsd.CLI.UI.Quit (runQuitCLI)
 import Gsd.CLI.Dependencies
 import Gsd.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)
