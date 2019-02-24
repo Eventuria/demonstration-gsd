@@ -6,26 +6,29 @@
 {-# LANGUAGE TypeFamilies #-}
 module Eventuria.GSD.CLI.UI.Workspaces (run)where
 
-import Prelude hiding (length)
-import System.Console.Byline hiding (askWithMenuRepeatedly)
-import Eventuria.Adapters.ByLine.Wrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
-import qualified  Data.List as List
-import Data.Text hiding (map,foldr)
-import Data.UUID.V4
-import Data.UUID
-import Control.Monad.IO.Class (MonadIO(liftIO))
-import Eventuria.GSD.Write.CommandSourcer.Client.Client
-import Eventuria.GSD.Write.Model.Commands.Command
-import Eventuria.GSD.Read.API.Client.Client (fetchWorkspaces )
-import Eventuria.GSD.CLI.Dependencies
-import Eventuria.GSD.CLI.Workflow.Steps
-import Eventuria.GSD.CLI.UI.Quit (runQuitCLI)
-import Eventuria.GSD.CLI.UI.Greetings
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.GSD.Read.Model.Workspace
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import           Prelude hiding (length,read)
+import           Control.Monad.IO.Class (MonadIO(liftIO))
+import           Data.Text hiding (map,foldr)
+import           Data.UUID.V4
+import           Data.UUID
+import qualified Data.List                      as List
+
+import           System.Console.Byline hiding (askWithMenuRepeatedly)
+
+import           Eventuria.Adapters.ByLine.Wrapper (askWithMenuRepeatedly,renderPrefixAndSuffixForDynamicGsdMenu)
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+
+import           Eventuria.GSD.Write.CommandSourcer.Client.Client
+import           Eventuria.GSD.Write.Model.Commands.Command
+import           Eventuria.GSD.Read.API.Client.Client (fetchWorkspaces )
+import           Eventuria.GSD.CLI.Dependencies
+import           Eventuria.GSD.CLI.Workflow.Steps
+import           Eventuria.GSD.CLI.UI.Quit (runQuitCLI)
+import           Eventuria.GSD.CLI.UI.Greetings
+import           Eventuria.GSD.Read.Model.Workspace
 import qualified Eventuria.GSD.CLI.UI.Workspace as WorkspaceActions (run)
-import Eventuria.GSD.Read.Model.GoalStats
+import           Eventuria.GSD.Read.Model.GoalStats
 
 
 data WorkspacesCommand = -- Workspaces Command
@@ -36,9 +39,9 @@ data WorkspacesCommand = -- Workspaces Command
 
 
 run :: WorkOnWorkspacesStepHandle
-run cliDependencies @ Dependencies {readClientDependencies , writeClientDependencies} = do
+run cliDependencies  @ Dependencies { clientDependencies} = do
   let currentStep = WorkOnWorkspacesStep run cliDependencies
-  safeResponse <- liftIO $ fetchWorkspaces readClientDependencies
+  safeResponse <- liftIO $ fetchWorkspaces (read  clientDependencies)
   case safeResponse of
     Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
     Right persistedWorkspaces -> do
@@ -83,10 +86,11 @@ run cliDependencies @ Dependencies {readClientDependencies , writeClientDependen
       sayLn $ fg cyan <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceName <- askUntil ("> enter a workspace name : " ) Nothing atLeastThreeChars
 
-      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies  CreateWorkspace {
-                                                                    commandId ,
-                                                                    workspaceId ,
-                                                                    workspaceName}
+      response <- liftIO $ sendCommandAndWaitTillProcessed
+                            (commandSourcer  clientDependencies)
+                            CreateWorkspace {commandId ,
+                                             workspaceId ,
+                                             workspaceName}
       case response of
         Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
         Right CommandFailed {reason} ->  do
@@ -102,9 +106,9 @@ run cliDependencies @ Dependencies {readClientDependencies , writeClientDependen
     runWorkOnAWorkspace :: Step WorkOnWorkspaces -> Byline IO (Either StepError (Step WorkOnAWorkspace))
     runWorkOnAWorkspace currentStep @ (WorkOnWorkspacesStep
                                             workOnWorkspaces
-                                            cliDependencies @ Dependencies {readClientDependencies,writeClientDependencies})  = do
+                                            cliDependencies  @ Dependencies { clientDependencies}) = do
       displayBeginningOfACommand
-      safeResponse <- liftIO $ fetchWorkspaces readClientDependencies
+      safeResponse <- liftIO $ fetchWorkspaces (read  clientDependencies)
       case safeResponse of
         Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
         Right persistedWorkspaces -> do

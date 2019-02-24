@@ -5,6 +5,8 @@ module Executables where
 
 
 import Prelude hiding (read)
+import Data.HashMap.Lazy
+
 import Eventuria.Commons.Network.Core
 import Eventuria.Commons.Logger.Core
 
@@ -35,28 +37,36 @@ cli :: IO ()
 cli =
   CLI.execute
     CLI.Settings {
-     loggerId =                  "[eventuria.gsd.cli]",
-     writeClientSettings = Command.Sourcer.Client.Settings {
-                      loggerId = "[eventuria.gsd.cli/command.sourcer.client]" ,
-                      url = URL { host = "localhost",
-                                  port = 3000,
-                                  path = ""}},
-     writeCommandConsumerClientSettings = Command.Consumer.Client.Settings {
-                      loggerId = "[eventuria.gsd.cli/command.consumer.client]" ,
-                      url = URL { host = "localhost",
-                                  port = 3001,
-                                  path = ""}},
-     readClientSettings = Read.Client.Settings {
-                      loggerId = "[eventuria.gsd.cli/read.client]" ,
-                      url = URL { host = "localhost",
-                                  port = 3002,
-                                  path = ""}},
+     loggerId =  loggerIds ! "cli" ,
+     commandSourcerClientSettings =
+        Command.Sourcer.Client.Settings {
+          loggerId = loggerIds ! "command.sourcer.client" ,
+          url = URL { host = "localhost",
+                      port = 3000,
+                      path = ""}},
+     commandConsumerClientSettings =
+        Command.Consumer.Client.Settings {
+          loggerId = loggerIds ! "command.consumer.client" ,
+          url = URL { host = "localhost",
+                      port = 3001,
+                      path = ""}},
+     readClientSettings =
+        Read.Client.Settings {
+          loggerId = loggerIds ! "cli" ,
+          url = URL { host = "localhost",
+                      port = 3002,
+                      path = ""}},
      monitoringClientSettings = Monitoring.Client.Settings {
-                      loggerId = "[eventuria.gsd.cli/monitoring.client]" ,
+                      loggerId = loggerIds ! "monitoring.client" ,
                       url = URL { host = "localhost",
                                   port = 3003,
                                   path = ""}}}
-
+  where loggerIds :: HashMap String String
+        loggerIds = fromList [
+          ("cli"                      ,"[eventuria.gsd.cli]"),
+          ("command.sourcer.client"   ,"[eventuria.gsd.cli/command.sourcer.client]"),
+          ("command.consumer.client"  ,"[eventuria.gsd.cli/command.consumer.client]"),
+          ("monitoring.client"        ,"[eventuria.gsd.cli/monitoring.client]")]
 
 commandSourcer :: IO ()
 commandSourcer =

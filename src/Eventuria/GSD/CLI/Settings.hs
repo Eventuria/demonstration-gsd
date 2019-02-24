@@ -10,8 +10,8 @@ import qualified Eventuria.GSD.Monitoring.API.Client.Settings as Monitoring.Clie
 
 data Settings = Settings {
                         loggerId :: LoggerId,
-                        writeClientSettings :: Write.Client.Settings,
-                        writeCommandConsumerClientSettings :: Write.Command.Consumer.Client.Settings,
+                        commandSourcerClientSettings :: Write.Client.Settings,
+                        commandConsumerClientSettings :: Write.Command.Consumer.Client.Settings,
                         readClientSettings :: Read.Client.Settings,
                         monitoringClientSettings :: Monitoring.Client.Settings}
 

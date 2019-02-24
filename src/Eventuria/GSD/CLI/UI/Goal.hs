@@ -8,7 +8,7 @@
 module Eventuria.GSD.CLI.UI.Goal (run)where
 
 import Data.Functor
-import Prelude hiding (length,readClientDependencies)
+import Prelude hiding (length,read)
 import Data.Text hiding (foldr,map)
 import qualified  Data.List as List
 import Data.UUID.V4
@@ -52,13 +52,14 @@ data GoalCommands = -- Goal Commands
                   | QuitCommand                 Text
 
 run :: WorkOnAGoalStepHandle
-run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDependencies,readClientDependencies}
-           workspace @ Workspace {workspaceId}
-           goal @ Goal {goalId}
-           workOnWorkspace
-           workOnWorkspaces = do
+run cliDependencies  @ Dependencies { clientDependencies}
+    workspace @ Workspace {workspaceId}
+    goal @ Goal {goalId}
+    workOnWorkspace
+    workOnWorkspaces = do
+
   let currentStep = WorkOnAGoalStep run cliDependencies workspace goal workOnWorkspace workOnWorkspaces
-  safeResponse  <- liftIO $ fetchActions readClientDependencies workspaceId goalId
+  safeResponse  <- liftIO $ fetchActions (read clientDependencies) workspaceId goalId
   case safeResponse of
     Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
     Right actions -> do
@@ -83,19 +84,19 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
         NotifyActionCompletedCommand _ -> runNotifyActionCompletedCommand currentStep >>= runNextStep
         ListCommandsReceived         _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListCommandsReceived
-                                              monitoringClientDependencies
+                                              (monitoring clientDependencies)
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListCommandResponsesProduced _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListCommandResponsesProduced
-                                              monitoringClientDependencies
+                                              (monitoring clientDependencies)
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListEventsGenerated          _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListEventsGenerated
-                                              monitoringClientDependencies
+                                              (monitoring clientDependencies)
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListValidationStates         _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListValidationStates
-                                              monitoringClientDependencies
+                                              (monitoring clientDependencies)
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         GotoWorkOnAGoal               _ -> runWorkOnAGoal                 currentStep >>= runNextStep
         GotoWorkOnWorkspace           _ -> runWorkOnWorkspace             currentStep >>= runNextStep
@@ -178,12 +179,12 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
     runNotifyActionCompletedCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runNotifyActionCompletedCommand currentStep @ (WorkOnAGoalStep
                                                        workOnAGoalStepHandle
-                                                       cliDependencies @ Dependencies {readClientDependencies, writeClientDependencies}
+                                                       cliDependencies  @ Dependencies { clientDependencies}
                                                        workspace @ Workspace {workspaceId}
                                                        goal @ Goal {goalId}
                                                        workOnWorkspace
                                                        workOnWorkspaces) = do
-      safeResponse <-  liftIO $ fetchActions readClientDependencies workspaceId goalId
+      safeResponse <-  liftIO $ fetchActions (read clientDependencies) workspaceId goalId
       case safeResponse of
         Left error -> return $ Left StepError {currentStep, errorDescription = show error }
         Right actions -> do
@@ -193,7 +194,7 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
            Action {actionId} <- askWithMenuRepeatedly menuConfig prompt onError
            commandId <- liftIO $ nextRandom
            sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
-           response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies NotifyActionCompleted {commandId ,
+           response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer clientDependencies) NotifyActionCompleted {commandId ,
                                                                                              workspaceId ,
                                                                                              goalId,
                                                                                              actionId}
@@ -221,7 +222,11 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
     runRefineGoalDescriptionCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runRefineGoalDescriptionCommand currentStep @ (WorkOnAGoalStep
                                                      workOnAGoalStepHandle
-                                                     cliDependencies @ Dependencies {readClientDependencies, writeClientDependencies}
+                                                     cliDependencies  @ Dependencies {
+                                                       clientDependencies = ClientDependencies {
+                                                                             commandSourcer,
+                                                                             monitoring,
+                                                                             read}}
                                                      workspace @ Workspace {workspaceId}
                                                      goal @ Goal {goalId}
                                                      workOnWorkspace
@@ -229,7 +234,7 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
       commandId <- liftIO $ nextRandom
       sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
       refinedGoalDescription <- askUntil "Enter a new goal description : " Nothing atLeastThreeChars
-      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies RefineGoalDescription {commandId ,
+      response <- liftIO $ sendCommandAndWaitTillProcessed commandSourcer RefineGoalDescription {commandId ,
                                                                       workspaceId ,
                                                                       goalId,
                                                                       refinedGoalDescription}
@@ -242,7 +247,7 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
           Right CommandSuccessfullyProcessed {} ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
-            (liftIO $ (fetchGoal readClientDependencies workspaceId goalId))
+            (liftIO $ (fetchGoal read workspaceId goalId))
              <&> either
                   (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                   (maybe
@@ -262,7 +267,7 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
     runActionizeOnGoalCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runActionizeOnGoalCommand currentStep @ (WorkOnAGoalStep
                                                 workOnAGoalStepHandle
-                                                cliDependencies @ Dependencies {readClientDependencies, writeClientDependencies}
+                                                cliDependencies  @ Dependencies { clientDependencies}
                                                 workspace @ Workspace {workspaceId}
                                                 goal @ Goal {goalId}
                                                 workOnWorkspace
@@ -272,11 +277,13 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
       actionId <- liftIO $ nextRandom
       sayLn $ fg green <> "generated a new Action Id (" <> text (toText commandId) <>") "
       actionDetails <- askUntil "Enter the details of the action : " Nothing atLeastThreeChars
-      response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies ActionizeOnGoal {commandId ,
-                                                                                  workspaceId ,
-                                                                                  goalId,
-                                                                                  actionId ,
-                                                                                  actionDetails}
+      response <- liftIO $ sendCommandAndWaitTillProcessed
+                            (commandSourcer clientDependencies)
+                              ActionizeOnGoal {commandId ,
+                                               workspaceId ,
+                                               goalId,
+                                               actionId ,
+                                               actionDetails}
       case response of
           Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
           Right CommandFailed {reason} ->  do
@@ -286,7 +293,7 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
           Right CommandSuccessfullyProcessed {} ->  do
             sayLn $ fg green <> "> The command has been successfully processed... "
             displayEndOfACommand
-            (liftIO $ (fetchGoal readClientDependencies workspaceId goalId))
+            (liftIO $ (fetchGoal (read clientDependencies) workspaceId goalId))
              <&> either
                   (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                   (maybe
@@ -303,13 +310,13 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
     runWorkOnAGoal :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runWorkOnAGoal currentStep @ (WorkOnAGoalStep
                                               workOnAGoalStepHandle
-                                              cliDependencies @ Dependencies {readClientDependencies, writeClientDependencies}
+                                              cliDependencies  @ Dependencies { clientDependencies}
                                               workspace @ Workspace {workspaceId}
                                               goal @ Goal {goalId}
                                               workOnWorkspace
                                               workOnWorkspaces) = do
      displayBeginningOfACommand
-     safeResponse <-  liftIO $ fetchGoals readClientDependencies workspaceId
+     safeResponse <-  liftIO $ fetchGoals (read clientDependencies) workspaceId
      case safeResponse of
       Left error -> return $ Left StepError {currentStep, errorDescription = show error }
       Right goals -> do
@@ -325,12 +332,12 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
     runChangeGoalStatus :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
     runChangeGoalStatus currentStep @ (WorkOnAGoalStep
                                           workOnAGoalStepHandle
-                                          cliDependencies @ Dependencies {readClientDependencies, writeClientDependencies}
+                                          cliDependencies  @ Dependencies { clientDependencies}
                                           workspace @ Workspace {workspaceId}
                                           goal @ Goal {goalId}
                                           workOnWorkspace
                                           workOnWorkspaces) = do
-      safeResponse <- liftIO $ (fetchGoal readClientDependencies workspaceId goalId)
+      safeResponse <- liftIO $ (fetchGoal (read clientDependencies) workspaceId goalId)
       case safeResponse of
         Left applicationError  -> return $ Left $ StepError {
                                                     currentStep ,
@@ -354,7 +361,7 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
                 commandId <- liftIO $ nextRandom
                 sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
                 commandToSent <- getCommandToSend nextStatus commandId goalId workspaceId
-                response <- liftIO $ sendCommandAndWaitTillProcessed writeClientDependencies commandToSent
+                response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer clientDependencies) commandToSent
                 case response of
                   Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
                   Right CommandFailed {reason} ->  do
@@ -364,7 +371,7 @@ run cliDependencies   @ Dependencies {writeClientDependencies,monitoringClientDe
                   Right CommandSuccessfullyProcessed {} ->  do
                     sayLn $ fg green <> "> The command has been successfully processed... "
                     displayEndOfACommand
-                    (liftIO $ (fetchGoal readClientDependencies workspaceId goalId))
+                    (liftIO $ (fetchGoal (read clientDependencies) workspaceId goalId))
                      <&> either
                           (\error -> Left $ StepError {currentStep ,errorDescription = show error})
                           (maybe
