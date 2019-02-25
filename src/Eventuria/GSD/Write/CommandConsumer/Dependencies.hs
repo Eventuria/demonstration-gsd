@@ -13,8 +13,8 @@ data Dependencies = Dependencies {logger :: Logger ,
                                   eventStoreClientDependencies :: EventStoreClient.Dependencies}
 
 
-retrieveDependencies :: RetrieveDependencies Settings Dependencies c
-retrieveDependencies Settings {
+getDependencies :: RetrieveDependencies Settings Dependencies c
+getDependencies Settings {
                   serviceLoggerId,
                   port,
                   eventStoreClientSettings}
@@ -25,3 +25,5 @@ retrieveDependencies Settings {
     eventStoreClientSettings
     (\eventStoreClientDependencies -> executionUnderDependenciesAcquired Dependencies {..})
     (\unhealthyDependency -> executionIfDependenciesAcquisitionFailed unhealthyDependency)
+
+

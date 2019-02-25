@@ -2,29 +2,32 @@
 {-# LANGUAGE RecordWildCards #-}
 module Eventuria.GSD.Write.CommandConsumer.Consumer where
 
-import Eventuria.Commons.Logger.Core
-import qualified Eventuria.GSD.Write.CommandConsumer.Service.OverEventStore as Eventuria.GSD.Write.CommandConsumer.Service
-import qualified Eventuria.GSD.Write.CommandConsumer.Settings as Consumer
-import qualified Eventuria.GSD.Write.CommandConsumer.Dependencies as Consumer
-import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
-import Control.Concurrent
+import           Control.Concurrent
+                 
+import           Eventuria.Commons.Logger.Core
+import           Eventuria.Commons.Dependencies.RetrieveByHealthChecking
+
+
+import qualified Eventuria.GSD.Write.CommandConsumer.Service.OverEventStore as Consumer.Service
+import qualified Eventuria.GSD.Write.CommandConsumer.Settings               as Consumer
+import qualified Eventuria.GSD.Write.CommandConsumer.Dependencies           as Consumer
 import qualified Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Server as Consumer.HealthCheck
 
 start :: Consumer.Settings -> IO ()
 start settings @ Consumer.Settings {healthCheckLoggerId}  =
-  checkHealthAndRetrieveDependencies
+  waitTillHealthy
     healthCheckLoggerId
     settings
-    Consumer.retrieveDependencies
+    Consumer.getDependencies
     (\consumerDependencies-> do
-      forkIO (Consumer.HealthCheck.runServerOnWarp consumerDependencies)
+      forkIO (Consumer.HealthCheck.runServerOnWarp settings consumerDependencies)
       startConsumer consumerDependencies)
 
  where
   startConsumer :: Consumer.Dependencies -> IO ()
   startConsumer Consumer.Dependencies {logger, eventStoreClientDependencies } = do
     logInfo logger "Starting Command Consumer"
-    safeResponse <- Eventuria.GSD.Write.CommandConsumer.Service.consumeCommands logger eventStoreClientDependencies
+    safeResponse <- Consumer.Service.consumeCommands logger eventStoreClientDependencies
     either
      (\error -> do
          logInfo logger $ "error : " ++ (show error)

@@ -7,32 +7,40 @@
 {-# LANGUAGE RecordWildCards #-}
 module Eventuria.GSD.CLI.UI.Goal (run)where
 
-import Data.Functor
-import Prelude hiding (length,read)
-import Data.Text hiding (foldr,map)
-import qualified  Data.List as List
-import Data.UUID.V4
-import Data.UUID
-import Control.Monad.IO.Class (MonadIO(liftIO))
-import System.Console.Byline hiding (askWithMenuRepeatedly)
-import Eventuria.Adapters.ByLine.Wrapper
-import Eventuria.GSD.Write.CommandSourcer.Client.Client
-import Eventuria.GSD.CLI.UI.Quit (runQuitCLI)
-import Eventuria.GSD.CLI.Dependencies
-import Eventuria.GSD.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)
-import Eventuria.GSD.Read.Model.Goal
-import Eventuria.GSD.Read.Model.Action
-import Eventuria.GSD.CLI.Workflow.Steps
-import Eventuria.GSD.Write.Model.Commands.Command
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-import Eventuria.GSD.Write.Model.Core
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import Eventuria.GSD.CLI.UI.Greetings
-import Eventuria.GSD.Read.Model.Workspace
-import Eventuria.GSD.Read.Model.ActionStats
-import Eventuria.GSD.Read.Model.GoalStats
-import qualified Eventuria.GSD.CLI.UI.Monitoring as MonitoringCLI
-import Eventuria.GSD.CLI.UI.Monitoring (runMonitoringCommand)
+import           Prelude hiding (length,read)
+
+import           Data.Text hiding (foldr,map)
+import           Data.Functor
+import           Data.UUID.V4
+import           Data.UUID
+import qualified Data.List                                    as List
+
+import           Control.Monad.IO.Class (MonadIO(liftIO))
+
+import           System.Console.Byline hiding (askWithMenuRepeatedly)
+
+import           Eventuria.Adapters.ByLine.Wrapper
+
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+
+import           Eventuria.GSD.Write.CommandSourcer.Client.Client
+import           Eventuria.GSD.Write.Model.Commands.Command
+import           Eventuria.GSD.Write.Model.Core
+
+import           Eventuria.GSD.Read.API.Client.Client (fetchActions,fetchGoal,fetchGoals)
+import           Eventuria.GSD.Read.Model.Goal
+import           Eventuria.GSD.Read.Model.Action
+import           Eventuria.GSD.Read.Model.Workspace
+import           Eventuria.GSD.Read.Model.ActionStats
+import           Eventuria.GSD.Read.Model.GoalStats
+
+import           Eventuria.GSD.CLI.Workflow.Steps
+import           Eventuria.GSD.CLI.UI.Quit (runQuitCLI)
+import           Eventuria.GSD.CLI.UI.Greetings
+import           Eventuria.GSD.CLI.Dependencies
+import qualified Eventuria.GSD.CLI.UI.Monitoring              as MonitoringCLI
+import           Eventuria.GSD.CLI.UI.Monitoring (runMonitoringCommand)
 
 data GoalCommands = -- Goal Commands
                     RefineGoalDescriptionCommand  Text
@@ -61,7 +69,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
   let currentStep = WorkOnAGoalStep run cliDependencies workspace goal workOnWorkspace workOnWorkspaces
   safeResponse  <- liftIO $ fetchActions (read clientDependencies) workspaceId goalId
   case safeResponse of
-    Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
+    Left error -> runNextStep $ Left StepError {errorDescription = show error , .. }
     Right actions -> do
       sayLn $ displayGoal workspace goal actions
       proposeAvailableGoalCommands
@@ -84,19 +92,19 @@ run cliDependencies  @ Dependencies { clientDependencies}
         NotifyActionCompletedCommand _ -> runNotifyActionCompletedCommand currentStep >>= runNextStep
         ListCommandsReceived         _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListCommandsReceived
-                                              (monitoring clientDependencies)
+                                              cliDependencies
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListCommandResponsesProduced _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListCommandResponsesProduced
-                                              (monitoring clientDependencies)
+                                              cliDependencies
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListEventsGenerated          _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListEventsGenerated
-                                              (monitoring clientDependencies)
+                                              cliDependencies
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         ListValidationStates         _ -> runMonitoringCommand            currentStep
                                               MonitoringCLI.ListValidationStates
-                                              (monitoring clientDependencies)
+                                              cliDependencies
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         GotoWorkOnAGoal               _ -> runWorkOnAGoal                 currentStep >>= runNextStep
         GotoWorkOnWorkspace           _ -> runWorkOnWorkspace             currentStep >>= runNextStep
@@ -186,7 +194,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                        workOnWorkspaces) = do
       safeResponse <-  liftIO $ fetchActions (read clientDependencies) workspaceId goalId
       case safeResponse of
-        Left error -> return $ Left StepError {currentStep, errorDescription = show error }
+        Left error -> return $ Left StepError {errorDescription = show error, .. }
         Right actions -> do
            let menuConfig = banner "Available actions :" $ menu actions stylizeAction
                prompt     = "please choose the action you consider Accomplished (provide the index) : "
@@ -199,7 +207,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                                                              goalId,
                                                                                              actionId}
            case response of
-                     Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+                     Left  errorDescription -> return $ Left $ StepError {errorDescription = show errorDescription, ..}
                      Right CommandFailed {reason} ->  do
                        sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
                        displayEndOfACommand
@@ -239,7 +247,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                                       goalId,
                                                                       refinedGoalDescription}
       case response of
-          Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+          Left  errorDescription -> return $ Left $ StepError {errorDescription = show errorDescription, ..}
           Right CommandFailed {reason} ->  do
             sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
             displayEndOfACommand
@@ -249,9 +257,9 @@ run cliDependencies  @ Dependencies { clientDependencies}
             displayEndOfACommand
             (liftIO $ (fetchGoal read workspaceId goalId))
              <&> either
-                  (\error -> Left $ StepError {currentStep ,errorDescription = show error})
+                  (\errorDescription -> Left $ StepError {errorDescription = show errorDescription , .. })
                   (maybe
-                    (Left $ StepError {currentStep ,errorDescription = "Goal asked does not exist"})
+                    (Left $ StepError {errorDescription = "Goal asked does not exist", ..})
                     (\goal -> Right $ WorkOnAGoalStep
                                           run
                                           cliDependencies
@@ -259,9 +267,6 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                           goal
                                           workOnWorkspace
                                           workOnWorkspaces))
-
-
-
 
 
     runActionizeOnGoalCommand :: Step WorkOnAGoal -> Byline IO (Either StepError (Step WorkOnAGoal))
@@ -285,7 +290,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                actionId ,
                                                actionDetails}
       case response of
-          Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+          Left  errorDescription -> return $ Left $ StepError {errorDescription = show errorDescription, ..}
           Right CommandFailed {reason} ->  do
             sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
             displayEndOfACommand
@@ -295,9 +300,9 @@ run cliDependencies  @ Dependencies { clientDependencies}
             displayEndOfACommand
             (liftIO $ (fetchGoal (read clientDependencies) workspaceId goalId))
              <&> either
-                  (\error -> Left $ StepError {currentStep ,errorDescription = show error})
+                  (\error -> Left $ StepError {errorDescription = show error, ..})
                   (maybe
-                    (Left $ StepError {currentStep ,errorDescription = "Goal asked does not exist"})
+                    (Left $ StepError {errorDescription = "Goal asked does not exist" , .. })
                     (\goal -> Right $ WorkOnAGoalStep
                                           run
                                           cliDependencies
@@ -318,7 +323,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
      displayBeginningOfACommand
      safeResponse <-  liftIO $ fetchGoals (read clientDependencies) workspaceId
      case safeResponse of
-      Left error -> return $ Left StepError {currentStep, errorDescription = show error }
+      Left error -> return $ Left StepError {errorDescription = show error, .. }
       Right goals -> do
          sayLn "Goals"
          let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu goals displayGoalForSelection)
@@ -339,12 +344,8 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                           workOnWorkspaces) = do
       safeResponse <- liftIO $ (fetchGoal (read clientDependencies) workspaceId goalId)
       case safeResponse of
-        Left applicationError  -> return $ Left $ StepError {
-                                                    currentStep ,
-                                                    errorDescription = show applicationError}
-        Right (Nothing)  -> return $ Left $ StepError {
-                                              currentStep ,
-                                              errorDescription = "Goal asked does not exist"}
+        Left applicationError  -> return $ Left $ StepError { errorDescription = show applicationError, ..}
+        Right (Nothing)  -> return $ Left $ StepError { errorDescription = "Goal asked does not exist", ..}
         Right (Just goal @ Goal {status}) -> do
           case (getNextStatusAvailable status) of
              [] -> do
@@ -363,7 +364,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                 commandToSent <- getCommandToSend nextStatus commandId goalId workspaceId
                 response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer clientDependencies) commandToSent
                 case response of
-                  Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+                  Left  errorDescription -> return $ Left $ StepError {errorDescription = show errorDescription, ..}
                   Right CommandFailed {reason} ->  do
                     sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
                     displayEndOfACommand
@@ -373,9 +374,9 @@ run cliDependencies  @ Dependencies { clientDependencies}
                     displayEndOfACommand
                     (liftIO $ (fetchGoal (read clientDependencies) workspaceId goalId))
                      <&> either
-                          (\error -> Left $ StepError {currentStep ,errorDescription = show error})
+                          (\error -> Left $ StepError {errorDescription = show error, ..})
                           (maybe
-                            (Left $ StepError {currentStep ,errorDescription = "Goal asked does not exist"})
+                            (Left $ StepError {errorDescription = "Goal asked does not exist", ..})
                             (\goal -> Right $ WorkOnAGoalStep
                                                   run
                                                   cliDependencies

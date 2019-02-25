@@ -1,8 +1,8 @@
 module Eventuria.Commons.DevOps.Core where
 
 type UnhealthyReason = String
-
-type HealthCheckResult = Either UnhealthyReason ()
+type Healthy = ()
+type HealthCheckResult = Either UnhealthyReason Healthy
 
 healthy :: HealthCheckResult
 healthy = Right ()

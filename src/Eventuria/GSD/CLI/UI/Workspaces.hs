@@ -4,6 +4,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE RecordWildCards #-}
 module Eventuria.GSD.CLI.UI.Workspaces (run)where
 
 import           Prelude hiding (length,read)
@@ -43,7 +44,7 @@ run cliDependencies  @ Dependencies { clientDependencies} = do
   let currentStep = WorkOnWorkspacesStep run cliDependencies
   safeResponse <- liftIO $ fetchWorkspaces (read  clientDependencies)
   case safeResponse of
-    Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
+    Left error -> runNextStep $ Left StepError {errorDescription = show error, .. }
     Right persistedWorkspaces -> do
       let workspaces =  (\PersistedItem{item} -> item) <$> persistedWorkspaces
       displayWorkspacesState workspaces
@@ -92,7 +93,7 @@ run cliDependencies  @ Dependencies { clientDependencies} = do
                                              workspaceId ,
                                              workspaceName}
       case response of
-        Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+        Left  errorDescription -> return $ Left $ StepError {errorDescription = show errorDescription, ..}
         Right CommandFailed {reason} ->  do
           sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
           displayEndOfACommand
@@ -110,7 +111,7 @@ run cliDependencies  @ Dependencies { clientDependencies} = do
       displayBeginningOfACommand
       safeResponse <- liftIO $ fetchWorkspaces (read  clientDependencies)
       case safeResponse of
-        Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
+        Left stepError -> return $ Left StepError {errorDescription = show stepError, .. }
         Right persistedWorkspaces -> do
           let workspaces =  (\PersistedItem{item} -> item) <$> persistedWorkspaces
           sayLn "Workspaces"

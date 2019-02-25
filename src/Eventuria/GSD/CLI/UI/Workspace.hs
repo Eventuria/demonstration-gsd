@@ -59,7 +59,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
  let currentStep = WorkOnAWorkspaceStep run cliDependencies workspace workOnWorkspaces
  safeResponse  <- liftIO $ fetchGoals (read  clientDependencies) workspaceId
  case safeResponse of
-  Left error -> runNextStep $ Left StepError {currentStep, errorDescription = show error }
+  Left error -> runNextStep $ Left StepError {errorDescription = show error, .. }
   Right goals -> do
       sayLn $ displayWorkspace workspace goals
       proposeAvailableWorkspaceCommands
@@ -82,19 +82,19 @@ run cliDependencies  @ Dependencies { clientDependencies}
         ListCommandsReceived          _ -> runMonitoringCommand
                                             currentStep
                                             MonitoringCLI.ListCommandsReceived
-                                            (monitoring clientDependencies)
+                                            cliDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         ListCommandResponsesProduced  _ -> runMonitoringCommand currentStep
                                             MonitoringCLI.ListCommandResponsesProduced
-                                            (monitoring clientDependencies)
+                                            cliDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         ListEventsGenerated           _ -> runMonitoringCommand currentStep
                                             MonitoringCLI.ListEventsGenerated
-                                            (monitoring clientDependencies)
+                                            cliDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         ListValidationStates          _ -> runMonitoringCommand currentStep
                                             MonitoringCLI.ListValidationStates
-                                            (monitoring clientDependencies)
+                                            cliDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         GotoWorkOnAGoal               _ -> runWorkOnAGoal      currentStep >>= runNextStep
         GotoWorkOnWorkspaces          _ -> runWorkOnWorkspaces currentStep >>= runNextStep
@@ -160,7 +160,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                              workspaceId,
                                              workspaceNewName}
       case response of
-        Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+        Left  errorDescription -> return $ Left $ StepError {errorDescription = show errorDescription , .. }
         Right CommandFailed {reason} ->  do
           sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
           displayEndOfACommand
@@ -170,9 +170,9 @@ run cliDependencies  @ Dependencies { clientDependencies}
           displayEndOfACommand
           (liftIO $ fetchWorkspace (read  clientDependencies) workspaceId)
            <&> either
-                (\error -> Left $ StepError {currentStep ,errorDescription = show error})
+                (\error -> Left $ StepError {errorDescription = show error, ..})
                 (maybe
-                  (Left $ StepError {currentStep ,errorDescription = "Workspace asked does not exist"})
+                  (Left $ StepError {errorDescription = "Workspace asked does not exist", ..})
                   (\workspace -> Right $ WorkOnAWorkspaceStep run cliDependencies workspace workOnWorkspaces))
 
     runSetNewGoal :: Step WorkOnAWorkspace -> Byline IO (Either StepError (Step WorkOnAWorkspace))
@@ -191,7 +191,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                                             goalId,
                                                                             goalDescription}
         case response of
-          Left  errorDescription -> return $ Left $ StepError {currentStep , errorDescription = show errorDescription}
+          Left  errorDescription -> return $ Left $ StepError {errorDescription = show errorDescription, ..}
           Right CommandFailed {reason} ->  do
             sayLn $ fg red <> "> The command failed : "<> (text . pack ) reason
             displayEndOfACommand
@@ -201,9 +201,9 @@ run cliDependencies  @ Dependencies { clientDependencies}
             displayEndOfACommand
             (liftIO $ fetchWorkspace (read  clientDependencies) workspaceId)
              <&> either
-                  (\error -> Left $ StepError {currentStep ,errorDescription = show error})
+                  (\error -> Left $ StepError {errorDescription = show error, ..})
                   (maybe
-                    (Left $ StepError {currentStep ,errorDescription = "Workspace asked does not exist"})
+                    (Left $ StepError {errorDescription = "Workspace asked does not exist", ..})
                     (\workspace -> Right $ WorkOnAWorkspaceStep run cliDependencies workspace workOnWorkspaces))
 
 
@@ -217,7 +217,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
      displayBeginningOfACommand
      safeResponse <-  liftIO $ fetchGoals (read  clientDependencies) workspaceId
      case safeResponse of
-      Left stepError -> return $ Left StepError {currentStep, errorDescription = show stepError }
+      Left stepError -> return $ Left StepError {errorDescription = show stepError, .. }
       Right goals -> do
          sayLn "Goals"
          let menuConfig = renderPrefixAndSuffixForDynamicGsdMenu (menu goals displayGoalForSelection)

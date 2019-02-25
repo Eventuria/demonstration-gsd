@@ -11,16 +11,15 @@ import Eventuria.Commons.Dependencies.Core
 import Eventuria.Commons.Logger.Core
 
 
-checkHealthAndRetrieveDependencies ::
-         LoggerId ->
-         settings ->
-         RetrieveDependencies settings dependencies c ->
-         ExecutionUnderDependenciesAcquired dependencies c ->
-         IO c
-checkHealthAndRetrieveDependencies healthCheckLoggerId
-                                   settings
-                                   retrieveDependencies
-                                   executionUnderDependenciesAcquired = do
+waitTillHealthy :: LoggerId ->
+               settings ->
+               RetrieveDependencies settings dependencies c ->
+               ExecutionUnderDependenciesAcquired dependencies c ->
+               IO c
+waitTillHealthy healthCheckLoggerId
+            settings
+            retrieveDependencies
+            executionUnderDependenciesAcquired = do
   healthCheckLogger <- getLogger healthCheckLoggerId
   logInfo healthCheckLogger "------------------------------------------"
   logInfo healthCheckLogger "Service Health Checking"

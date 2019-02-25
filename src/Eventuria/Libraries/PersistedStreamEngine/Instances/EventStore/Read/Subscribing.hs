@@ -51,7 +51,7 @@ subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (Saf
 subscribeOnOffset eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },
                                                        streamName}
                   offset = do
-  logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset" ++ (show offset)
+  logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset " ++ (show offset)
 
   subscription <- EventStore.subscribeFrom
                     connection

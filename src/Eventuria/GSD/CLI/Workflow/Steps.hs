@@ -9,13 +9,16 @@
 module Eventuria.GSD.CLI.Workflow.Steps where
 
 import System.Console.Byline
-import Data.Text
 import System.Exit (exitSuccess)
-import Eventuria.GSD.CLI.Dependencies
+
+import Control.Monad.IO.Class (MonadIO(liftIO))
+import Data.Text
+
 import Eventuria.GSD.Read.Model.Workspace
 import Eventuria.GSD.Read.Model.Goal
-import Control.Monad.IO.Class (MonadIO(liftIO))
 
+import Eventuria.GSD.CLI.UI.HealthChecking
+import Eventuria.GSD.CLI.Dependencies
 
 type ErrorDescription = String
 
@@ -57,7 +60,7 @@ data Step stepType where
                           Step WorkOnAGoal
   QuitStep :: Step Quit
 
-data StepError = forall stepType. StepError { currentStep :: Step stepType , errorDescription :: ErrorDescription}
+data StepError = forall stepType. StepError { cliDependencies :: Dependencies ,currentStep :: Step stepType , errorDescription :: ErrorDescription}
 
 runNextStep :: forall stepType. Either StepError (Step stepType) -> Byline IO ()
 runNextStep nextStepEither = case nextStepEither of
@@ -83,8 +86,10 @@ runNextStep nextStepEither = case nextStepEither of
                                                     workOnWorkspace
                                                     workOnWorkspaces
   Right (QuitStep ) -> liftIO $ exitSuccess
-  Left  StepError {currentStep,errorDescription} -> do
-      sayLn $ fg red <> "Error: " <>  (text . pack ) errorDescription
-      sayLn $ ""
+  Left  StepError {cliDependencies,currentStep,errorDescription} -> do
+      sayLn $ fg red <> "an error occured with some dependencies : " <>  (text . pack ) errorDescription
+      sayLn $ "starting health checking to diagnose...."
+      liftIO $ waitTillHealthyDependencies cliDependencies
+      sayLn $ "going back to the healthy flow..."
       runNextStep $ Right currentStep
 

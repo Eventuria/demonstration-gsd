@@ -3,6 +3,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RecordWildCards #-}
 module Eventuria.GSD.CLI.UI.Monitoring where
 
 import System.Console.Byline
@@ -19,7 +20,7 @@ import Eventuria.GSD.Monitoring.API.Client.Client (streamGsdEventByWorkspaceId,
                               streamGsdCommandByWorkspaceId,
                               streamGsdCommandResponseByWorkspaceId,
                               streamGsdValidationStateByWorkspaceId)
-import Eventuria.GSD.Monitoring.API.Client.Dependencies
+import Eventuria.GSD.CLI.Dependencies
 import Eventuria.Commons.Logger.Core
 
 
@@ -34,12 +35,15 @@ runMonitoringCommand :: forall stepType. Step stepType ->
                                          Dependencies ->
                                          Workspace ->
                                          Byline IO (Either StepError (Step stepType))
-runMonitoringCommand currentStep monitoringCommand dependencies @ Dependencies { logger} Workspace {workspaceId} =
+runMonitoringCommand currentStep
+                     monitoringCommand
+                     cliDependencies @ Dependencies { logger , clientDependencies }
+                     Workspace {workspaceId} =
   (case monitoringCommand of
-    ListCommandsReceived ->         displayCallResult currentStep  logger "Commands"                 (streamGsdCommandByWorkspaceId         dependencies workspaceId)
-    ListCommandResponsesProduced -> displayCallResult currentStep  logger "Command Responses"        (streamGsdCommandResponseByWorkspaceId dependencies workspaceId)
-    ListEventsGenerated ->          displayCallResult currentStep  logger "Events"                   (streamGsdEventByWorkspaceId           dependencies workspaceId)
-    ListValidationStates ->         displayCallResult currentStep  logger "Validation State History" (streamGsdValidationStateByWorkspaceId dependencies workspaceId))
+    ListCommandsReceived ->         displayCallResult currentStep  logger "Commands"                 (streamGsdCommandByWorkspaceId         (monitoring clientDependencies) workspaceId)
+    ListCommandResponsesProduced -> displayCallResult currentStep  logger "Command Responses"        (streamGsdCommandResponseByWorkspaceId (monitoring clientDependencies) workspaceId)
+    ListEventsGenerated ->          displayCallResult currentStep  logger "Events"                   (streamGsdEventByWorkspaceId           (monitoring clientDependencies) workspaceId)
+    ListValidationStates ->         displayCallResult currentStep  logger "Validation State History" (streamGsdValidationStateByWorkspaceId (monitoring clientDependencies) workspaceId))
 
   where
     displayCallResult :: forall item stepType. Show item =>
@@ -53,7 +57,7 @@ runMonitoringCommand currentStep monitoringCommand dependencies @ Dependencies {
       sayLn $ fg white <> (text . pack) itemName
       safeResponse <- liftIO $ clientCall
       nextStep <- case safeResponse of
-          Left error -> return $ Left $ StepError { currentStep, errorDescription = show error }
+          Left error -> return $ Left $ StepError { errorDescription = show error, .. }
           Right persistedItems -> persistedItems & mapM (sayLn . displayItem) >> (return $ Right currentStep)
       displayEndOfACommand
       return nextStep

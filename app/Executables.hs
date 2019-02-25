@@ -38,29 +38,27 @@ cli =
   CLI.execute
     CLI.Settings {
      loggerId =  loggerIds ! "cli" ,
-     commandSourcerClientSettings =
-        Command.Sourcer.Client.Settings {
-          loggerId = loggerIds ! "command.sourcer.client" ,
-          url = URL { host = "localhost",
-                      port = 3000,
-                      path = ""}},
-     commandConsumerClientSettings =
-        Command.Consumer.Client.Settings {
-          loggerId = loggerIds ! "command.consumer.client" ,
-          url = URL { host = "localhost",
-                      port = 3001,
-                      path = ""}},
-     readClientSettings =
-        Read.Client.Settings {
-          loggerId = loggerIds ! "cli" ,
-          url = URL { host = "localhost",
-                      port = 3002,
-                      path = ""}},
-     monitoringClientSettings = Monitoring.Client.Settings {
-                      loggerId = loggerIds ! "monitoring.client" ,
-                      url = URL { host = "localhost",
-                                  port = 3003,
-                                  path = ""}}}
+     clientSettings = CLI.ClientSettings {
+                       commandSourcer = Command.Sourcer.Client.Settings {
+                            loggerId = loggerIds ! "command.sourcer.client" ,
+                            url = URL { host = "localhost",
+                                        port = 3000,
+                                        path = ""}},
+                       commandConsumer = Command.Consumer.Client.Settings {
+                            loggerId = loggerIds ! "command.consumer.client" ,
+                            url = URL { host = "localhost",
+                                        port = 3001,
+                                        path = ""}},
+                       read = Read.Client.Settings {
+                            loggerId = loggerIds ! "cli" ,
+                            url = URL { host = "localhost",
+                                        port = 3002,
+                                        path = ""}},
+                       monitoring = Monitoring.Client.Settings {
+                            loggerId = loggerIds ! "monitoring.client" ,
+                            url = URL { host = "localhost",
+                                        port = 3003,
+                                        path = ""}}}}
   where loggerIds :: HashMap String String
         loggerIds = fromList [
           ("cli"                      ,"[eventuria.gsd.cli]"),

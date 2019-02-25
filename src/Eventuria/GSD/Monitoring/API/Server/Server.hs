@@ -14,43 +14,50 @@
 
 module Eventuria.GSD.Monitoring.API.Server.Server  where
 
-import Prelude hiding (foldr)
+import           Prelude hiding (foldr)
+                 
+import           Control.Monad.IO.Class (MonadIO(liftIO))
 
-import Servant
-import Eventuria.Adapters.Servant.Wrapper
-import Servant.Pipes ()
-import Eventuria.Adapters.Streamly.Adapters
-import Network.Wai.Handler.Warp hiding (Settings)
-import Eventuria.GSD.Monitoring.API.Definition
+import           Servant
+import           Servant.Pipes ()
+import           Network.Wai.Handler.Warp hiding (Settings)
+
+import           Eventuria.Adapters.Servant.Wrapper
+import           Eventuria.Adapters.Streamly.Adapters
+
+import           Eventuria.Commons.DevOps.Core
+import           Eventuria.Commons.Logger.Core
+import           Eventuria.Commons.Dependencies.RetrieveByHealthChecking
+import           Eventuria.Commons.System.SafeResponse
 
 import qualified Eventuria.GSD.Monitoring.Service.OverEventStore as GsdMonitoring
 
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.GSD.Write.Model.Core
-
-import Eventuria.Libraries.CQRS.Write.Serialization.PersistenceResult ()
-import Eventuria.Libraries.CQRS.Write.Serialization.Command ()
-import Eventuria.Libraries.CQRS.Write.Serialization.Event ()
-import Eventuria.GSD.Write.Model.Commands.Command
-import Eventuria.GSD.Write.Model.Commands.Serialization ()
-import Eventuria.GSD.Write.Model.Events.Event
-import Eventuria.GSD.Write.Model.Events.Serialization()
-import Eventuria.GSD.Write.Model.State
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-import Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
-import Eventuria.Commons.DevOps.Core
-import Eventuria.GSD.Monitoring.API.Server.Settings
+import           Eventuria.Libraries.CQRS.Write.Serialization.PersistenceResult ()
+import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
+import           Eventuria.Libraries.CQRS.Write.Serialization.Event ()
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
+                 
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+                 
+import           Eventuria.GSD.Write.Model.Core
+import           Eventuria.GSD.Write.Model.Commands.Command
+import           Eventuria.GSD.Write.Model.Commands.Serialization ()
+import           Eventuria.GSD.Write.Model.Events.Event
+import           Eventuria.GSD.Write.Model.Events.Serialization()
+import           Eventuria.GSD.Write.Model.State
+                 
+import           Eventuria.GSD.Monitoring.API.Definition
+import           Eventuria.GSD.Monitoring.API.Server.Settings
 import qualified Eventuria.GSD.Monitoring.API.Server.Dependencies as Server.State
 import qualified Eventuria.GSD.Monitoring.API.Server.Dependencies as Server
-import Eventuria.Commons.Logger.Core
-import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
-import Eventuria.Commons.System.SafeResponse
+
 
 start :: Settings -> IO ()
 start settings @ Settings {healthCheckLoggerId}  =
-  checkHealthAndRetrieveDependencies
+  waitTillHealthy
     healthCheckLoggerId
     settings
     Server.retrieveDependencies
@@ -80,7 +87,10 @@ start settings @ Settings {healthCheckLoggerId}  =
       where
 
         healthCheck :: Handler HealthCheckResult
-        healthCheck = return healthy
+        healthCheck = liftIO $ Server.retrieveDependencies
+                                settings
+                                (\dependencies -> return healthy)
+                                (\unhealthyDependencies -> return $ unhealthy "Service unavailable")
 
         streamCommandResponse :: Server.Dependencies ->
                                  WorkspaceId ->

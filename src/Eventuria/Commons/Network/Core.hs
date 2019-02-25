@@ -5,3 +5,5 @@ type URLPort = Int
 type URLPath = String
 
 data URL = URL {host :: URLHost,port :: URLPort,path :: URLPath}
+
+

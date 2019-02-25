@@ -42,7 +42,7 @@ import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
 
 start :: Settings -> IO ()
 start settings @ Settings {healthCheckLoggerId}  =
-  checkHealthAndRetrieveDependencies
+  waitTillHealthy
     healthCheckLoggerId
     settings
     Server.retrieveDependencies
@@ -68,7 +68,10 @@ start settings @ Settings {healthCheckLoggerId}  =
                                 :<|> fetchGoal       dependencies
      where
       healthCheck :: Handler HealthCheckResult
-      healthCheck = return healthy
+      healthCheck = liftIO $ Server.retrieveDependencies
+                                settings
+                                (\dependencies -> return healthy)
+                                (\unhealthyDependencies -> return $ unhealthy "Service unavailable")
 
       streamWorkspace :: Server.Dependencies ->
                          Handler (PipeStream (SafeResponse (Persisted Workspace)))
