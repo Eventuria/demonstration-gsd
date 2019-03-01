@@ -23,7 +23,6 @@ import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.Valida
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import Eventuria.Commons.DevOps.Core
 import qualified Pipes as P
-import Eventuria.Commons.System.SafeResponse
 
 
 type GSDMonitoringStreamingApi =   HealthCheck
@@ -35,46 +34,46 @@ type GSDMonitoringStreamingApi =   HealthCheck
                              :<|>  StreamGsdValidationStateByWorkspaceId
 
 
-type HealthCheck =      "health" :> Get '[JSON]  HealthCheckResult
+type HealthCheck =      "health" :> Get '[JSON]  Healthy
 
 type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "command" :>
                                       Capture "workspaceId" WorkspaceId :>
                                       StreamGet
                                         NewlineFraming
                                         JSON
-                                        (P.Producer (SafeResponse (Persisted GsdCommand)) IO () )
+                                        (P.Producer (Persisted GsdCommand) IO () )
 
 type StreamInfinitelyGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "infinitely" :> "commands" :>
                                                 Capture "workspaceId" WorkspaceId :>
                                                 StreamGet
                                                   NewlineFraming
                                                   JSON
-                                                  (P.Producer (SafeResponse (Persisted GsdCommand)) IO () )
+                                                  (P.Producer (Persisted GsdCommand) IO () )
 
 type StreamGsdCommandResponseByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "commandResponses" :>
                                              Capture "workspaceId" WorkspaceId :>
                                              StreamGet
                                               NewlineFraming
                                               JSON
-                                              (P.Producer (SafeResponse (Persisted CommandResponse)) IO () )
+                                              (P.Producer (Persisted CommandResponse) IO () )
 
 type StreamGsdEventsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "events" :>
                                     Capture "workspaceId" WorkspaceId :>
                                     StreamGet
                                       NewlineFraming
                                       JSON
-                                      (P.Producer (SafeResponse (Persisted GsdEvent)) IO () )
+                                      (P.Producer (Persisted GsdEvent) IO () )
 
 type StreamInfinitelyGsdEventsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "infinitely" :> "events" :>
                                               Capture "workspaceId" WorkspaceId :>
                                               StreamGet
                                                 NewlineFraming
                                                 JSON
-                                                (P.Producer (SafeResponse (Persisted GsdEvent)) IO () )
+                                                (P.Producer (Persisted GsdEvent) IO () )
 
 type StreamGsdValidationStateByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "validationState" :>
                                              Capture "workspaceId" WorkspaceId :>
                                              StreamGet
                                               NewlineFraming
                                               JSON
-                                              (P.Producer (SafeResponse (Persisted (ValidationState GsdState))) IO () )
+                                              (P.Producer (Persisted (ValidationState GsdState)) IO () )

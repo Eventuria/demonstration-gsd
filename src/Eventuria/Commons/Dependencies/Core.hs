@@ -5,12 +5,12 @@ import Data.List.NonEmpty
 
 type Name = String
 data UnhealthyDependency = UnhealthyDependency {name :: Name,
-                                                unhealthyReason :: UnhealthyReason}
+                                                unhealthyReason :: UnhealthyReason} deriving Show
+
+type HealthCheck dependencies = dependencies -> IO (Either (NonEmpty UnhealthyDependency) Healthy)
 
 type ExecutionUnderDependenciesAcquired dependencies c = (dependencies -> IO c)
-type ExecutionIfDependenciesAcquisitionFailed c = (NonEmpty UnhealthyDependency -> IO c)
 
-type RetrieveDependencies settings dependencies c = settings ->
+type GetDependencies settings dependencies c = settings ->
                                                   ExecutionUnderDependenciesAcquired dependencies c ->
-                                                  ExecutionIfDependenciesAcquisitionFailed c ->
                                                   IO c

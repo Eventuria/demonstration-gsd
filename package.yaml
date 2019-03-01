@@ -55,6 +55,7 @@ dependencies:
   - byline == 0.3.2.0
   - mtl == 2.2.2
   - validation == 1
+  - either == 5.0.1
 library:
   source-dirs: src
 ghc-options:

@@ -10,30 +10,36 @@ module Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Read.Strea
   streamAll,
   streamAllInfinitely) where
 
-import Streamly
+import           GHC.Natural
+
+import           Control.Monad.IO.Class (MonadIO(liftIO))
+import           Control.Concurrent.Async (waitCatch)
+import           Control.Exception
+
+import           Data.Maybe
+import           Data.Aeson
+
+
+import           Streamly
 import qualified Streamly.Prelude as S
-import Control.Monad.IO.Class (MonadIO(liftIO))
-import Control.Concurrent.Async (waitCatch)
-import GHC.Natural
 
 import qualified Database.EventStore as EventStore
+
+import           Eventuria.Commons.Logger.Core
+
 import qualified Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Read.Subscribing as EventStore.Subscribing
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-import Eventuria.Commons.Logger.Core
-import Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.EventStoreStream
-import Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Client.Dependencies
-import Data.Aeson
-import Data.Maybe
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
-import Control.Exception
-import Eventuria.Commons.System.SafeResponse
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
+import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.EventStoreStream
+import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Client.Dependencies
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
+
 
 
 streamFromOffset :: Streamable stream monad item =>
                       EventStoreStream item ->
                       Offset ->
-                      stream monad (SafeResponse (Persisted item))
+                      stream monad (Either SomeException (Persisted item))
 streamFromOffset eventStoreStream @ EventStoreStream {
                                        dependencies = Dependencies { logger, credentials, connection },
                                        streamName = streamName } fromOffset = do
@@ -50,7 +56,9 @@ streamFromOffset eventStoreStream @ EventStoreStream {
                       (fromInteger batchSize)
                       EventStore.NoResolveLink
                       (Just credentials) >>= waitCatch )
-        (\e @ SomeException {}  -> return $ Left e)
+        (\e @ SomeException {}  -> do
+            liftIO $ logInfo logger $ "[stream.from.offset] exception raised "  ++ show e
+            return $ Left e)
 
   case commandFetched of
     Right (EventStore.ReadSuccess slices) -> do
@@ -65,7 +73,9 @@ streamFromOffset eventStoreStream @ EventStoreStream {
     Right (EventStore.ReadNotModified   )-> return $ Left readNotModifiedException
     Right (EventStore.ReadError e)        -> return $ Left readErrorException
     Right (EventStore.ReadAccessDenied e) -> return $ Left readAccessDeniedException
-    Left (exception) -> return $ Left exception
+    Left (exception) -> do
+      liftIO $ logInfo logger $ "[stream.from.offset] exception propagated "  ++ show exception
+      return $ Left exception
   where
      getPersistedItemsFromSlices :: FromJSON item => EventStore.Slice t  -> [Persisted item]
      getPersistedItemsFromSlices slices = recordedEventToPersistedItem
@@ -75,12 +85,12 @@ streamFromOffset eventStoreStream @ EventStoreStream {
 
 streamAll :: Streamable stream monad item =>
                 EventStoreStream item ->
-                stream monad (SafeResponse (Persisted item))
+                stream monad (Either SomeException (Persisted item))
 streamAll eventStoreStream = streamFromOffset eventStoreStream 0
 
 streamAllInfinitely :: Streamable stream monad item =>
                           EventStoreStream item ->
-                          stream monad (SafeResponse (Persisted item))
+                          stream monad (Either SomeException (Persisted item))
 streamAllInfinitely eventStoreStream =
   (EventStore.Subscribing.subscribe eventStoreStream)
     `parallel` (streamAll eventStoreStream)

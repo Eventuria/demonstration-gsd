@@ -90,6 +90,8 @@ runNextStep nextStepEither = case nextStepEither of
       sayLn $ fg red <> "an error occured with some dependencies : " <>  (text . pack ) errorDescription
       sayLn $ "starting health checking to diagnose...."
       liftIO $ waitTillHealthyDependencies cliDependencies
-      sayLn $ "going back to the healthy flow..."
+      sayLn $ fg white <> "------------------------------------------"
+      sayLn $ fg white <> " [" <> fg green <> "√" <> fg white <> "] Going back to your previous healthy flow"
+      sayLn $ fg white <> "------------------------------------------"
       runNextStep $ Right currentStep
 

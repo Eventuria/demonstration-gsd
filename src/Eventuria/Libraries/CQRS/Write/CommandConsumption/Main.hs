@@ -5,27 +5,32 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Eventuria.Libraries.CQRS.Write.CommandConsumption.Main  where
 
-import Streamly (parallely)
-import Data.Function ((&))
-import Control.Concurrent
+import           Control.Concurrent
+import           Control.Exception
 
-import Eventuria.Commons.Logger.Core
-import Eventuria.Libraries.CQRS.Write.StreamRepository
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
+import           Data.Function ((&))
 
-import Eventuria.Libraries.CQRS.Write.Serialization.Command ()
-import Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
+import           Streamly (parallely)
+
+import           Eventuria.Commons.Logger.Core
+
 import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
-import Eventuria.Commons.System.SafeResponse
-import Control.Exception
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Core
+
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
+
+import           Eventuria.Libraries.CQRS.Write.StreamRepository
+import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
+import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Core
+
+
 
 
 execute ::  Logger ->
             AggregateIdStream persistedStreamEngine  ->
             Streaming persistedStreamEngine ->
             ConsumeAnAggregate ->
-            IO (SafeResponse ())
+            IO (Either SomeException ())
 execute logger
        aggregateIdStream
        Streaming {streamAllInfinitely}

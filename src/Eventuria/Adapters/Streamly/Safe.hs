@@ -3,25 +3,26 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Eventuria.Adapters.Streamly.Safe where
 
-import qualified Streamly.Prelude as S
-import Streamly
-import Eventuria.Commons.System.SafeResponse
-import Data.Either
-import Data.Function ((&))
-import Control.Concurrent (ThreadId)
-import Control.Exception
+import           Control.Concurrent (ThreadId)
+import           Control.Exception
 
-map :: (IsStream t, Monad m) => (a -> b) -> t m ( SafeResponse a) -> t m (SafeResponse b)
+import           Data.Either
+import           Data.Function ((&))
+
+import qualified Streamly.Prelude as S
+import           Streamly
+
+map :: (IsStream t, Monad m) => (a -> b) -> t m ( Either SomeException a) -> t m (Either SomeException b)
 map transformation stream = stream & S.map (\safeResponse -> case safeResponse of
         Right a -> Right $ transformation a
         Left error -> Left error )
 
-mapM :: (IsStream t, MonadAsync m) => (a -> m (SafeResponse b)) -> t m (SafeResponse a) -> t m (SafeResponse b)
+mapM :: (IsStream t, MonadAsync m) => (a -> m (Either SomeException b)) -> t m (Either SomeException a) -> t m (Either SomeException b)
 mapM transformation stream = stream & S.mapM (\safeResponse -> case safeResponse of
     Right a -> transformation a
     Left error -> return $ Left error )
 
-filter :: (IsStream t, Monad m) => (a -> Bool) -> t m (SafeResponse a) -> t m (SafeResponse a)
+filter :: (IsStream t, Monad m) => (a -> Bool) -> t m (Either SomeException a) -> t m (Either SomeException a)
 filter filtering stream = stream & S.filter (\safeResponse -> case safeResponse of
     Right a -> filtering a
     Left left -> True )
@@ -30,7 +31,7 @@ filter filtering stream = stream & S.filter (\safeResponse -> case safeResponse 
 foldx :: forall x m a b. Monad m => (x -> a ->  x)
                      -> x
                      -> (x -> b)
-                     -> SerialT m (SafeResponse a) -> m (SafeResponse b)
+                     -> SerialT m (Either SomeException a) -> m (Either SomeException b)
 foldx folding element extraction stream =
   S.foldx
     (\safeResponseA safeResponseB ->
@@ -43,17 +44,17 @@ foldx folding element extraction stream =
     (\safeResponse -> fmap extraction safeResponse)
     stream
 
-fromList :: (Monad m, IsStream t) => SafeResponse [a] -> t m (SafeResponse a)
+fromList :: (Monad m, IsStream t) => Either SomeException [a] -> t m (Either SomeException a)
 fromList safeResponse = case safeResponse of
                     Right items -> S.fromList $ Right <$> items
                     Left error -> S.yield $ Left error
 
-yield :: IsStream t => a -> t m (SafeResponse a)
+yield :: IsStream t => a -> t m (Either SomeException a)
 yield element = S.yield $ Right element
 
 
 runStreamOnIOAndThrowFailureTo :: ThreadId ->
-                                SerialT IO ( SafeResponse a) -> IO ()
+                                SerialT IO ( Either SomeException a) -> IO ()
 runStreamOnIOAndThrowFailureTo threadId stream = runStream $
   stream
     & S.mapM (\safeResponse -> case safeResponse of
@@ -63,8 +64,8 @@ runStreamOnIOAndThrowFailureTo threadId stream = runStream $
               return $ Left error  )
 
 
--- Bunch of smells that justifies improving the "SafeResponse abstraction"  ...
-toList :: SerialT IO (SafeResponse a) -> IO (SafeResponse [a])
+-- Bunch of bad smells
+toList :: SerialT IO (Either SomeException a) -> IO (Either SomeException [a])
 toList stream =  do
     items <- catch
               (S.toList stream)
@@ -75,7 +76,7 @@ toList stream =  do
       (Left error : xs) -> return $ Left error
 
   where
-    removeSafeResponseLayer :: [SafeResponse a] -> [a]
+    removeSafeResponseLayer :: [Either SomeException a] -> [a]
     removeSafeResponseLayer items = (fromRight blowUp) <$> items
 
     blowUp :: a

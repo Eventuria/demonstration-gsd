@@ -13,17 +13,19 @@ data Dependencies = Dependencies {logger :: Logger ,
                                   eventStoreClientDependencies :: EventStoreClient.Dependencies}
 
 
-getDependencies :: RetrieveDependencies Settings Dependencies c
+getDependencies :: GetDependencies Settings Dependencies c
 getDependencies Settings {
                   serviceLoggerId,
                   port,
                   eventStoreClientSettings}
-                executionUnderDependenciesAcquired
-                executionIfDependenciesAcquisitionFailed  = do
+                executionUnderDependenciesAcquired = do
   logger <- getLogger serviceLoggerId
-  EventStoreClient.retrieveDependencies
+  EventStoreClient.getDependencies
     eventStoreClientSettings
     (\eventStoreClientDependencies -> executionUnderDependenciesAcquired Dependencies {..})
-    (\unhealthyDependency -> executionIfDependenciesAcquisitionFailed unhealthyDependency)
 
 
+healthCheck :: HealthCheck Dependencies
+healthCheck dependencies @ Dependencies {eventStoreClientDependencies}  = do
+  result <- EventStoreClient.healthCheck eventStoreClientDependencies
+  return $ fmap (\_ -> ()) result

@@ -9,29 +9,39 @@ module Eventuria.GSD.Read.API.Client.Client (
   fetchWorkspace,
   fetchGoals,
   fetchGoal,
-  fetchActions) where
+  fetchActions,
+  ReadServerDown(..)) where
 
-import Data.Proxy
-import Servant
-import Eventuria.GSD.Read.Model.Workspace
-import qualified Pipes as P
-import Eventuria.Adapters.Streamly.Adapters
+import           Control.Exception
+                 
+import           Data.Proxy
+                 
+import           Servant
+import           Servant.Pipes ()
+
 import qualified Servant.Client.Streaming as S
-import Eventuria.GSD.Write.Model.Core
-import Eventuria.GSD.Read.Model.Goal
-import Eventuria.GSD.Read.Model.Action
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.Commons.System.SafeResponse
-import Servant.Pipes ()
-import Eventuria.GSD.Read.API.Client.Dependencies
-import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
-import Eventuria.Commons.Logger.Core
-import Control.Exception
-import Eventuria.GSD.Read.API.Definition
-import Eventuria.Commons.DevOps.Core
+import qualified Pipes as P
+import qualified Streamly.Prelude as Streamly
+
+import           Eventuria.Adapters.Streamly.Adapters
+
+import           Eventuria.Commons.DevOps.Core
+
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+
+import           Eventuria.GSD.Read.Model.Workspace
+import           Eventuria.GSD.Write.Model.Core
+import           Eventuria.GSD.Read.Model.Goal
+import           Eventuria.GSD.Read.Model.Action
+import           Eventuria.GSD.Read.API.Client.Dependencies
+import           Eventuria.GSD.Read.API.Definition
+
+data ReadServerDown = ReadServerDown  deriving Show
+
+instance Exception ReadServerDown
 
 fetchWorkspaces :: Dependencies ->
-                   IO (SafeResponse [Persisted Workspace])
+                   IO (Either ReadServerDown [Persisted Workspace])
 fetchWorkspaces dependencies =
   bindWithSettings
     dependencies
@@ -39,7 +49,7 @@ fetchWorkspaces dependencies =
 
 fetchGoals :: Dependencies ->
               WorkspaceId ->
-              IO (SafeResponse [Goal])
+              IO (Either ReadServerDown [Goal])
 fetchGoals dependencies workspaceId =
   bindWithSettings
     dependencies
@@ -48,70 +58,73 @@ fetchGoals dependencies workspaceId =
 fetchActions :: Dependencies ->
                 WorkspaceId ->
                 GoalId ->
-                IO (SafeResponse [Action])
+                IO (Either ReadServerDown [Action])
 fetchActions dependencies workspaceId goalId =
   bindWithSettings
     dependencies
     (streamActionOnPipe workspaceId goalId)
 
 bindWithSettings :: Dependencies ->
-                    S.ClientM (P.Producer (SafeResponse (item)) IO ()) ->
-                    IO (SafeResponse [item])
-bindWithSettings Dependencies { httpClientManager, url, logger} call = do
-  (S.withClientM
-     (fromPipes <$> call )
-     (S.mkClientEnv httpClientManager url)
-     (\e -> case e of
-        Left errorHttpLevel -> do
-         logInfo logger "An http error occured with the monitoring microservice."
-         return $ Left $ toException errorHttpLevel
-        Right stream -> do
-         safeResponse <- StreamlySafe.toList stream
-         return safeResponse))
+                    S.ClientM (P.Producer (item) IO ()) ->
+                    IO (Either ReadServerDown [item])
+bindWithSettings Dependencies { httpClientManager, url, logger} call =
+  catch
+    (S.withClientM
+       (fromPipes <$> call )
+       (S.mkClientEnv httpClientManager url)
+       (\e -> case e of
+          Left errorHttpLevel -> return $ Left $ ReadServerDown
+          Right stream -> do
+           list <- Streamly.toList stream
+           return $ Right list))
+    (\SomeException {} -> return $ Left $ ReadServerDown )
+
 
 fetchGoal :: Dependencies ->
               WorkspaceId ->
               GoalId ->
-              IO (SafeResponse (Maybe Goal))
+              IO (Either ReadServerDown (Maybe Goal))
 fetchGoal Dependencies { httpClientManager, url, logger} workspaceId goalId =
-  (S.withClientM
-       (fetchGoalCall workspaceId goalId)
-       (S.mkClientEnv httpClientManager url)
-       (\e -> case e of
-          Left errorHttpLevel -> do
-           logInfo logger "An http error occured with the monitoring microservice."
-           return $ Left $ toException errorHttpLevel
-          Right safeResponse -> return safeResponse))
+  catch
+    (S.withClientM
+         (fetchGoalCall workspaceId goalId)
+         (S.mkClientEnv httpClientManager url)
+         (\e -> case e of
+            Left errorHttpLevel -> return $ Left ReadServerDown
+            Right maybeGoal -> return $ Right maybeGoal))
+    (\SomeException {} -> return $ Left $ ReadServerDown )
 
 fetchWorkspace :: Dependencies ->
               WorkspaceId ->
-              IO (SafeResponse (Maybe Workspace))
+              IO (Either ReadServerDown (Maybe Workspace))
 fetchWorkspace Dependencies { httpClientManager, url, logger} workspaceId  =
-  (S.withClientM
-       (fetchWorkspaceCall workspaceId)
+  catch
+    (S.withClientM
+         (fetchWorkspaceCall workspaceId)
+         (S.mkClientEnv httpClientManager url)
+         (\e -> case e of
+            Left errorHttpLevel -> return $ Left  ReadServerDown
+            Right maybeWorkspace -> return $ Right maybeWorkspace))
+    (\SomeException {} -> return $ Left $ ReadServerDown )
+
+healthCheck :: Dependencies -> IO (Either ReadServerDown Healthy)
+healthCheck    Dependencies { httpClientManager, url, logger}  =
+  catch
+    (S.withClientM
+       healthCheckCall
        (S.mkClientEnv httpClientManager url)
-       (\e -> case e of
-          Left errorHttpLevel -> do
-           logInfo logger "An http error occured with the monitoring microservice."
-           return $ Left $ toException errorHttpLevel
-          Right safeResponse -> return safeResponse))
+       (\e -> do
+          case e of
+            Left errorHttpLevel -> return $ Left ReadServerDown
+            Right healthy  -> return $ Right () ))
+    (\SomeException {} -> return $ Left ReadServerDown )
 
-healthCheck :: Dependencies -> IO (HealthCheckResult)
-healthCheck Dependencies { httpClientManager, url, logger}  = do
-  S.withClientM
-     healthCheckCall
-     (S.mkClientEnv httpClientManager url)
-     (\e -> do
-        case e of
-          Left errorHttpLevel -> return $ unhealthy $ show errorHttpLevel
-          Right healthCheckResult  -> return healthCheckResult )
-
-healthCheckCall :: S.ClientM HealthCheckResult
-fetchWorkspaceCall :: WorkspaceId ->            S.ClientM (SafeResponse (Maybe Workspace))
-fetchGoalCall ::      WorkspaceId -> GoalId ->  S.ClientM (SafeResponse (Maybe Goal))
-streamWorkspaceOnPipe ::                        S.ClientM (P.Producer (SafeResponse (Persisted Workspace)) IO () )
-streamGoalOnPipe ::   WorkspaceId ->            S.ClientM (P.Producer (SafeResponse Goal )IO () )
-streamActionOnPipe :: WorkspaceId -> GoalId ->  S.ClientM (P.Producer (SafeResponse Action) IO () )
+healthCheckCall :: S.ClientM Healthy
+fetchWorkspaceCall :: WorkspaceId ->            S.ClientM (Maybe Workspace)
+fetchGoalCall ::      WorkspaceId -> GoalId ->  S.ClientM (Maybe Goal)
+streamWorkspaceOnPipe ::                        S.ClientM (P.Producer (Persisted Workspace) IO () )
+streamGoalOnPipe ::   WorkspaceId ->            S.ClientM (P.Producer Goal IO () )
+streamActionOnPipe :: WorkspaceId -> GoalId ->  S.ClientM (P.Producer Action IO () )
 healthCheckCall
   :<|> streamWorkspaceOnPipe
   :<|> streamGoalOnPipe

@@ -7,7 +7,7 @@ import           Data.Validation
 import           Data.List.NonEmpty
                  
 import           Control.Lens
-                 
+
 import           Eventuria.Commons.Logger.Core
 import qualified Eventuria.GSD.Monitoring.API.Client.Dependencies                        as Monitoring.Client
 import qualified Eventuria.GSD.Monitoring.API.Client.Client                              as Monitoring.Client
@@ -69,11 +69,11 @@ checkDependenciesHealth dependencies @ Dependencies {clientDependencies = Client
 
   where
 
-    toAccValidation :: (UnhealthyReason -> UnhealthyDependency) ->
-                        HealthCheckResult ->
+    toAccValidation :: Show exception =>  (UnhealthyReason -> UnhealthyDependency) ->
+                        Either exception Healthy ->
                         Validation (NonEmpty UnhealthyDependency) ()
     toAccValidation errorHandler = either
-                        (\unhealthyReason -> _Failure # (pure $ errorHandler unhealthyReason))
+                        (\someException -> _Failure # (pure $ errorHandler $ show someException))
                         (\healthy -> _Success # healthy )
 
     unhealthyDependency :: String -> UnhealthyReason -> UnhealthyDependency

@@ -17,4 +17,4 @@ import Eventuria.Commons.DevOps.Core
 
 type GsdCommandConsumerApi =  HealthCheck
 
-type HealthCheck = "health" :> Get '[JSON]  HealthCheckResult
+type HealthCheck = "health" :> Get '[JSON]  Healthy

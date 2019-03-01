@@ -16,9 +16,9 @@ import Data.Maybe
 import Data.Aeson
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-import Eventuria.Commons.System.SafeResponse
+import Eventuria.Adapters.Time.Core
 
-subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (SafeResponse (Persisted item))
+subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Either SomeException (Persisted item))
 subscribe eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },
                                                streamName} = do
   liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
@@ -28,7 +28,7 @@ subscribe eventStoreStream @ EventStoreStream {dependencies = Dependencies { log
   case result of
     Left e @ SomeException {} -> do
                liftIO $ logInfo logger "subscription to stream failed - retrying..."
-               liftIO $ threadDelay (5 * 1000000) -- 5 seconds
+               liftIO $ threadDelay $ getInMsFromSeconds 5
                subscribe eventStoreStream
     Right subscription -> do
                liftIO $ logInfo logger $ "subscription enabled on stream " ++ show streamName
@@ -47,7 +47,7 @@ subscribe eventStoreStream @ EventStoreStream {dependencies = Dependencies { log
         EventStore.waitConfirmation subscription
         return subscription
 
-subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (SafeResponse (Persisted item))
+subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (Either SomeException (Persisted item))
 subscribeOnOffset eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },
                                                        streamName}
                   offset = do
@@ -63,7 +63,7 @@ subscribeOnOffset eventStoreStream @ EventStoreStream {dependencies = Dependenci
   case result of
     Left e @ SomeException {} -> do
                logInfo logger "subscription to stream failed - retrying..."
-               threadDelay (5 * 1000000) -- 5 seconds
+               threadDelay $ getInMsFromSeconds 5
                subscribeOnOffset eventStoreStream offset
     Right _ -> do
             resolvedEvent <- EventStore.nextEvent subscription

@@ -14,102 +14,141 @@
 module Eventuria.GSD.Read.API.Server.Server  (start) where
 
 
-import Servant
-import Eventuria.Adapters.Servant.Wrapper
-import Servant.Pipes ()
-import Network.Wai.Handler.Warp hiding (Settings)
-import Eventuria.Adapters.Streamly.Adapters
+import           Prelude hiding (foldr)
 
+import           Data.Function ((&))
+                 
+import           Control.Monad.IO.Class (MonadIO(liftIO))
+import           Control.Concurrent
+import           Control.Exception hiding (Handler)
+                 
+import           Servant
+import           Servant.Pipes ()
+import           Network.Wai.Handler.Warp hiding (Settings)
 
-import Prelude hiding (foldr)
-import Eventuria.Commons.Logger.Core
-import Control.Monad.IO.Class (MonadIO(liftIO))
+import qualified Streamly.Prelude as Streamly
 
-import qualified Eventuria.GSD.Read.Service.OverEventStore as GsdRead
+import           Eventuria.Adapters.Servant.Wrapper
+import           Eventuria.Adapters.Streamly.Adapters
+                 
+import           Eventuria.Commons.Logger.Core
+import           Eventuria.Commons.DevOps.Core
+import           Eventuria.Commons.Network.Core
+import           Eventuria.Commons.System.Threading
+import           Eventuria.Commons.Dependencies.HealthChecking
+                 
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 
-import Eventuria.GSD.Write.Model.Core
-import Eventuria.GSD.Read.Model.Goal
-import Eventuria.GSD.Read.Model.Action
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.GSD.Read.Model.Workspace
-import Eventuria.GSD.Read.API.Definition
-import Eventuria.Commons.System.SafeResponse
-import Eventuria.GSD.Read.API.Server.Settings
+import qualified Eventuria.GSD.Read.Service.OverEventStore as Service
 import qualified Eventuria.GSD.Read.API.Server.Dependencies as Server
-import Eventuria.Commons.DevOps.Core
-import Eventuria.Commons.Dependencies.RetrieveByHealthChecking
+import           Eventuria.GSD.Read.Model.Goal
+import           Eventuria.GSD.Read.Model.Action
+import           Eventuria.GSD.Read.Model.Workspace
+import           Eventuria.GSD.Read.API.Definition
+import           Eventuria.GSD.Read.API.Server.Settings
+                 
+import           Eventuria.GSD.Write.Model.Core
 
 
 start :: Settings -> IO ()
-start settings @ Settings {healthCheckLoggerId}  =
+start settings @ Settings {healthCheckLoggerId} = do
   waitTillHealthy
-    healthCheckLoggerId
-    settings
-    Server.retrieveDependencies
-    runServerOnWarp
+      healthCheckLoggerId
+      settings
+      Server.getDependencies
+      Server.healthCheck
+  catch
+    (Server.getDependencies
+       settings
+       (runServerOnWarp))
+    (\ServerDownException -> start settings)
+
   where
     runServerOnWarp :: Server.Dependencies -> IO()
-    runServerOnWarp dependencies @ Server.Dependencies {logger,port} = do
-       logInfo logger "Server Started"
-       run port $ application
-                    (proxy :: Proxy GSDReadApi)
-                    readServer
-                    dependencies
+    runServerOnWarp dependencies @ Server.Dependencies {port,logger}  = do
+      logInfo logger "Server Up and Running"
+      serverThreadId <- myThreadId
+      serverDownExceptionReceiver <- catchingServerDownExceptionOnceAndThenDiscard serverThreadId
+      run port $ application
+                (proxy :: Proxy GSDReadApi)
+                (readServer serverDownExceptionReceiver)
+                dependencies
 
     {-- N.B : Servant does not support Streamly,
               so Streamly is converted to Pipe at the Servant Level (see toPipes )
     --}
-    readServer :: ServantServer GSDReadApi Server.Dependencies
-    readServer dependencies = healthCheck
-                                :<|> streamWorkspace dependencies
-                                :<|> streamGoal      dependencies
-                                :<|> streamAction    dependencies
-                                :<|> fetchWorkspace  dependencies
-                                :<|> fetchGoal       dependencies
+    readServer :: ServerThreadId -> ServantServer GSDReadApi Server.Dependencies
+    readServer serverThreadId dependencies =
+      healthCheck            serverThreadId dependencies
+        :<|> streamWorkspace serverThreadId dependencies
+        :<|> streamGoal      serverThreadId dependencies
+        :<|> streamAction    serverThreadId dependencies
+        :<|> fetchWorkspace  serverThreadId dependencies
+        :<|> fetchGoal       serverThreadId dependencies
      where
-      healthCheck :: Handler HealthCheckResult
-      healthCheck = liftIO $ Server.retrieveDependencies
-                                settings
-                                (\dependencies -> return healthy)
-                                (\unhealthyDependencies -> return $ unhealthy "Service unavailable")
+      healthCheck :: ServerThreadId -> Server.Dependencies -> Handler Healthy
+      healthCheck serverThreadId Server.Dependencies {logger} =
+        liftIO $ logInfo logger "service health asked"  >>
+                 Server.healthCheck dependencies >>=
+                 either
+                   (\error -> do
+                       logInfo logger $ "service unhealthy : " ++ show error
+                       return $ Left $ toException ServerDownException)
+                   (\right -> do
+                       logInfo logger "service healthy"
+                       return $ Right ()) >>=
+                 breakServerOnFailure logger serverThreadId
 
-      streamWorkspace :: Server.Dependencies ->
-                         Handler (PipeStream (SafeResponse (Persisted Workspace)))
-      streamWorkspace Server.Dependencies {eventStoreClientDependencies} =
-        (return . toPipes . GsdRead.streamWorkspace) eventStoreClientDependencies
+      streamWorkspace :: ServerThreadId ->
+                         Server.Dependencies ->
+                         Handler (PipeStream ( Persisted Workspace))
+      streamWorkspace serverThreadId Server.Dependencies {logger, eventStoreClientDependencies} = do
+        liftIO $ logInfo logger "stream workspaces"
+        return . toPipes $ Service.streamWorkspace eventStoreClientDependencies
+                              & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-      fetchWorkspace :: Server.Dependencies ->
+      fetchWorkspace :: ServerThreadId ->
+                        Server.Dependencies ->
                         WorkspaceId ->
-                        Handler (SafeResponse (Maybe Workspace))
-      fetchWorkspace Server.Dependencies {eventStoreClientDependencies} workspaceId =
-        liftIO $ GsdRead.fetchWorkspace eventStoreClientDependencies workspaceId
+                        Handler (Maybe Workspace)
+      fetchWorkspace serverThreadId Server.Dependencies {logger,eventStoreClientDependencies} workspaceId = do
+        liftIO $ logInfo logger "fetch workspace"
+        liftIO $ Service.fetchWorkspace eventStoreClientDependencies workspaceId >>=
+                 breakServerOnFailure logger serverThreadId
 
-      streamGoal :: Server.Dependencies ->
+      streamGoal :: ServerThreadId ->
+                    Server.Dependencies ->
                     WorkspaceId ->
-                    Handler (PipeStream (SafeResponse Goal))
-      streamGoal Server.Dependencies {eventStoreClientDependencies} workspaceId =
-        (return . toPipes) $ GsdRead.streamGoal eventStoreClientDependencies workspaceId
+                    Handler (PipeStream Goal)
+      streamGoal serverThreadId Server.Dependencies {logger,eventStoreClientDependencies} workspaceId = do
+        liftIO $ logInfo logger "stream goals"
+        (return . toPipes) $ Service.streamGoal eventStoreClientDependencies workspaceId
+                                & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-
-      fetchGoal :: Server.Dependencies ->
+      fetchGoal :: ServerThreadId ->
+                   Server.Dependencies ->
                    WorkspaceId ->
                    GoalId ->
-                   Handler (SafeResponse (Maybe Goal))
-      fetchGoal Server.Dependencies {eventStoreClientDependencies} workspaceId goalId =
-        liftIO $ GsdRead.fetchGoal
+                   Handler (Maybe Goal)
+      fetchGoal serverThreadId Server.Dependencies {logger,eventStoreClientDependencies} workspaceId goalId = do
+        liftIO $ logInfo logger "fetch goal"
+        liftIO $ Service.fetchGoal
                     eventStoreClientDependencies
                     workspaceId
-                    goalId
+                    goalId >>=
+                 breakServerOnFailure logger serverThreadId
 
-      streamAction :: Server.Dependencies ->
+      streamAction :: ServerThreadId ->
+                      Server.Dependencies ->
                       WorkspaceId ->
                       GoalId ->
-                      Handler (PipeStream (SafeResponse Action) )
-      streamAction Server.Dependencies {eventStoreClientDependencies} workspaceId goalId =
-        (return . toPipes) $ GsdRead.streamAction
+                      Handler (PipeStream Action )
+      streamAction serverThreadId Server.Dependencies {logger,eventStoreClientDependencies} workspaceId goalId = do
+        liftIO $ logInfo logger "stream action"
+        (return . toPipes) $ Service.streamAction
                               eventStoreClientDependencies
                               workspaceId
                               goalId
-
+                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
 

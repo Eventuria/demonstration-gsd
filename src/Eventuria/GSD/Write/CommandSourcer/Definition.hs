@@ -20,12 +20,11 @@ import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandRespon
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.Commons.System.SafeResponse
 import Eventuria.Commons.DevOps.Core
 
 type GsdWriteApi =  HealthCheck :<|>  SendGsdCommand :<|>  WaitTillCommandResponseProduced
 
-type HealthCheck =      "health" :> Get '[JSON]  HealthCheckResult
+type HealthCheck =      "health" :> Get '[JSON]  Healthy
 
 type SendGsdCommand = "gsd" :> "write" :> "sendCommand"
                                        :> ReqBody '[JSON] GsdCommand
@@ -36,4 +35,4 @@ type WaitTillCommandResponseProduced = "gsd" :> "write" :> "waitTillCommandRespo
                                        :> Capture "agreggateId" AggregateId
                                        :> Capture "offset" Offset
                                        :> Capture "commandId" CommandId
-                                       :> Get '[JSON] (SafeResponse (Persisted CommandResponse))
+                                       :> Get '[JSON] (Persisted CommandResponse)

@@ -3,18 +3,22 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl where
 
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-import Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
-import Eventuria.Libraries.CQRS.Write.Aggregate.Events.EventId
+import           Control.Monad.Free
+import           Control.Exception
 
-import Data.Time
-import Control.Monad.Free
+import           Data.Time
 import qualified Data.Set as Set
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
-import Eventuria.Commons.System.SafeResponse
 
-type TransactionInterpreter applicationState a = WritePersistenceStreamLanguage applicationState a -> IO (SafeResponse a)
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
+                 
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.EventId
+
+
+
+type TransactionInterpreter applicationState a = WritePersistenceStreamLanguage applicationState a -> IO (Either SomeException a)
 
 data Directive applicationState a = PersistEvent Event a
                 | PersistValidationState (ValidationState applicationState) a

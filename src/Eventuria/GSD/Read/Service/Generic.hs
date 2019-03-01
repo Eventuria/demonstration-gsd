@@ -6,28 +6,34 @@
 
 module Eventuria.GSD.Read.Service.Generic where
 
-import Streamly hiding (Streaming)
-import Data.Function ((&))
-import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
-import Eventuria.Commons.System.SafeResponse
-import Data.Maybe
-import Data.Text hiding (map,length,find)
-import Data.List (find)
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
-import Eventuria.Libraries.CQRS.Write.StreamRepository
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Control.Monad.IO.Class (MonadIO(liftIO))
+import           Control.Monad.IO.Class (MonadIO(liftIO))
+import           Control.Exception
 
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import Eventuria.GSD.Read.Model.Workspace
-import Eventuria.GSD.Read.Model.Goal
-import Eventuria.GSD.Read.Model.Action
-import Eventuria.GSD.Write.Model.Core
-import Eventuria.GSD.Write.Model.Events.Event
-import Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
-import Eventuria.Libraries.CQRS.Write.Serialization.Event ()
-import Eventuria.GSD.Read.Model.GoalStats
-import Eventuria.GSD.Read.Model.ActionStats
+import           Data.Function ((&))
+import           Data.Text hiding (map,length,find)
+import           Data.List (find)
+import           Data.Maybe
+
+import           Streamly hiding (Streaming)
+
+import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
+
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
+
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
+import           Eventuria.Libraries.CQRS.Write.Serialization.Event ()
+import           Eventuria.Libraries.CQRS.Write.StreamRepository
+
+import           Eventuria.GSD.Write.Model.Core
+import           Eventuria.GSD.Write.Model.Events.Event
+
+import           Eventuria.GSD.Read.Model.Workspace
+import           Eventuria.GSD.Read.Model.Goal
+import           Eventuria.GSD.Read.Model.Action
+import           Eventuria.GSD.Read.Model.GoalStats
+import           Eventuria.GSD.Read.Model.ActionStats
 
 data WorkspaceBuilder = WorkspaceBuilder {  workspaceIdMaybe :: Maybe WorkspaceId ,
                                             workspaceNameMaybe :: Maybe WorkspaceName ,
@@ -37,7 +43,7 @@ streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT mon
                      AggregateIdStream persistedStream ->
                      GetEventStream persistedStream ->
                      Streaming persistedStream ->
-                     stream monad (SafeResponse (Persisted Workspace))
+                     stream monad (Either SomeException (Persisted Workspace))
 streamWorkspace aggregateIdStream getEventStream streaming @ Streaming {streamAll} =
     (streamAll $ aggregateIdStream)
       & StreamlySafe.mapM (\PersistedItem { offset = offset, item = workspaceId} ->
@@ -57,7 +63,7 @@ fetchWorkspace :: Streamable SerialT monad Event =>
                      GetEventStream persistedStream ->
                      Streaming persistedStream ->
                      WorkspaceId ->
-                     monad (SafeResponse (Maybe Workspace))
+                     monad (Either SomeException (Maybe Workspace))
 fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
     StreamlySafe.foldx
      folding
@@ -78,7 +84,7 @@ fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
                         GetEventStream persistedStream ->
                         Streaming persistedStream ->
                         WorkspaceId ->
-                        stream monad (SafeResponse GsdEvent)
+                        stream monad (Either SomeException GsdEvent)
     streamingEvent getEventStream Streaming {streamAll} workspaceId =
         (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
 
@@ -109,7 +115,7 @@ streamGoal :: Streamable stream monad Event =>
                 GetEventStream persistedStream ->
                 Streaming persistedStream ->
                 WorkspaceId ->
-                stream monad (SafeResponse Goal)
+                stream monad (Either SomeException Goal)
 streamGoal getEventStream streaming workspaceId = do
     goals <- liftIO $ fetchGoals getEventStream streaming workspaceId
     StreamlySafe.fromList goals
@@ -119,7 +125,7 @@ fetchGoal :: Streamable SerialT monad Event =>
                      Streaming persistedStream ->
                      WorkspaceId ->
                      GoalId ->
-                     monad (SafeResponse (Maybe Goal))
+                     monad (Either SomeException (Maybe Goal))
 fetchGoal getEventStream streaming @ Streaming {streamAll} workspaceId goalIdGiven =
   (fmap . fmap) (find (\goal@Goal{goalId} -> goalId == goalIdGiven)) (fetchGoals getEventStream streaming workspaceId)
 
@@ -127,7 +133,7 @@ fetchGoals :: Streamable SerialT monad Event =>
                      GetEventStream persistedStream ->
                      Streaming persistedStream ->
                      WorkspaceId ->
-                     monad (SafeResponse [Goal])
+                     monad (Either SomeException [Goal])
 fetchGoals getEventStream streaming @ Streaming {streamAll} workspaceId =
   StreamlySafe.foldx
     folding
@@ -139,7 +145,7 @@ fetchGoals getEventStream streaming @ Streaming {streamAll} workspaceId =
                         GetEventStream persistedStream ->
                         Streaming persistedStream ->
                         WorkspaceId ->
-                        stream monad (SafeResponse GsdEvent)
+                        stream monad (Either SomeException GsdEvent)
     streamingEvent getEventStream Streaming {streamAll} workspaceId =
       (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
 
@@ -194,7 +200,7 @@ streamAction :: Streamable stream monad Event =>
                   Streaming persistedStream ->
                   WorkspaceId ->
                   GoalId ->
-                  stream monad (SafeResponse Action)
+                  stream monad (Either SomeException Action)
 streamAction getEventStream streaming workspaceId goalIdGiven = do
     actions <- liftIO $ StreamlySafe.foldx
       folding
@@ -208,7 +214,7 @@ streamAction getEventStream streaming workspaceId goalIdGiven = do
                         GetEventStream persistedStream ->
                         Streaming persistedStream ->
                         WorkspaceId -> GoalId ->
-                        stream monad (SafeResponse GsdEvent)
+                        stream monad (Either SomeException GsdEvent)
     streamingEvent getEventStream Streaming {streamAll} workspaceId goalIdToStream =
       (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
     folding :: [Action] -> GsdEvent -> [Action]

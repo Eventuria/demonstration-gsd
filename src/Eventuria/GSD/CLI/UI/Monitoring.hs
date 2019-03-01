@@ -6,22 +6,23 @@
 {-# LANGUAGE RecordWildCards #-}
 module Eventuria.GSD.CLI.UI.Monitoring where
 
-import System.Console.Byline
 import Control.Monad.IO.Class (MonadIO(liftIO))
-import Eventuria.Commons.System.SafeResponse
+
 import Data.Text
 import Data.Function ((&))
-import Eventuria.GSD.CLI.Workflow.Steps
-import Eventuria.GSD.Read.Model.Workspace
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.GSD.CLI.UI.Greetings
 
-import Eventuria.GSD.Monitoring.API.Client.Client (streamGsdEventByWorkspaceId,
-                              streamGsdCommandByWorkspaceId,
-                              streamGsdCommandResponseByWorkspaceId,
-                              streamGsdValidationStateByWorkspaceId)
-import Eventuria.GSD.CLI.Dependencies
+import System.Console.Byline
+
 import Eventuria.Commons.Logger.Core
+import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+
+import Eventuria.GSD.Read.Model.Workspace
+import Eventuria.GSD.Monitoring.API.Client.Client
+
+import Eventuria.GSD.CLI.Workflow.Steps
+import Eventuria.GSD.CLI.UI.Greetings
+import Eventuria.GSD.CLI.Dependencies
+
 
 
 data MonitoringCommand = ListCommandsReceived
@@ -50,7 +51,7 @@ runMonitoringCommand currentStep
                                                  Step stepType ->
                                                  Logger ->
                                                  String ->
-                                                 IO( SafeResponse [Persisted item]) ->
+                                                 IO( Either MonitoringServerDown [Persisted item]) ->
                                                  Byline IO (Either StepError (Step stepType))
     displayCallResult currentStep logger itemName clientCall = do
       displayBeginningOfACommand

@@ -15,20 +15,27 @@
 module Eventuria.GSD.Monitoring.API.Server.Server  where
 
 import           Prelude hiding (foldr)
-                 
+
+import           Data.Function ((&))
+
 import           Control.Monad.IO.Class (MonadIO(liftIO))
+import           Control.Concurrent
+import           Control.Exception hiding (Handler)
 
 import           Servant
 import           Servant.Pipes ()
 import           Network.Wai.Handler.Warp hiding (Settings)
+
+import qualified Streamly.Prelude as Streamly
 
 import           Eventuria.Adapters.Servant.Wrapper
 import           Eventuria.Adapters.Streamly.Adapters
 
 import           Eventuria.Commons.DevOps.Core
 import           Eventuria.Commons.Logger.Core
-import           Eventuria.Commons.Dependencies.RetrieveByHealthChecking
-import           Eventuria.Commons.System.SafeResponse
+import           Eventuria.Commons.Dependencies.HealthChecking
+import           Eventuria.Commons.Network.Core
+import           Eventuria.Commons.System.Threading
 
 import qualified Eventuria.GSD.Monitoring.Service.OverEventStore as GsdMonitoring
 
@@ -56,78 +63,117 @@ import qualified Eventuria.GSD.Monitoring.API.Server.Dependencies as Server
 
 
 start :: Settings -> IO ()
-start settings @ Settings {healthCheckLoggerId}  =
+start settings @ Settings {healthCheckLoggerId}  = do
   waitTillHealthy
-    healthCheckLoggerId
-    settings
-    Server.retrieveDependencies
-    runServerOnWarp
+      healthCheckLoggerId
+      settings
+      Server.getDependencies
+      Server.healthCheck
+  catch
+    (Server.getDependencies
+       settings
+       (runServerOnWarp))
+    (\ServerDownException -> start settings)
+
 
   where
 
     runServerOnWarp :: Server.Dependencies -> IO()
     runServerOnWarp dependencies @ Server.Dependencies {logger,port} = do
-       logInfo logger "Server Started"
+       logInfo logger "Server Up and Running"
+       serverThreadId <- myThreadId
+       serverDownExceptionReceiver <- catchingServerDownExceptionOnceAndThenDiscard serverThreadId
        run port $ application
                     (proxy :: Proxy GSDMonitoringStreamingApi)
-                    monitoringServer
+                    (monitoringServer serverDownExceptionReceiver)
                     dependencies
 
     {-- N.B : Servant does not support Streamly,
               so Streamly is converted to Pipe at the Servant Level (see toPipes )
     --}
-    monitoringServer :: ServantServer GSDMonitoringStreamingApi Server.Dependencies
-    monitoringServer dependencies = healthCheck
-         :<|> streamCommand                         dependencies
-         :<|> streamInfinitelyCommand               dependencies
-         :<|> streamCommandResponse                 dependencies
-         :<|> streamEvent                           dependencies
-         :<|> streamInfinitelyEvent                 dependencies
-         :<|> streamGsdValidationStateByWorkspaceId dependencies
+    monitoringServer :: ServerThreadId -> ServantServer GSDMonitoringStreamingApi Server.Dependencies
+    monitoringServer serverThreadId dependencies =
+              healthCheck                           serverThreadId dependencies
+         :<|> streamCommand                         serverThreadId dependencies
+         :<|> streamInfinitelyCommand               serverThreadId dependencies
+         :<|> streamCommandResponse                 serverThreadId dependencies
+         :<|> streamEvent                           serverThreadId dependencies
+         :<|> streamInfinitelyEvent                 serverThreadId dependencies
+         :<|> streamGsdValidationStateByWorkspaceId serverThreadId dependencies
       where
 
-        healthCheck :: Handler HealthCheckResult
-        healthCheck = liftIO $ Server.retrieveDependencies
-                                settings
-                                (\dependencies -> return healthy)
-                                (\unhealthyDependencies -> return $ unhealthy "Service unavailable")
+        healthCheck :: ServerThreadId -> Server.Dependencies -> Handler Healthy
+        healthCheck serverThreadId Server.Dependencies {logger} =
+          liftIO $ logInfo logger "service health asked"  >>
+                   Server.healthCheck dependencies >>=
+                   either
+                     (\error -> do
+                         logInfo logger $ "service unhealthy : " ++ show error
+                         return $ Left $ toException ServerDownException)
+                     (\right -> do
+                         logInfo logger "service healthy"
+                         return $ Right ()) >>=
+                   breakServerOnFailure logger serverThreadId
 
-        streamCommandResponse :: Server.Dependencies ->
+        streamCommandResponse :: ServerThreadId ->
+                                 Server.Dependencies ->
                                  WorkspaceId ->
-                                 Handler (PipeStream (SafeResponse (Persisted CommandResponse)))
-        streamCommandResponse Server.Dependencies {eventStoreClientDependencies} =
-          return . toPipes . GsdMonitoring.streamCommandResponse eventStoreClientDependencies
+                                 Handler (PipeStream (Persisted CommandResponse))
+        streamCommandResponse serverThreadId
+                              Server.Dependencies {logger,eventStoreClientDependencies}
+                              workspaceId =
+          return . toPipes $ GsdMonitoring.streamCommandResponse eventStoreClientDependencies workspaceId
+                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-
-        streamInfinitelyCommand :: Server.Dependencies ->
+        streamInfinitelyCommand :: ServerThreadId ->
+                                   Server.Dependencies ->
                                    WorkspaceId ->
-                                   Handler (PipeStream (SafeResponse (Persisted GsdCommand)))
-        streamInfinitelyCommand Server.Dependencies {eventStoreClientDependencies} =
-          return . toPipes . GsdMonitoring.streamInfinitelyCommand eventStoreClientDependencies
+                                   Handler (PipeStream (Persisted GsdCommand))
+        streamInfinitelyCommand serverThreadId
+                                Server.Dependencies {logger,eventStoreClientDependencies}
+                                workspaceId =
+          return . toPipes $ GsdMonitoring.streamInfinitelyCommand eventStoreClientDependencies workspaceId
+                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
 
-        streamCommand :: Server.Dependencies ->
+        streamCommand :: ServerThreadId ->
+                         Server.Dependencies ->
                          WorkspaceId ->
-                         Handler (PipeStream (SafeResponse (Persisted GsdCommand)))
-        streamCommand Server.Dependencies {eventStoreClientDependencies} =
-          return . toPipes .  GsdMonitoring.streamCommand eventStoreClientDependencies
+                         Handler (PipeStream (Persisted GsdCommand))
+        streamCommand serverThreadId
+                      Server.Dependencies {logger,eventStoreClientDependencies}
+                      workspaceId =
+          return . toPipes $  GsdMonitoring.streamCommand eventStoreClientDependencies workspaceId
+                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-        streamEvent :: Server.Dependencies ->
+        streamEvent :: ServerThreadId ->
+                       Server.Dependencies ->
                        WorkspaceId ->
-                       Handler (PipeStream (SafeResponse (Persisted GsdEvent)))
-        streamEvent Server.Dependencies {eventStoreClientDependencies} =
-          return . toPipes .  GsdMonitoring.streamEvent eventStoreClientDependencies
+                       Handler (PipeStream (Persisted GsdEvent))
+        streamEvent serverThreadId
+                    Server.Dependencies {logger,eventStoreClientDependencies}
+                    workspaceId =
+          return . toPipes $  GsdMonitoring.streamEvent eventStoreClientDependencies workspaceId
+                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-        streamInfinitelyEvent :: Server.Dependencies ->
+        streamInfinitelyEvent :: ServerThreadId ->
+                                 Server.Dependencies ->
                                  WorkspaceId ->
-                                 Handler (PipeStream (SafeResponse (Persisted GsdEvent)))
-        streamInfinitelyEvent Server.Dependencies {eventStoreClientDependencies} =
-          return . toPipes . GsdMonitoring.streamInfinitelyEvent eventStoreClientDependencies
+                                 Handler (PipeStream (Persisted GsdEvent))
+        streamInfinitelyEvent serverThreadId
+                              Server.Dependencies {logger,eventStoreClientDependencies}
+                              workspaceId =
+          return . toPipes $ GsdMonitoring.streamInfinitelyEvent eventStoreClientDependencies workspaceId
+                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-        streamGsdValidationStateByWorkspaceId :: Server.Dependencies ->
+        streamGsdValidationStateByWorkspaceId :: ServerThreadId ->
+                                                 Server.Dependencies ->
                                                  WorkspaceId ->
-                                                 Handler (PipeStream (SafeResponse (Persisted (ValidationState GsdState))))
-        streamGsdValidationStateByWorkspaceId Server.Dependencies {eventStoreClientDependencies} =
-          return . toPipes . GsdMonitoring.streamValidationState eventStoreClientDependencies
+                                                 Handler (PipeStream (Persisted (ValidationState GsdState)))
+        streamGsdValidationStateByWorkspaceId serverThreadId
+                                              Server.Dependencies {logger,eventStoreClientDependencies}
+                                              workspaceId =
+          return . toPipes $ GsdMonitoring.streamValidationState eventStoreClientDependencies workspaceId
+                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
 

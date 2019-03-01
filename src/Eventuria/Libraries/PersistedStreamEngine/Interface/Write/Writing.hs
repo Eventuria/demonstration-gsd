@@ -2,9 +2,10 @@
 {-# LANGUAGE ExistentialQuantification #-}
 module Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing where
 
+import Control.Exception
 
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writable
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.PersistenceResult
 
-data Writing persistedStream = Writing { persist :: forall item . Writable item =>  persistedStream item -> item -> IO PersistenceResult }
+data Writing persistedStream = Writing { persist :: forall item . Writable item =>  persistedStream item -> item -> IO (Either SomeException PersistenceResult) }
 

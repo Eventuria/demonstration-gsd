@@ -2,10 +2,13 @@
 {-# LANGUAGE RecordWildCards #-}
 module Eventuria.GSD.Write.CommandConsumer.Consumer where
 
+import           System.Exit (exitSuccess)
+import           GHC.IO.Exception
 import           Control.Concurrent
-                 
+import           Control.Exception
+
 import           Eventuria.Commons.Logger.Core
-import           Eventuria.Commons.Dependencies.RetrieveByHealthChecking
+import           Eventuria.Commons.Dependencies.HealthChecking
 
 
 import qualified Eventuria.GSD.Write.CommandConsumer.Service.OverEventStore as Consumer.Service
@@ -15,22 +18,29 @@ import qualified Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Server as C
 
 start :: Consumer.Settings -> IO ()
 start settings @ Consumer.Settings {healthCheckLoggerId}  =
-  waitTillHealthy
-    healthCheckLoggerId
-    settings
+    waitTillHealthy
+        healthCheckLoggerId
+        settings
+        Consumer.getDependencies
+        Consumer.healthCheck >>
     Consumer.getDependencies
-    (\consumerDependencies-> do
-      forkIO (Consumer.HealthCheck.runServerOnWarp settings consumerDependencies)
-      startConsumer consumerDependencies)
+         settings
+         (\dependencies -> forkIO (Consumer.HealthCheck.runServerOnWarp dependencies) >> startConsumer dependencies)
+
 
  where
   startConsumer :: Consumer.Dependencies -> IO ()
-  startConsumer Consumer.Dependencies {logger, eventStoreClientDependencies } = do
-    logInfo logger "Starting Command Consumer"
-    safeResponse <- Consumer.Service.consumeCommands logger eventStoreClientDependencies
+  startConsumer Consumer.Dependencies {logger, eventStoreClientDependencies } =
+    logInfo logger "Starting Command Consumer" >>
+    Consumer.Service.consumeCommands logger eventStoreClientDependencies >>=
     either
-     (\error -> do
-         logInfo logger $ "error : " ++ (show error)
-         return ())
-     (\right -> return ())
-     safeResponse
+     (\someException@ SomeException {} ->
+         case (asyncExceptionFromException someException) of
+           Just (UserInterrupt) -> do
+              logInfo logger $ "receiving request to end the service."
+              logInfo logger $ "shutting down the service"
+              exitSuccess
+           otherwise -> do
+              logInfo logger $ "issue propagated : " ++ (show someException)
+              start settings)
+     (\end -> return ())

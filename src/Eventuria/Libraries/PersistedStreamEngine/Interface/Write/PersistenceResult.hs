@@ -2,6 +2,5 @@ module Eventuria.Libraries.PersistedStreamEngine.Interface.Write.PersistenceResu
 
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 
-data PersistenceResult =  PersistenceFailure {reason :: String}
-                        | PersistenceSuccess {lastOffsetPersisted :: Offset} deriving Show
+data PersistenceResult =  PersistenceResult {lastOffsetPersisted :: Offset} deriving Show
 

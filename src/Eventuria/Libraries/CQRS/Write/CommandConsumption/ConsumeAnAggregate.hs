@@ -2,28 +2,32 @@
 {-# LANGUAGE FlexibleContexts      #-}
 module Eventuria.Libraries.CQRS.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)where
 
-import Data.Aeson
-import Eventuria.Commons.Logger.Core
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
-import Eventuria.Libraries.CQRS.Write.StreamRepository
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandler
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Core
-import Control.Monad.IO.Class (MonadIO(..))
-import Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
-import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
+import           Control.Concurrent
+import           Control.Monad.IO.Class (MonadIO(..))
+import           Control.Exception
+
+import           Data.Aeson
+import           Data.Function ((&))
+import           Data.Maybe
+
+import           Eventuria.Commons.Logger.Core
+
 import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
-import Control.Concurrent
-import Control.Exception
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
-import Eventuria.Commons.System.SafeResponse
-import Data.Function ((&))
-import Data.Maybe
-import Eventuria.Libraries.CQRS.Write.Serialization.Command ()
+
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
+
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
+import           Eventuria.Libraries.CQRS.Write.StreamRepository
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandler
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Core
+import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
 
 getConsumeAnAggregate :: (FromJSON applicationState, Show applicationState) =>
                            Logger ->
@@ -128,7 +132,7 @@ yieldAndSubscribeToAggregateUpdates :: (Streamable stream monad Command, Streama
                                        Subscribing persistedStreamEngine ->
                                        CommandStream persistedStreamEngine ->
                                        Persisted AggregateId ->
-                                       stream monad (SafeResponse (Persisted AggregateId))
+                                       stream monad (Either SomeException (Persisted AggregateId))
 yieldAndSubscribeToAggregateUpdates Subscribing {subscribe}
                                     commandStream
                                     persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =

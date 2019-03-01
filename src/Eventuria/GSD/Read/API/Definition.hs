@@ -18,7 +18,6 @@ import Eventuria.GSD.Read.Model.Goal
 import Eventuria.GSD.Read.Model.Action
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.GSD.Write.Model.Core
-import Eventuria.Commons.System.SafeResponse
 import Eventuria.Commons.DevOps.Core
 
 type GSDReadApi =   HealthCheck
@@ -28,27 +27,27 @@ type GSDReadApi =   HealthCheck
                       :<|>   FetchWorkspace
                       :<|>   FetchGoal
 
-type HealthCheck =      "health" :> Get '[JSON]  HealthCheckResult
+type HealthCheck =      "health" :> Get '[JSON]  Healthy
 
 type StreamWorkspace =   "gsd" :> "read" :> "streamWorkspace"
-                                         :> StreamGet NewlineFraming JSON (P.Producer (SafeResponse (Persisted Workspace)) IO () )
+                                         :> StreamGet NewlineFraming JSON (P.Producer (Persisted Workspace) IO () )
 
 type FetchWorkspace =   "gsd" :> "read" :> "fetchWorkspace"
                                         :> Capture "workspaceId" WorkspaceId
-                                        :> Get '[JSON] (SafeResponse (Maybe Workspace))
+                                        :> Get '[JSON] (Maybe Workspace)
 
 type StreamGoal =        "gsd" :> "read" :> "streamGoal"
                                          :> Capture "workspaceId" WorkspaceId
-                                         :> "goals" :> StreamGet NewlineFraming JSON (P.Producer (SafeResponse(Goal)) IO () )
+                                         :> "goals" :> StreamGet NewlineFraming JSON (P.Producer Goal IO () )
 
 type FetchGoal =   "gsd" :> "read" :> "fetchGoal"
                                         :> Capture "workspaceId" WorkspaceId
                                         :> Capture "goalId" GoalId
-                                        :> Get '[JSON] (SafeResponse (Maybe Goal))
+                                        :> Get '[JSON] (Maybe Goal)
 
 type StreamAction =      "gsd" :> "read" :> "streamAction"
                                          :> Capture "workspaceId" WorkspaceId
                                          :> "goals"
                                          :> Capture "goalId" GoalId
-                                         :> StreamGet NewlineFraming JSON (P.Producer (SafeResponse (Action)) IO () )
+                                         :> StreamGet NewlineFraming JSON (P.Producer Action IO () )
 

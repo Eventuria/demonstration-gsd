@@ -7,78 +7,79 @@ module Eventuria.GSD.Write.CommandSourcer.Client.Client (
   healthCheck,
   sendCommandAndWaitTillProcessed) where
 
-import Servant
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import Eventuria.GSD.Write.Model.Commands.Command
-import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Eventuria.Libraries.CQRS.Write.PersistCommandResult
-import Eventuria.Commons.System.SafeResponse
-import Eventuria.GSD.Write.CommandSourcer.Client.Dependencies
+import           Control.Exception
+
 import qualified Servant.Client.Streaming as S
-import Control.Exception
-import Eventuria.Commons.Logger.Core
-import Eventuria.GSD.Write.CommandSourcer.Definition
-import Eventuria.GSD.Write.Model.Commands.Serialization ()
-import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
-import Eventuria.Commons.DevOps.Core
-data SendCommandAnWaitFailure =  SendCommandAnWaitFailure {reason :: String} deriving Show
+import           Servant
 
-healthCheck :: Dependencies -> IO (HealthCheckResult)
-healthCheck Dependencies { httpClientManager, url, logger}  = do
-  S.withClientM
-     healthCheckCall
-     (S.mkClientEnv httpClientManager url)
-     (\e -> do
-        case e of
-          Left errorHttpLevel -> return $ unhealthy $ show errorHttpLevel
-          Right healthCheckResult  -> return healthCheckResult )
+import           Eventuria.Commons.DevOps.Core
 
-sendCommandAndWaitTillProcessed :: Dependencies -> GsdCommand -> IO (Either SendCommandAnWaitFailure CommandResponse )
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
+import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
+
+import           Eventuria.GSD.Write.Model.Commands.Command
+import           Eventuria.GSD.Write.CommandSourcer.Client.Dependencies
+import           Eventuria.GSD.Write.CommandSourcer.Definition
+import           Eventuria.GSD.Write.Model.Commands.Serialization ()
+
+
+data CommandSourcerServerDown = CommandSourcerServerDown  deriving Show
+
+instance Exception CommandSourcerServerDown
+
+healthCheck :: Dependencies -> IO (Either CommandSourcerServerDown Healthy)
+healthCheck    Dependencies { httpClientManager, url, logger}  =
+  catch
+    (S.withClientM
+       healthCheckCall
+       (S.mkClientEnv httpClientManager url)
+       (\e -> do
+          case e of
+            Left errorHttpLevel -> return $ Left CommandSourcerServerDown
+            Right healthy  -> return $ Right () ))
+    (\SomeException {} -> return $ Left CommandSourcerServerDown )
+
+sendCommandAndWaitTillProcessed :: Dependencies -> GsdCommand -> IO (Either CommandSourcerServerDown CommandResponse )
 sendCommandAndWaitTillProcessed dependencies @ Dependencies { httpClientManager, url, logger} gsdCommand =
-   (S.withClientM
-   (sendCommandCall gsdCommand )
-   (S.mkClientEnv httpClientManager url)
-   (\eitherServantErrorOrResponse -> case eitherServantErrorOrResponse of
-      Left servantError -> do
-       logInfo logger "An http error occured with the write microservice."
-       return $ Left $ SendCommandAnWaitFailure {reason = show servantError }
-      Right persistenceResult -> case persistenceResult of
-            FailedToPersist {reason } -> return $ Left $ SendCommandAnWaitFailure {reason}
-            SuccessfullyPersisted {aggregateId, commandId,lastOffsetPersisted} -> do
-              safeResponse <- waitTillCommandResponseProduced
-                                dependencies
-                                aggregateId
-                                lastOffsetPersisted
-                                commandId
-              case safeResponse of
-                Left exception -> return $ Left $ SendCommandAnWaitFailure {reason = show exception }
-                Right PersistedItem {item = commandResponse } -> return $ Right commandResponse))
+   catch
+    (S.withClientM
+      (sendCommandCall gsdCommand )
+      (S.mkClientEnv httpClientManager url)
+      (\eitherServantErrorOrResponse -> case eitherServantErrorOrResponse of
+          Left servantError -> return $ Left CommandSourcerServerDown
+          Right (PersistCommandResult {aggregateId, commandId,lastOffsetPersisted}) ->
+                  waitTillCommandResponseProduced
+                                    dependencies
+                                    aggregateId
+                                    lastOffsetPersisted
+                                    commandId))
+    (\SomeException {} -> return $ Left $ CommandSourcerServerDown )
 
   where
 
     waitTillCommandResponseProduced :: Dependencies ->
                                          AggregateId ->
                                               Offset ->
-                                           CommandId -> IO (SafeResponse (Persisted CommandResponse))
+                                           CommandId -> IO (Either CommandSourcerServerDown  CommandResponse)
     waitTillCommandResponseProduced Dependencies { httpClientManager, url, logger} aggregateId offset commandId =
       (S.withClientM
        (waitTillCommandResponseProducedCall aggregateId offset commandId)
        (S.mkClientEnv httpClientManager url)
        (\e -> case e of
-          Left servantError -> do
-           logInfo logger "An http error occured with the write microservice."
-           return $ Left $ toException servantError
-          Right safeResponse -> return safeResponse))
+          Left servantError -> return $ Left CommandSourcerServerDown
+          Right PersistedItem {item} -> return $ Right item))
 
-healthCheckCall :: S.ClientM HealthCheckResult
+healthCheckCall :: S.ClientM Healthy
 sendCommandCall :: GsdCommand -> S.ClientM PersistCommandResult
 waitTillCommandResponseProducedCall :: AggregateId ->
                                        Offset ->
                                        CommandId ->
-                                       S.ClientM (SafeResponse (Persisted CommandResponse))
+                                       S.ClientM (Persisted CommandResponse)
 healthCheckCall
   :<|> sendCommandCall
   :<|> waitTillCommandResponseProducedCall = S.client api
