@@ -7,10 +7,10 @@ import           Control.Exception
 
 import           Eventuria.Commons.Logger.Core
 
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
 
-import qualified Eventuria.Libraries.CQRS.Write.CommandConsumption.Main as CQRS.Write.CommandConsumption
+import qualified Eventuria.Libraries.CQRS.Write.CommandConsumption.Service as CQRS.Write.Service
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAggregate)
@@ -33,7 +33,7 @@ consumeCommands logger cqrsStreamRepository @ CqrsStreamRepository {
                                                   getValidationStateStream}
                        reading @ Reading { streaming ,querying}
                        transactionInterpreter   =
-   CQRS.Write.CommandConsumption.execute
+   CQRS.Write.Service.startCommandConsumption
       logger
       aggregateIdStream
       streaming

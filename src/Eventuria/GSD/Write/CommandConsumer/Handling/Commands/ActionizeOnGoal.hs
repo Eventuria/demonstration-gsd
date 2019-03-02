@@ -1,10 +1,10 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DataKinds #-}
-module Eventuria.GSD.Write.CommandConsumer.Handling.ActionizeOnGoal where
+module Eventuria.GSD.Write.CommandConsumer.Handling.Commands.ActionizeOnGoal where
 
 
-import Eventuria.Libraries.CQRS.EDsl hiding (Action)
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.ResponseDSL hiding (Action)
 import Eventuria.GSD.Write.Model.Events.Event
 import Eventuria.GSD.Write.Model.State
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
@@ -23,19 +23,19 @@ handle :: Offset ->
           GoalId ->
           ActionId ->
           Text  ->
-          CommandDirective GsdState
+          CommandHandlingResponse GsdState
 handle offset
        ValidationState {commandsProcessed, aggregateId,state}
        commandId workspaceId goalId actionId actionDetails = case (state) of
-  Nothing -> Reject "Trying to actionize on a goal but there is no goal in the workspace given"
+  Nothing -> RejectCommand "Trying to actionize on a goal but there is no goal in the workspace given"
   Just GsdState {goals} -> case (findGoal goalId goals)  of
-    Nothing -> Reject "Trying to actionize on a goal that does not exist"
+    Nothing -> RejectCommand "Trying to actionize on a goal that does not exist"
     Just goal @ Goal {workspaceId,goalId, actions,  description,status} -> case (findAction actionId actions)  of
-        Just action -> Reject "Trying to actionize on a goal more than once"
-        Nothing -> Validate $ do
-          now <- getCurrentTime
+        Just action -> RejectCommand "Trying to actionize on a goal more than once"
+        Nothing -> ValidateCommandWithFollowingTransactionPayload $ do
+          createdOn <- getCurrentTime
           eventId <- getNewEventID
-          persistEvent $ toEvent $ ActionRevealed {  eventId , createdOn = now, workspaceId , goalId , actionId, actionDetails}
+          persistEvent $ toEvent $ ActionRevealed {  eventId , createdOn, workspaceId , goalId , actionId, actionDetails}
           updateValidationState ValidationState {lastOffsetConsumed = offset ,
                                                  commandsProcessed = union commandsProcessed (fromList [commandId]) ,
                                                  aggregateId,

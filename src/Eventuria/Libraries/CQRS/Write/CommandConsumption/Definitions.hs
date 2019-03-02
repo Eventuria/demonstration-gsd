@@ -1,4 +1,4 @@
-module Eventuria.Libraries.CQRS.Write.CommandConsumption.Core where
+module Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions where
 
 import Control.Exception
 
@@ -8,12 +8,12 @@ import Eventuria.Commons.Logger.Core
 
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl
+import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL
 
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import Eventuria.Libraries.CQRS.Write.StreamRepository
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandler
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
 
 type ConsumeACommand          = Persisted Command     ->  IO (Either SomeException ())
 type ConsumeAnAggregateStream = Persisted AggregateId ->  SerialT IO (Either SomeException ())

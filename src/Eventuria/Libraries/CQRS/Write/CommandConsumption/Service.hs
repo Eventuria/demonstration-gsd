@@ -3,7 +3,7 @@
 {-# LANGUAGE FlexibleContexts      #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Eventuria.Libraries.CQRS.Write.CommandConsumption.Main  where
+module Eventuria.Libraries.CQRS.Write.CommandConsumption.Service  where
 
 import           Control.Concurrent
 import           Control.Exception
@@ -21,20 +21,20 @@ import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Readin
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
 import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Core
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 
 
 
 
-execute ::  Logger ->
+startCommandConsumption ::  Logger ->
             AggregateIdStream persistedStreamEngine  ->
             Streaming persistedStreamEngine ->
             ConsumeAnAggregate ->
             IO (Either SomeException ())
-execute logger
-       aggregateIdStream
-       Streaming {streamAllInfinitely}
-       consumeAnAggregate = do
+startCommandConsumption  logger
+                         aggregateIdStream
+                         Streaming {streamAllInfinitely}
+                         consumeAnAggregate = do
   threadId <-  myThreadId
   logInfo logger "runnning command consummers on all aggregates"
 

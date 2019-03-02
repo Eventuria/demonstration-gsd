@@ -6,13 +6,12 @@ import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.StreamRepository
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandler
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Core
+import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 import Data.Aeson
-import Eventuria.Libraries.CQRS.EDsl
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.CqrsEDslToWDslTranslation (translate)
+import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.CommandHandlingResponseToTransactionDSL
 import Control.Monad.IO.Class (MonadIO(..))
 import Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
@@ -46,17 +45,15 @@ consumeACommand logger
                 transactionInterpreter
                 commandHandler
                 validationStateStream
-                persistedCommand @PersistedItem {
-                                item = Command { commandHeader = commandHeader@CommandHeader {commandId} }} = do
+                persistedCommand @ PersistedItem {
+                                    item = Command { commandHeader = commandHeader@CommandHeader {commandId} }} = do
   response <- liftIO $ (fmap.fmap.fmap) item $ retrieveLast validationStateStream
   case response of
       Right lastValidationState -> do
           liftIO $ logInfo logger $ "feeding command handler > "
             ++ (show persistedCommand) ++ " > validationState : " ++ show lastValidationState
-          transactionInterpreter $ case (commandHandler persistedCommand lastValidationState) of
-                              Reject reason -> rejectCommandTransaction lastValidationState commandHeader reason
-                              SkipBecauseAlreadyProcessed -> skipCommandTransaction commandHeader
-                              Validate commandTransaction -> validateCommandTransaction
-                                                              commandHeader
-                                                              (translate $ commandTransaction)
+          transactionInterpreter $ translateIntoTransaction
+                                      lastValidationState
+                                      persistedCommand
+                                    $ commandHandler persistedCommand lastValidationState
       Left error -> return $ Left error

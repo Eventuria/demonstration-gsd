@@ -7,7 +7,7 @@ import Control.Monad.IO.Class (MonadIO(..))
 
 import Eventuria.Commons.Logger.Core
 import Data.Aeson
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl
+import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL
 import Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
 import Eventuria.Libraries.CQRS.Write.Aggregate.Core
 import Eventuria.Libraries.CQRS.Write.StreamRepository
@@ -29,24 +29,37 @@ transactionInterpreterForEventStore :: (ToJSON applicationState , Show applicati
                                         TransactionInterpreter applicationState a
 
 transactionInterpreterForEventStore logger streamRepository (Pure a) = return $ Right a
+
+transactionInterpreterForEventStore logger streamRepository (Free (TransactionStart command next))  = do
+    liftIO $ logInfo logger  $ "[command.transaction] start : " ++ show command
+    transactionInterpreterForEventStore logger streamRepository next
+
+transactionInterpreterForEventStore logger streamRepository (Free (TransactionEnd command next))  = do
+    liftIO $ logInfo logger  $ "[command.transaction] end : " ++ show command
+    transactionInterpreterForEventStore logger streamRepository next
+
 transactionInterpreterForEventStore logger streamRepository (Free (PersistEvent event next))  = do
-    liftIO $ logInfo logger  $ "persist event : " ++ (show event)
+    liftIO $ logInfo logger  $ "[command.transaction] persist event : " ++ (show event)
     let eventStream = (getEventStream streamRepository) $ getAggregateId (event::Event)
     persist eventStream event
     transactionInterpreterForEventStore logger streamRepository next
+
 transactionInterpreterForEventStore logger streamRepository (Free (PersistValidationState validationState next)) = do
-    liftIO $ logInfo logger $ "persist validationState : " ++ (show validationState)
+    liftIO $ logInfo logger $ "[command.transaction] persist validationState : " ++ (show validationState)
     let validationStateStream = (getValidationStateStream streamRepository) $ getAggregateId validationState
     persist validationStateStream validationState
     transactionInterpreterForEventStore logger streamRepository next
+
 transactionInterpreterForEventStore logger streamRepository (Free (PersistCommandResponse commandResponse next))  = do
-    liftIO $ logInfo logger $ "persist response : " ++ (show commandResponse)
+    liftIO $ logInfo logger $ "[command.transaction] persist response : " ++ (show commandResponse)
     let responseStream = (getCommandResponseStream streamRepository) $ getAggregateId commandResponse
     persist responseStream commandResponse
     transactionInterpreterForEventStore logger streamRepository next
+
 transactionInterpreterForEventStore logger streamRepository (Free (GetCurrentTime fct))  = do
     now <- Time.getCurrentTime
     transactionInterpreterForEventStore logger streamRepository (fct now)
+
 transactionInterpreterForEventStore logger streamRepository (Free (GetNewEventId fct))  = do
     eventId <- liftIO $ Uuid.nextRandom
     transactionInterpreterForEventStore logger streamRepository (fct eventId)

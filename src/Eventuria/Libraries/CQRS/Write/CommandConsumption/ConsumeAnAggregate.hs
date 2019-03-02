@@ -16,14 +16,14 @@ import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.WDsl
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
 
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandler
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Core
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
