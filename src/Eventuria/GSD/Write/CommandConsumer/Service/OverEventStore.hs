@@ -18,5 +18,5 @@ consumeCommands logger eventStoreClientDependencies =
       logger
       (getEventStoreStreamRepository eventStoreClientDependencies)
       getEventStoreReading
-      (transactionInterpreterForEventStore logger (getEventStoreStreamRepository eventStoreClientDependencies))
+      (interpretTransactionOverEventStore logger (getEventStoreStreamRepository eventStoreClientDependencies))
 

@@ -3,7 +3,6 @@
 module Eventuria.Libraries.CQRS.Write.CommandConsumption.ConsumeAnAggregate (getConsumeAnAggregate)where
 
 import           Control.Concurrent
-import           Control.Monad.IO.Class (MonadIO(..))
 import           Control.Exception
 
 import           Data.Aeson
@@ -16,7 +15,6 @@ import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
 
@@ -75,8 +73,10 @@ consumeCommandsOnAnAggregate logger
                              consumeACommand
                              persistedAggregate @ PersistedItem { item = aggregateId} =  do
   threadId <- myThreadId
-  liftIO $ logInfo logger $ "detected aggregrate " ++ (show $ item persistedAggregate)
-    ++ " > Thread " ++ show threadId ++ " is locked for this aggregate"
+  logInfo logger $ "[consume.aggregate.commands] detected aggregrate "
+    ++ (show $ item persistedAggregate)
+    ++ "(thread "++ show threadId ++" locked on aggregate)"
+
   let commandStream = getCommandStream aggregateId
       validationStateStream = getValidationStateStream aggregateId
 
@@ -108,13 +108,13 @@ consumeAnAggregateStream  logger
                       persistedAggregate @ PersistedItem {item = aggregateId} =
   (yieldAndSubscribeToAggregateUpdates subscribing commandStream persistedAggregate)
     & StreamlySafe.mapM (\PersistedItem {item = aggregateId}  -> do
-        liftIO $ logInfo logger $ "processing commands for aggregate " ++ (show aggregateId)
-        response <- liftIO $ retrieveLast validationStateStream
+        logInfo logger $ "[consume.aggregate.commands] consuming commands for aggregate " ++ (show aggregateId)
+        response <- retrieveLast validationStateStream
         case response of
           Right lastValidationStateCall -> do
             let lastOffsetConsumed = getLastOffsetConsumed lastValidationStateCall
             threadId <- myThreadId
-            liftIO $ logInfo logger $ "last offset command consummed is   " ++ (show lastOffsetConsumed)
+            logInfo logger $ "[consume.aggregate.commands] last offset command consummed is   " ++ (show lastOffsetConsumed)
             try (StreamlySafe.runStreamOnIOAndThrowFailureTo threadId
                   $ (streamFromOffset
                         commandStream $

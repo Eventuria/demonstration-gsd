@@ -2,24 +2,29 @@
 {-# LANGUAGE RecordWildCards #-}
 module Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Read.Subscribing where
 
+import           Control.Concurrent
+import           Control.Exception
+import           Control.Monad.IO.Class (MonadIO(liftIO))
+
+import           Data.Aeson
+import           Data.Maybe
+
 import qualified Streamly.Prelude as S
-import Control.Concurrent
-import Control.Monad.IO.Class (MonadIO(liftIO))
 import qualified Database.EventStore as EventStore
 
-import Eventuria.Commons.Logger.Core
-import Control.Exception
-import Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.EventStoreStream
-import Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Client.Dependencies
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import Data.Maybe
-import Data.Aeson
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-import Eventuria.Adapters.Time.Core
+import           Eventuria.Adapters.Time.Core
+import           Eventuria.Commons.Logger.Core
 
-subscribe :: Streamable stream monad item => EventStoreStream item -> stream monad (Either SomeException (Persisted item))
-subscribe eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },
+import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.EventStoreStream
+import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Client.Dependencies
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
+
+subscribe :: Streamable stream monad item =>
+              EventStoreStream item ->
+              stream monad (Either SomeException (Persisted item))
+subscribe eventStoreStream @ EventStoreStream {clientDependencies = Dependencies { logger, credentials, connection },
                                                streamName} = do
   liftIO $ logInfo logger $ "subscribing to stream : " ++ show streamName
 
@@ -48,7 +53,7 @@ subscribe eventStoreStream @ EventStoreStream {dependencies = Dependencies { log
         return subscription
 
 subscribeOnOffset :: FromJSON item => EventStoreStream item -> Offset -> IO (Either SomeException (Persisted item))
-subscribeOnOffset eventStoreStream @ EventStoreStream {dependencies = Dependencies { logger, credentials, connection },
+subscribeOnOffset eventStoreStream @ EventStoreStream {clientDependencies = Dependencies { logger, credentials, connection },
                                                        streamName}
                   offset = do
   logInfo logger $ "subscribing to stream : " ++ show streamName ++ " on the offset " ++ (show offset)

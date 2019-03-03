@@ -7,8 +7,8 @@ import           Control.Exception
 
 import           Eventuria.Commons.Logger.Core
 
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 
 import qualified Eventuria.Libraries.CQRS.Write.CommandConsumption.Service as CQRS.Write.Service
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
@@ -23,11 +23,11 @@ import           Eventuria.GSD.Write.Model.State
 
 
 consumeCommands :: Logger ->
-                           CqrsStreamRepository persistedStream GsdState ->
+                           CQRSStreamRepository persistedStream GsdState ->
                            Reading persistedStream ->
                            TransactionInterpreter GsdState () ->
                            IO (Either SomeException ())
-consumeCommands logger cqrsStreamRepository @ CqrsStreamRepository {
+consumeCommands logger cqrsStreamRepository @ CQRSStreamRepository {
                                                   aggregateIdStream,
                                                   getCommandStream,
                                                   getValidationStateStream}

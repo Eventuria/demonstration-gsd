@@ -15,13 +15,13 @@ data CommandHandlingResponse applicationState = RejectCommand RejectionReason
                                               | ValidateCommandWithFollowingTransactionPayload (TransactionPayload applicationState ())
 
 
-data TransactionAtom applicationState a =
+data TransactionUnit applicationState a =
                 PersistEvent Event a
               | UpdateValidationState (ValidationState applicationState) a
               | GetCurrentTime (Time.UTCTime -> a )
               | GetNewEventId (EventId -> a) deriving (Functor)
 
-type TransactionPayload applicationState a = Free (TransactionAtom applicationState) a
+type TransactionPayload applicationState a = Free (TransactionUnit applicationState) a
 
 persistEvent :: Event -> TransactionPayload applicationState ()
 persistEvent event = Free (PersistEvent event (Pure ()))

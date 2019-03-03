@@ -18,6 +18,7 @@ import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
 type ConsumeACommand          = Persisted Command     ->  IO (Either SomeException ())
 type ConsumeAnAggregateStream = Persisted AggregateId ->  SerialT IO (Either SomeException ())
 type ConsumeAnAggregate       = Persisted AggregateId ->  IO (Either SomeException ())
+type TransactionInterpreter applicationState a = Persisted Command -> Transaction applicationState a -> IO (Either SomeException a)
 
 type GetConsumeAnAggregate persistedStreamEngine applicationState =
        Logger ->

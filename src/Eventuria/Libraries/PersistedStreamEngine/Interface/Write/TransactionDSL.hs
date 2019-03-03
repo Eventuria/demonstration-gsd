@@ -5,35 +5,23 @@
 module Eventuria.Libraries.PersistedStreamEngine.Interface.Write.TransactionDSL where
 
 import           Control.Monad.Free
-import           Control.Exception
 
 import           Data.Time
 
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.EventId
 
-type TransactionInterpreter applicationState a = Transaction applicationState a -> IO (Either SomeException a)
 
-data TransactionAtom applicationState a =
-                  TransactionStart (Persisted Command) a
-                | PersistEvent Event a
+data TransactionUnit applicationState a =
+                  PersistEvent Event a
                 | PersistValidationState (ValidationState applicationState) a
                 | PersistCommandResponse CommandResponse a
                 | GetCurrentTime (UTCTime -> a )
-                | GetNewEventId (EventId -> a)
-                | TransactionEnd (Persisted Command) a deriving (Functor)
+                | GetNewEventId (EventId -> a) deriving (Functor)
 
-type Transaction applicationState a = Free (TransactionAtom applicationState) a
-
-transactionStart :: (Persisted Command) -> Transaction applicationState ()
-transactionStart command = Free (TransactionStart command (Pure ()))
-
-transactionEnd :: (Persisted Command) -> Transaction applicationState ()
-transactionEnd  command = Free (TransactionEnd command (Pure ()))
+type Transaction applicationState a = Free (TransactionUnit applicationState) a
 
 
 persistEvent :: Event ->

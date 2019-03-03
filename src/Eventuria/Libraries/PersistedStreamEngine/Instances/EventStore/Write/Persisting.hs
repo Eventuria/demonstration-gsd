@@ -21,7 +21,7 @@ import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.
 
 
 persist :: Writable item =>  EventStoreStream item -> item -> IO (Either SomeException PersistenceResult)
-persist eventStoreStream @ EventStoreStream {  dependencies = Dependencies { logger, credentials, connection },
+persist eventStoreStream @ EventStoreStream {  clientDependencies = Dependencies { logger, credentials, connection },
                                                streamName = streamName } itemToPersist =
     catch
     (do
@@ -30,7 +30,7 @@ persist eventStoreStream @ EventStoreStream {  dependencies = Dependencies { log
             eventData               = EventStore.withJson itemToPersist
             eventInEventStoreDomain = EventStore.createEvent eventType (Just eventIdInEventStoreDomain) eventData
 
-        writeResult <- liftIO $ EventStore.sendEvent
+        writeResult <- EventStore.sendEvent
                 connection
                 streamName
                 EventStore.anyVersion

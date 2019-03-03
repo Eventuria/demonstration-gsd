@@ -41,7 +41,7 @@ streamFromOffset :: Streamable stream monad item =>
                       Offset ->
                       stream monad (Either SomeException (Persisted item))
 streamFromOffset eventStoreStream @ EventStoreStream {
-                                       dependencies = Dependencies { logger, credentials, connection },
+                                       clientDependencies = Dependencies { logger, credentials, connection },
                                        streamName = streamName } fromOffset = do
 
   liftIO $ logInfo logger $ "streaming [" ++ (show fromOffset) ++ "..] > " ++ show streamName

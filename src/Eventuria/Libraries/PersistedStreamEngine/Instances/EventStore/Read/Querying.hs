@@ -21,7 +21,7 @@ import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 
 isStreamNotFound :: EventStoreStream item -> IO (Either SomeException Bool)
-isStreamNotFound EventStoreStream { dependencies = Dependencies { logger, credentials, connection },
+isStreamNotFound EventStoreStream { clientDependencies = Dependencies { logger, credentials, connection },
                                     streamName} =
   catch
    (do
@@ -41,7 +41,7 @@ isStreamNotFound EventStoreStream { dependencies = Dependencies { logger, creden
       return $ Left e)
 
 retrieveLast :: FromJSON item => EventStoreStream item -> IO( Either SomeException (Maybe (Persisted item)))
-retrieveLast EventStoreStream { dependencies = Dependencies { logger, credentials, connection },
+retrieveLast EventStoreStream { clientDependencies = Dependencies { logger, credentials, connection },
                                 streamName} =
   catch
    (do

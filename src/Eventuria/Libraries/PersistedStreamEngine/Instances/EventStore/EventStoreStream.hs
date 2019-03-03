@@ -7,7 +7,7 @@ import qualified Database.EventStore as EventStore
 import Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Client.Dependencies
 
 data EventStoreStream item = EventStoreStream {
-                                           dependencies :: Dependencies,
+                                           clientDependencies :: Dependencies,
                                            streamName :: EventStore.StreamName}
 
 

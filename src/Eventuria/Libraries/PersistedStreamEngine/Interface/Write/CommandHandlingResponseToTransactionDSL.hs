@@ -20,42 +20,36 @@ import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 
-translateIntoTransaction :: Maybe (ValidationState applicationState) ->
+translateResponseIntoTransaction :: Maybe (ValidationState applicationState) ->
              Persisted Command ->
              CommandHandlingResponse applicationState  -> Transaction applicationState ()
 
-translateIntoTransaction
+translateResponseIntoTransaction
        snapshotMaybe
        persistedCommand @ PersistedItem { item = Command { commandHeader = commandHeaderProcessed@CommandHeader {..}}}
        (RejectCommand rejectionReason)  =
 
   case snapshotMaybe of
     Just snapshot ->
-      transactionStart persistedCommand >>
       persistAggregate ValidationState {  lastOffsetConsumed = (lastOffsetConsumed snapshot) + 1 ,
                                           commandsProcessed = Set.insert commandId (commandsProcessed snapshot),
                                           state = state snapshot, ..} >>
-      persistCommandResponse CommandFailed {commandHeaderProcessed, reason = rejectionReason } >>
-      transactionEnd persistedCommand
+      persistCommandResponse CommandFailed {commandHeaderProcessed, reason = rejectionReason }
     Nothing ->
-      transactionStart persistedCommand >>
       persistAggregate ValidationState { lastOffsetConsumed = 0 ,
-                                               commandsProcessed = Set.fromList [commandId],
-                                               aggregateId,
-                                               state = Nothing} >>
-      persistCommandResponse CommandFailed {commandHeaderProcessed,reason = rejectionReason } >>
-      transactionEnd persistedCommand
+                                         commandsProcessed = Set.fromList [commandId],
+                                         aggregateId,
+                                         state = Nothing} >>
+      persistCommandResponse CommandFailed {commandHeaderProcessed,reason = rejectionReason }
 
-translateIntoTransaction
+translateResponseIntoTransaction
        snapshotMaybe
        persistedCommand @ PersistedItem { item = Command { commandHeader = commandHeaderProcessed@CommandHeader {..}}}
-       (ValidateCommandWithFollowingTransactionPayload transactionPayload)  =
-  transactionStart persistedCommand >>
+       (ValidateCommandWithFollowingTransactionPayload transactionPayload) =
   translateTransactionPayload transactionPayload >>
-  persistCommandResponse CommandSuccessfullyProcessed {commandHeaderProcessed} >>
-  transactionEnd persistedCommand
+  persistCommandResponse CommandSuccessfullyProcessed {commandHeaderProcessed}
 
-translateIntoTransaction
+translateResponseIntoTransaction
        snapshotMaybe
        persistedCommand
        SkipCommandBecauseAlreadyProcessed  = return ()
