@@ -42,8 +42,7 @@ import qualified Eventuria.GSD.Monitoring.Service.OverEventStore as GsdMonitorin
 import           Eventuria.Libraries.CQRS.Write.Serialization.PersistenceResult ()
 import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
 import           Eventuria.Libraries.CQRS.Write.Serialization.Event ()
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
+
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
                  
@@ -54,7 +53,7 @@ import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.Model.Commands.Serialization ()
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.Events.Serialization()
-import           Eventuria.GSD.Write.Model.State
+import           Eventuria.GSD.Write.Model.WriteModel
                  
 import           Eventuria.GSD.Monitoring.API.Definition
 import           Eventuria.GSD.Monitoring.API.Server.Settings
@@ -93,13 +92,11 @@ start settings @ Settings {healthCheckLoggerId}  = do
     --}
     monitoringServer :: ServerThreadId -> ServantServer GSDMonitoringStreamingApi Server.Dependencies
     monitoringServer serverThreadId dependencies =
-              healthCheck                           serverThreadId dependencies
-         :<|> streamCommand                         serverThreadId dependencies
-         :<|> streamInfinitelyCommand               serverThreadId dependencies
-         :<|> streamCommandResponse                 serverThreadId dependencies
-         :<|> streamEvent                           serverThreadId dependencies
-         :<|> streamInfinitelyEvent                 serverThreadId dependencies
-         :<|> streamGsdValidationStateByWorkspaceId serverThreadId dependencies
+              healthCheck                             serverThreadId dependencies
+         :<|> streamCommand                           serverThreadId dependencies
+         :<|> streamCommandResponse                   serverThreadId dependencies
+         :<|> streamEvent                             serverThreadId dependencies
+         :<|> streamGsdWriteModelHistoryByWorkspaceId serverThreadId dependencies
       where
 
         healthCheck :: ServerThreadId -> Server.Dependencies -> Handler Healthy
@@ -125,17 +122,6 @@ start settings @ Settings {healthCheckLoggerId}  = do
           return . toPipes $ GsdMonitoring.streamCommandResponse eventStoreClientDependencies workspaceId
                            & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-        streamInfinitelyCommand :: ServerThreadId ->
-                                   Server.Dependencies ->
-                                   WorkspaceId ->
-                                   Handler (PipeStream (Persisted GsdCommand))
-        streamInfinitelyCommand serverThreadId
-                                Server.Dependencies {logger,eventStoreClientDependencies}
-                                workspaceId =
-          return . toPipes $ GsdMonitoring.streamInfinitelyCommand eventStoreClientDependencies workspaceId
-                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
-
-
         streamCommand :: ServerThreadId ->
                          Server.Dependencies ->
                          WorkspaceId ->
@@ -156,24 +142,15 @@ start settings @ Settings {healthCheckLoggerId}  = do
           return . toPipes $  GsdMonitoring.streamEvent eventStoreClientDependencies workspaceId
                            & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-        streamInfinitelyEvent :: ServerThreadId ->
-                                 Server.Dependencies ->
-                                 WorkspaceId ->
-                                 Handler (PipeStream (Persisted GsdEvent))
-        streamInfinitelyEvent serverThreadId
-                              Server.Dependencies {logger,eventStoreClientDependencies}
-                              workspaceId =
-          return . toPipes $ GsdMonitoring.streamInfinitelyEvent eventStoreClientDependencies workspaceId
-                           & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
-        streamGsdValidationStateByWorkspaceId :: ServerThreadId ->
+        streamGsdWriteModelHistoryByWorkspaceId :: ServerThreadId ->
                                                  Server.Dependencies ->
                                                  WorkspaceId ->
-                                                 Handler (PipeStream (Persisted (ValidationState GsdState)))
-        streamGsdValidationStateByWorkspaceId serverThreadId
+                                                 Handler (PipeStream (Persisted (Maybe GsdWriteModel)))
+        streamGsdWriteModelHistoryByWorkspaceId serverThreadId
                                               Server.Dependencies {logger,eventStoreClientDependencies}
                                               workspaceId =
-          return . toPipes $ GsdMonitoring.streamValidationState eventStoreClientDependencies workspaceId
+          return . toPipes $ GsdMonitoring.streamWriteModelHistory eventStoreClientDependencies workspaceId
                            & Streamly.mapM (breakServerOnFailure logger serverThreadId)
 
 

@@ -6,7 +6,7 @@ import Test.Hspec
 import Test.QuickCheck
 import Generic.Random
 import Data.Aeson
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+
 import Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
 import Test.QuickCheck.Instances.UUID ()
 import Test.QuickCheck.Instances.UnorderedContainers ()

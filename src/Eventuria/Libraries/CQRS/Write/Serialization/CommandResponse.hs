@@ -19,11 +19,13 @@ instance Writable CommandResponse where
 
 
 instance ToJSON CommandResponse where
-   toJSON (commandResponse @ (CommandSuccessfullyProcessed commandHeaderProcessed)) = object [
-          "commandHeaderProcessed" .= commandHeaderProcessed,
+   toJSON (commandResponse @ (CommandSuccessfullyProcessed aggregateId commandId)) = object [
+          "aggregateId" .= aggregateId,
+          "commandId" .= commandId,
           "commandResponseName" .= commandResponseNameForCommandSuccessfullyProcessed]
-   toJSON (commandResponse @ (CommandFailed commandHeaderProcessed reason)) = object [
-         "commandHeaderProcessed" .= commandHeaderProcessed,
+   toJSON (commandResponse @ (CommandFailed aggregateId commandId reason)) = object [
+         "aggregateId" .= aggregateId,
+         "commandId" .= commandId,
          "commandResponseName" .= commandResponseNameForCommandFailed,
          "reason" .= reason]
 
@@ -33,9 +35,11 @@ instance FromJSON CommandResponse  where
                commandResponseNameMaybe <- jsonObject .: "commandResponseName"
                case commandResponseNameMaybe of
                     Just (String commandResponseName) | (Text.unpack commandResponseName) == commandResponseNameForCommandSuccessfullyProcessed -> CommandSuccessfullyProcessed
-                        <$> jsonObject .: "commandHeaderProcessed"
+                        <$> jsonObject .: "aggregateId"
+                        <*> jsonObject .: "commandId"
                     Just (String commandResponseName) | (Text.unpack commandResponseName) == commandResponseNameForCommandFailed -> CommandFailed
-                        <$> jsonObject .: "commandHeaderProcessed"
+                        <$> jsonObject .: "aggregateId"
+                        <*> jsonObject .: "commandId"
                         <*> jsonObject .: "reason"
                     Just (String unknownCommandResponseName) -> error $ "Command Response unknown : " ++ Text.unpack unknownCommandResponseName
                     Nothing -> error $ "Command Response name not provided"

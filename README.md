@@ -52,7 +52,7 @@ https://www.linkedin.com/in/nhenin/
 
 ## MVP Roadmap
 
-- Transaction
+- CommandTransactionDSL
 
 
 ------------------------

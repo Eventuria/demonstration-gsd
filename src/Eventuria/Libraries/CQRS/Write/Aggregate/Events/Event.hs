@@ -12,12 +12,12 @@ import Data.Map
 type EventName = String
 
 data Event = Event { eventHeader :: EventHeader,
-                     payload :: EventPayload} deriving Show
+                     payload :: EventPayload} deriving (Show,Eq)
 
 data EventHeader =  EventHeader { aggregateId :: AggregateId,
                              eventId :: EventId ,
                              createdOn :: UTCTime ,
-                             eventName :: EventName} deriving Show
+                             eventName :: EventName} deriving (Show,Eq)
 type EventPayload = Map String Value
 
 instance AggregateJoinable Event where

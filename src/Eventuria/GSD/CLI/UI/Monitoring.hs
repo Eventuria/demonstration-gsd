@@ -28,7 +28,7 @@ import Eventuria.GSD.CLI.Dependencies
 data MonitoringCommand = ListCommandsReceived
                        | ListCommandResponsesProduced
                        | ListEventsGenerated
-                       | ListValidationStates
+                       | ListWriteModelHistory
 
 
 runMonitoringCommand :: forall stepType. Step stepType ->
@@ -41,10 +41,10 @@ runMonitoringCommand currentStep
                      cliDependencies @ Dependencies { logger , clientDependencies }
                      Workspace {workspaceId} =
   (case monitoringCommand of
-    ListCommandsReceived ->         displayCallResult currentStep  logger "Commands"                 (streamGsdCommandByWorkspaceId         (monitoring clientDependencies) workspaceId)
-    ListCommandResponsesProduced -> displayCallResult currentStep  logger "Command Responses"        (streamGsdCommandResponseByWorkspaceId (monitoring clientDependencies) workspaceId)
-    ListEventsGenerated ->          displayCallResult currentStep  logger "Events"                   (streamGsdEventByWorkspaceId           (monitoring clientDependencies) workspaceId)
-    ListValidationStates ->         displayCallResult currentStep  logger "Validation State History" (streamGsdValidationStateByWorkspaceId (monitoring clientDependencies) workspaceId))
+    ListCommandsReceived ->         displayCallResult currentStep  logger "Commands"            (streamGsdCommandByWorkspaceId           (monitoring clientDependencies) workspaceId)
+    ListCommandResponsesProduced -> displayCallResult currentStep  logger "Command Responses"   (streamGsdCommandResponseByWorkspaceId   (monitoring clientDependencies) workspaceId)
+    ListEventsGenerated ->          displayCallResult currentStep  logger "Events"              (streamGsdEventByWorkspaceId             (monitoring clientDependencies) workspaceId)
+    ListWriteModelHistory ->        displayCallResult currentStep  logger "Write Model History" (streamGsdWriteModelHistoryByWorkspaceId (monitoring clientDependencies) workspaceId))
 
   where
     displayCallResult :: forall item stepType. Show item =>

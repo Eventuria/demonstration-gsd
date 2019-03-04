@@ -33,11 +33,11 @@ import           Eventuria.Commons.Dependencies.HealthChecking
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import           Eventuria.Libraries.CQRS.Write.Serialization.PersistenceResult ()
 import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
 
 
 import qualified Eventuria.GSD.Write.CommandSourcer.Service.OverEventStore as Service
@@ -46,7 +46,7 @@ import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.CommandSourcer.Definition
 import           Eventuria.GSD.Write.Model.Commands.Serialization ()
 import           Eventuria.GSD.Write.CommandSourcer.Server.Settings
-
+import           Eventuria.GSD.Write.Model.WriteModel
 
 start :: Settings -> IO ()
 start settings @ Settings {healthCheckLoggerId}  =
@@ -112,7 +112,7 @@ start settings @ Settings {healthCheckLoggerId}  =
                                          AggregateId ->
                                          Offset ->
                                          CommandId ->
-                                         Handler (Persisted CommandResponse)
+                                         Handler (Persisted (CommandTransaction GsdWriteModel))
       waitTillCommandResponseProduced serverThreadId
                                       Server.Dependencies {logger,eventStoreClientDependencies}
                                       aggregateId

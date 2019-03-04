@@ -14,17 +14,15 @@ import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 
-import           Eventuria.GSD.Write.Model.State
+import           Eventuria.GSD.Write.Model.WriteModel
 
 
-getEventStoreStreamRepository :: Dependencies -> CQRSStreamRepository EventStoreStream GsdState
+getEventStoreStreamRepository :: Dependencies -> CQRSWriteStreamRepository EventStoreStream GsdWriteModel
 getEventStoreStreamRepository clientDependencies =
-  CQRSStreamRepository  {
-    aggregateIdStream =                        getAggregateStream    clientDependencies "gsd_aggregate_id",
-    getCommandStream  =        \aggregateId -> getAggregateSubStream clientDependencies "gsd_aggregate_commands-"          aggregateId,
-    getCommandResponseStream = \aggregateId -> getAggregateSubStream clientDependencies "gsd_aggregate_command_response_-" aggregateId,
-    getValidationStateStream = \aggregateId -> getAggregateSubStream clientDependencies "gsd_aggregate_validation_states-" aggregateId,
-    getEventStream =           \aggregateId -> getAggregateSubStream clientDependencies "gsd_aggregate_events-"            aggregateId}
+  CQRSWriteStreamRepository  {
+    aggregateIdStream           =                 getAggregateStream    clientDependencies "gsd_aggregate_id",
+    getCommandStream            = \aggregateId -> getAggregateSubStream clientDependencies "gsd_aggregate_commands-"            aggregateId,
+    getCommandTransactionStream = \aggregateId -> getAggregateSubStream clientDependencies "gsd_aggregate_command_transaction-" aggregateId}
   where
       getAggregateStream :: Dependencies -> String ->  EventStoreStream item
       getAggregateStream clientDependencies streamName =

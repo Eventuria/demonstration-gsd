@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE DeriveGeneric #-}
-module Eventuria.GSD.Write.Model.State where
+module Eventuria.GSD.Write.Model.WriteModel where
 
 
 import Data.Aeson
@@ -30,16 +30,16 @@ data Goal = Goal {workspaceId ::WorkspaceId ,
                   status :: GoalStatus} deriving (Show , Eq , Generic )
 
 
-data GsdState = GsdState { goals :: [Goal]} deriving (Show,Eq,Generic)
+data GsdWriteModel = GsdWriteModel { goals :: [Goal]} deriving (Show,Eq,Generic)
 
 
-instance ToJSON GsdState where
-  toJSON (GsdState {goals } ) = object [
+instance ToJSON GsdWriteModel where
+  toJSON (GsdWriteModel {goals } ) = object [
             "goals" .= goals]
 
-instance FromJSON GsdState  where
+instance FromJSON GsdWriteModel  where
 
-    parseJSON (Object jsonObject) = GsdState <$> jsonObject .: "goals"
+    parseJSON (Object jsonObject) = GsdWriteModel <$> jsonObject .: "goals"
     parseJSON _ =  error $ "Json format not expected"
 
 

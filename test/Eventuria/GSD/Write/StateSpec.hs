@@ -6,7 +6,7 @@ import Test.Hspec
 import Test.QuickCheck
 import Generic.Random
 import Data.Aeson
-import Eventuria.GSD.Write.Model.State
+import Eventuria.GSD.Write.Model.WriteModel
 import Test.QuickCheck.Instances.UUID ()
 import Test.QuickCheck.Instances.UnorderedContainers ()
 import Test.QuickCheck.Instances.Vector ()
@@ -31,8 +31,8 @@ instance Arbitrary Goal where
   arbitrary :: Gen  Goal
   arbitrary = genericArbitraryU
 
-instance Arbitrary GsdState where
-  arbitrary :: Gen  GsdState
+instance Arbitrary GsdWriteModel where
+  arbitrary :: Gen  GsdWriteModel
   arbitrary = genericArbitraryU
 
 main :: IO ()
@@ -43,4 +43,4 @@ spec = do
   describe "Gsd State" $ do
     it "can be marshalled and unmarshalled"
       $  verbose
-      $ \gsdState -> ((decode . encode) gsdState) == (Just (gsdState) :: Maybe (GsdState))
+      $ \gsdState -> ((decode . encode) gsdState) == (Just (gsdState) :: Maybe (GsdWriteModel))

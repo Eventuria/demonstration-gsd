@@ -8,6 +8,7 @@ module Eventuria.GSD.Write.CommandSourcer.Client.Client (
   sendCommandAndWaitTillProcessed) where
 
 import           Control.Exception
+import           Data.Either.Combinators
 
 import qualified Servant.Client.Streaming as S
 import           Servant
@@ -20,8 +21,10 @@ import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
-import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
+import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction ()
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
 
+import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.CommandSourcer.Client.Dependencies
 import           Eventuria.GSD.Write.CommandSourcer.Definition
@@ -52,12 +55,13 @@ sendCommandAndWaitTillProcessed dependencies @ Dependencies { httpClientManager,
       (S.mkClientEnv httpClientManager url)
       (\eitherServantErrorOrResponse -> case eitherServantErrorOrResponse of
           Left servantError -> return $ Left CommandSourcerServerDown
-          Right (PersistCommandResult {aggregateId, commandId,lastOffsetPersisted}) ->
-                  waitTillCommandResponseProduced
+          Right (PersistCommandResult {aggregateId, commandId,lastOffsetPersisted}) -> do
+                  result <- waitTillCommandResponseProduced
                                     dependencies
                                     aggregateId
                                     lastOffsetPersisted
-                                    commandId))
+                                    commandId
+                  return $ mapRight toCommandResponse result ))
     (\SomeException {} -> return $ Left $ CommandSourcerServerDown )
 
   where
@@ -65,7 +69,7 @@ sendCommandAndWaitTillProcessed dependencies @ Dependencies { httpClientManager,
     waitTillCommandResponseProduced :: Dependencies ->
                                          AggregateId ->
                                               Offset ->
-                                           CommandId -> IO (Either CommandSourcerServerDown  CommandResponse)
+                                           CommandId -> IO (Either CommandSourcerServerDown  (CommandTransaction GsdWriteModel))
     waitTillCommandResponseProduced Dependencies { httpClientManager, url, logger} aggregateId offset commandId =
       (S.withClientM
        (waitTillCommandResponseProducedCall aggregateId offset commandId)
@@ -79,7 +83,7 @@ sendCommandCall :: GsdCommand -> S.ClientM PersistCommandResult
 waitTillCommandResponseProducedCall :: AggregateId ->
                                        Offset ->
                                        CommandId ->
-                                       S.ClientM (Persisted CommandResponse)
+                                       S.ClientM (Persisted (CommandTransaction GsdWriteModel))
 healthCheckCall
   :<|> sendCommandCall
   :<|> waitTillCommandResponseProducedCall = S.client api

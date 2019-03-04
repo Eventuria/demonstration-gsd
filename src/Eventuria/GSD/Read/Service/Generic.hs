@@ -18,13 +18,9 @@ import           Streamly hiding (Streaming)
 
 import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
 
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
-import           Eventuria.Libraries.CQRS.Write.Serialization.Event ()
-import           Eventuria.Libraries.CQRS.Write.StreamRepository
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 
 import           Eventuria.GSD.Write.Model.Core
 import           Eventuria.GSD.Write.Model.Events.Event
@@ -35,36 +31,33 @@ import           Eventuria.GSD.Read.Model.Action
 import           Eventuria.GSD.Read.Model.GoalStats
 import           Eventuria.GSD.Read.Model.ActionStats
 
+import           Eventuria.Libraries.CQRS.Read.StreamRepository
+
+
+
 data WorkspaceBuilder = WorkspaceBuilder {  workspaceIdMaybe :: Maybe WorkspaceId ,
                                             workspaceNameMaybe :: Maybe WorkspaceName ,
                                             goalStats :: GoalStats} deriving Show
 
-streamWorkspace :: (Streamable stream monad WorkspaceId , Streamable SerialT monad Event) =>
-                     AggregateIdStream persistedStream ->
-                     GetEventStream persistedStream ->
-                     Streaming persistedStream ->
-                     stream monad (Either SomeException (Persisted Workspace))
-streamWorkspace aggregateIdStream getEventStream streaming @ Streaming {streamAll} =
-    (streamAll $ aggregateIdStream)
+streamWorkspace :: StreamAll AggregateId ->
+                   GetStreamAll Event ->
+                   SerialT IO (Either SomeException (Persisted Workspace))
+streamWorkspace streamAllWorkspaceId getStreamAllEventsByAggregateId =
+    streamAllWorkspaceId
       & StreamlySafe.mapM (\PersistedItem { offset = offset, item = workspaceId} ->
           (fmap. fmap .fmap ) (\workspace -> PersistedItem {offset, item = workspace })
             $ fetchWorkspace
-                getEventStream
-                streaming
+                getStreamAllEventsByAggregateId
                 workspaceId)
-      & StreamlySafe.filter (\maybePersistedWorkspace -> case maybePersistedWorkspace of
-        Just persistedWorkspace -> True
-        Nothing -> False )
-      & StreamlySafe.map (\maybePersistedWorkspace -> fromJust $ maybePersistedWorkspace)
+      & StreamlySafe.filter (\itemMaybe -> maybe (False) (\just -> True) itemMaybe)
+      & StreamlySafe.map (\itemJustOnly -> fromJust $ itemJustOnly)
 
 
 
-fetchWorkspace :: Streamable SerialT monad Event =>
-                     GetEventStream persistedStream ->
-                     Streaming persistedStream ->
-                     WorkspaceId ->
-                     monad (Either SomeException (Maybe Workspace))
-fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
+fetchWorkspace :: GetStreamAll Event ->
+                  WorkspaceId ->
+                  IO (Either SomeException (Maybe Workspace))
+fetchWorkspace getStreamAllEventsByAggregateId workspaceId =
     StreamlySafe.foldx
      folding
      (WorkspaceBuilder { workspaceIdMaybe = Nothing, workspaceNameMaybe = Nothing,
@@ -77,16 +70,14 @@ fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
                      workspaceName = fromJust $ workspaceNameMaybe,
                      goalStats}
           otherwise -> Nothing)
-     (streamingEvent getEventStream streaming workspaceId)
+     (streamingEvent getStreamAllEventsByAggregateId workspaceId)
   where
 
-    streamingEvent :: (Streamable stream monad Event) =>
-                        GetEventStream persistedStream ->
-                        Streaming persistedStream ->
-                        WorkspaceId ->
-                        stream monad (Either SomeException GsdEvent)
-    streamingEvent getEventStream Streaming {streamAll} workspaceId =
-        (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
+    streamingEvent :: GetStreamAll Event ->
+                      WorkspaceId ->
+                      SerialT IO (Either SomeException GsdEvent)
+    streamingEvent getStreamAllEventsByAggregateId workspaceId =
+        (getStreamAllEventsByAggregateId workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
 
     folding :: WorkspaceBuilder -> GsdEvent -> WorkspaceBuilder
     folding workspaceBuilder gsdEvent =
@@ -111,43 +102,35 @@ fetchWorkspace getEventStream streaming @ Streaming {streamAll} workspaceId =
                        (workspaceBuilder , _ ) -> workspaceBuilder
 
 
-streamGoal :: Streamable stream monad Event =>
-                GetEventStream persistedStream ->
-                Streaming persistedStream ->
+streamGoal ::   GetStreamAll Event ->
                 WorkspaceId ->
-                stream monad (Either SomeException Goal)
-streamGoal getEventStream streaming workspaceId = do
-    goals <- liftIO $ fetchGoals getEventStream streaming workspaceId
+                SerialT IO (Either SomeException Goal)
+streamGoal getStreamAllEventsByAggregateId workspaceId = do
+    goals <- liftIO $ fetchGoals getStreamAllEventsByAggregateId workspaceId
     StreamlySafe.fromList goals
 
-fetchGoal :: Streamable SerialT monad Event =>
-                     GetEventStream persistedStream ->
-                     Streaming persistedStream ->
-                     WorkspaceId ->
-                     GoalId ->
-                     monad (Either SomeException (Maybe Goal))
-fetchGoal getEventStream streaming @ Streaming {streamAll} workspaceId goalIdGiven =
-  (fmap . fmap) (find (\goal@Goal{goalId} -> goalId == goalIdGiven)) (fetchGoals getEventStream streaming workspaceId)
+fetchGoal :: GetStreamAll Event ->
+             WorkspaceId ->
+             GoalId ->
+             IO (Either SomeException (Maybe Goal))
+fetchGoal getStreamAllEventsByAggregateId workspaceId goalIdGiven =
+  (fmap . fmap) (find (\goal@Goal{goalId} -> goalId == goalIdGiven)) (fetchGoals getStreamAllEventsByAggregateId workspaceId)
 
-fetchGoals :: Streamable SerialT monad Event =>
-                     GetEventStream persistedStream ->
-                     Streaming persistedStream ->
-                     WorkspaceId ->
-                     monad (Either SomeException [Goal])
-fetchGoals getEventStream streaming @ Streaming {streamAll} workspaceId =
+fetchGoals :: GetStreamAll Event ->
+              WorkspaceId ->
+              IO (Either SomeException [Goal])
+fetchGoals getStreamAllEventsByAggregateId  workspaceId =
   StreamlySafe.foldx
     folding
     []
     id
-    (streamingEvent getEventStream streaming workspaceId)
+    (streamingEvent getStreamAllEventsByAggregateId workspaceId)
   where
-    streamingEvent :: (Streamable stream monad Event) =>
-                        GetEventStream persistedStream ->
-                        Streaming persistedStream ->
-                        WorkspaceId ->
-                        stream monad (Either SomeException GsdEvent)
-    streamingEvent getEventStream Streaming {streamAll} workspaceId =
-      (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
+    streamingEvent :: GetStreamAll Event ->
+                      WorkspaceId ->
+                      SerialT IO (Either SomeException GsdEvent)
+    streamingEvent getStreamAllEventsByAggregateId  workspaceId =
+      (getStreamAllEventsByAggregateId workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
 
     folding :: [Goal] -> GsdEvent -> [Goal]
     folding goals GoalSet {workspaceId, goalId, goalDescription} =
@@ -195,28 +178,24 @@ fetchGoals getEventStream streaming @ Streaming {streamAll} workspaceId =
       ) $ goals
 
 
-streamAction :: Streamable stream monad Event =>
-                  GetEventStream persistedStream ->
-                  Streaming persistedStream ->
+streamAction ::   GetStreamAll Event ->
                   WorkspaceId ->
                   GoalId ->
-                  stream monad (Either SomeException Action)
-streamAction getEventStream streaming workspaceId goalIdGiven = do
+                  SerialT IO (Either SomeException Action)
+streamAction getStreamAllEventsByAggregateId workspaceId goalIdGiven = do
     actions <- liftIO $ StreamlySafe.foldx
       folding
       []
       id
-      (streamingEvent getEventStream streaming workspaceId goalIdGiven)
+      (streamingEvent getStreamAllEventsByAggregateId workspaceId goalIdGiven)
 
     StreamlySafe.fromList actions
   where
-    streamingEvent :: (Streamable stream monad Event) =>
-                        GetEventStream persistedStream ->
-                        Streaming persistedStream ->
-                        WorkspaceId -> GoalId ->
-                        stream monad (Either SomeException GsdEvent)
-    streamingEvent getEventStream Streaming {streamAll} workspaceId goalIdToStream =
-      (streamAll $ getEventStream workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
+    streamingEvent :: GetStreamAll Event ->
+                      WorkspaceId -> GoalId ->
+                      SerialT IO (Either SomeException GsdEvent)
+    streamingEvent getStreamAllEventsByAggregateId  workspaceId goalIdToStream =
+      (getStreamAllEventsByAggregateId workspaceId) & StreamlySafe.map (\PersistedItem{item = event} -> fromEvent event)
     folding :: [Action] -> GsdEvent -> [Action]
     folding actions ActionRevealed {actionDetails, ..} | goalIdGiven == goalId =
       actions ++ [Action { indexation = (length actions), details = actionDetails, status = Initiated, ..}]

@@ -4,41 +4,37 @@
 module Eventuria.GSD.Monitoring.Service.Generic (
                 streamWorkspaceId,
                 streamCommand,
-                streamInfinitelyCommand,
                 streamCommandResponse,
                 streamEvent,
-                streamInfinitelyEvent,
-                streamValidationState) where
+                streamWriteModelHistory) where
 
 import           Control.Lens
 import           Control.Exception
 
 import           Data.Function ((&))
 
+import           Streamly hiding (Streaming)
 import qualified Streamly.Prelude as S
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
 
-import           Eventuria.GSD.Write.Model.State
+import           Eventuria.Libraries.CQRS.Read.StreamRepository
+
+import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.Core
 
-
-streamWorkspaceId :: Streamable stream monad WorkspaceId =>
-                      AggregateIdStream persistedStream ->
-                      Streaming persistedStream ->
-                      stream monad (Either SomeException (Persisted WorkspaceId))
-streamWorkspaceId aggregateIdStream Streaming {streamAll} = streamAll aggregateIdStream
-
+streamWorkspaceId :: StreamAll WorkspaceId ->
+                      SerialT IO (Either SomeException (Persisted WorkspaceId))
+streamWorkspaceId streamAll = streamAll
 
 streamCommand ::  Streamable stream monad Command => GetCommandStream persistedStream ->
                     Streaming persistedStream ->
@@ -49,52 +45,25 @@ streamCommand getCommandStream Streaming {streamAll} workspaceId =
       S.map (\result -> over _Right (\PersistedItem { offset = offset, item = cqrsCommand} ->
                                       PersistedItem { offset = offset, item = fromCommand $ cqrsCommand}) result)
 
-
-streamInfinitelyCommand ::  Streamable stream monad Command =>
-                              GetCommandStream persistedStream ->
-                              Streaming persistedStream ->
-                              WorkspaceId ->
-                              stream monad (Either SomeException (Persisted GsdCommand))
-streamInfinitelyCommand getCommandStream Streaming {streamAllInfinitely} workspaceId =
-  (streamAllInfinitely $ getCommandStream workspaceId) &
-      S.map (\result -> over _Right (\PersistedItem { offset = offset, item = cqrsCommand} ->
-              PersistedItem { offset = offset, item = fromCommand $ cqrsCommand}) result)
-
-streamCommandResponse :: Streamable stream monad CommandResponse =>
-                          GetCommandResponseStream persistedStream ->
-                          Streaming persistedStream ->
-                          WorkspaceId ->
-                          stream monad (Either SomeException (Persisted CommandResponse))
-streamCommandResponse getCommandResponseStream
-                      Streaming {streamAll}
-                      workspaceId = (streamAll $ getCommandResponseStream workspaceId)
-
-streamEvent :: Streamable stream monad Event =>
-                GetEventStream persistedStream ->
-                Streaming persistedStream ->
-                WorkspaceId ->
-                stream monad (Either SomeException (Persisted GsdEvent))
-streamEvent getEventStream Streaming {streamAll} workspaceId =
-  (streamAll $ getEventStream workspaceId) &
+streamEvent :: GetStreamAll Event ->
+               WorkspaceId ->
+               SerialT IO (Either SomeException (Persisted GsdEvent))
+streamEvent getStreamAllEventsByAggregateId workspaceId =
+  (getStreamAllEventsByAggregateId workspaceId) &
       S.map (\result -> over _Right (\PersistedItem { offset = offset, item = cqrsEvent} ->
               PersistedItem { offset = offset, item = fromEvent $ cqrsEvent}) result)
 
-streamInfinitelyEvent :: Streamable stream monad Event =>
-                          GetEventStream persistedStream ->
-                          Streaming persistedStream ->
-                          WorkspaceId ->
-                          stream monad (Either SomeException (Persisted GsdEvent))
-streamInfinitelyEvent getEventStream Streaming {streamAllInfinitely} workspaceId =
-  (streamAllInfinitely $ getEventStream  workspaceId) &
-      S.map (\result -> over _Right (\PersistedItem { offset = offset, item = cqrsEvent} ->
-              PersistedItem { offset = offset, item = fromEvent $ cqrsEvent}) result)
 
-streamValidationState :: Streamable stream monad (ValidationState GsdState) =>
-                          GetValidationStateStream persistedStream GsdState ->
-                          Streaming persistedStream ->
-                          WorkspaceId ->
-                          stream monad (Either SomeException (Persisted (ValidationState GsdState)))
-streamValidationState getValidateStateStream Streaming {streamAll} workspaceId =
-  (streamAll $ getValidateStateStream  workspaceId)
+streamCommandResponse :: GetStreamAll CommandResponse ->
+                         WorkspaceId ->
+                         SerialT IO (Either SomeException (Persisted CommandResponse))
+streamCommandResponse getStreamAll = getStreamAll
+
+
+streamWriteModelHistory :: GetStreamAll (Maybe GsdWriteModel) ->
+                           WorkspaceId ->
+                          SerialT IO (Either SomeException (Persisted (Maybe GsdWriteModel)))
+streamWriteModelHistory getStreamAll = getStreamAll
+
 
 

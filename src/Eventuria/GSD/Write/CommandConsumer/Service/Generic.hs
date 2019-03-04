@@ -7,8 +7,8 @@ import           Control.Exception
 
 import           Eventuria.Commons.Logger.Core
 
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 
 import qualified Eventuria.Libraries.CQRS.Write.CommandConsumption.Service as CQRS.Write.Service
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
@@ -18,21 +18,21 @@ import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse()
 
 
 import           Eventuria.GSD.Write.CommandConsumer.Handling.CommandHandler (commandHandler)
-import           Eventuria.GSD.Write.Model.State
+import           Eventuria.GSD.Write.Model.WriteModel
 
 
 
 consumeCommands :: Logger ->
-                           CQRSStreamRepository persistedStream GsdState ->
-                           Reading persistedStream ->
-                           TransactionInterpreter GsdState () ->
-                           IO (Either SomeException ())
-consumeCommands logger cqrsStreamRepository @ CQRSStreamRepository {
+                   CQRSWriteStreamRepository persistedStream GsdWriteModel ->
+                   Reading persistedStream ->
+                   Writing persistedStream ->
+                   IO (Either SomeException ())
+consumeCommands logger cqrsStreamRepository @ CQRSWriteStreamRepository {
                                                   aggregateIdStream,
                                                   getCommandStream,
-                                                  getValidationStateStream}
+                                                  getCommandTransactionStream}
                        reading @ Reading { streaming ,querying}
-                       transactionInterpreter   =
+                       writing =
    CQRS.Write.Service.startCommandConsumption
       logger
       aggregateIdStream
@@ -40,8 +40,8 @@ consumeCommands logger cqrsStreamRepository @ CQRSStreamRepository {
       (getConsumeAnAggregate
         logger
         getCommandStream
-        getValidationStateStream
+        getCommandTransactionStream
         reading
-        transactionInterpreter
+        writing
         commandHandler
         getConsumeACommandForAnAggregate)

@@ -52,7 +52,7 @@ data GoalCommands = -- Goal Commands
                   | ListCommandsReceived         Text
                   | ListCommandResponsesProduced Text
                   | ListEventsGenerated          Text
-                  | ListValidationStates         Text
+                  | ListWriteModelHistory         Text
                     -- Navigation
                   | GotoWorkOnAGoal             Text
                   | GotoWorkOnWorkspace         Text
@@ -102,8 +102,8 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                               MonitoringCLI.ListEventsGenerated
                                               cliDependencies
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
-        ListValidationStates         _ -> runMonitoringCommand            currentStep
-                                              MonitoringCLI.ListValidationStates
+        ListWriteModelHistory         _ -> runMonitoringCommand            currentStep
+                                              MonitoringCLI.ListWriteModelHistory
                                               cliDependencies
                                               workspace >>= runNextStepOnErrorOrProposeAvailableGoalCommandsAgain
         GotoWorkOnAGoal               _ -> runWorkOnAGoal                 currentStep >>= runNextStep
@@ -128,7 +128,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
      ++ [      ListCommandsReceived            "List Commands Received",
                ListCommandResponsesProduced    "List Command Responses Produced",
                ListEventsGenerated             "List Events Generated",
-               ListValidationStates            "List Validation Dependencies History"]
+               ListWriteModelHistory           "Show Write Model History"]
      ++ (case totalGoals of
             totalGoals | totalGoals > 0 ->
               [GotoWorkOnAGoal                 "Work On Another Goal"]
@@ -145,7 +145,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
             ListCommandsReceived         description -> fg white <> text description
             ListCommandResponsesProduced description -> fg white <> text description
             ListEventsGenerated          description -> fg white <> text description
-            ListValidationStates         description -> fg white <> text description <> "\nNavigation"
+            ListWriteModelHistory         description -> fg white <> text description <> "\nNavigation"
             GotoWorkOnAGoal              description -> fg white <> text description
             GotoWorkOnWorkspace          description -> fg white <> text description
             GotoWorkOnWorkspaces         description -> fg white <> text description
@@ -158,7 +158,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
             ListCommandsReceived         description -> fg white <> text description
             ListCommandResponsesProduced description -> fg white <> text description
             ListEventsGenerated          description -> fg white <> text description
-            ListValidationStates         description -> fg white <> text description <> "\nNavigation"
+            ListWriteModelHistory         description -> fg white <> text description <> "\nNavigation"
             GotoWorkOnAGoal              description -> fg white <> text description
             GotoWorkOnWorkspace          description -> fg white <> text description
             GotoWorkOnWorkspaces         description -> fg white <> text description
@@ -172,7 +172,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
             ListCommandsReceived         description -> fg white <> text description
             ListCommandResponsesProduced description -> fg white <> text description
             ListEventsGenerated          description -> fg white <> text description
-            ListValidationStates         description -> fg white <> text description <> "\nNavigation"
+            ListWriteModelHistory         description -> fg white <> text description <> "\nNavigation"
             GotoWorkOnAGoal              description -> fg white <> text description
             GotoWorkOnWorkspace          description -> fg white <> text description
             GotoWorkOnWorkspaces         description -> fg white <> text description

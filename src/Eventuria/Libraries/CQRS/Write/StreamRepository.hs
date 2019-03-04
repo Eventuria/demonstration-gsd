@@ -1,26 +1,21 @@
 module Eventuria.Libraries.CQRS.Write.StreamRepository where
 
-import Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
+
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
 
-type EventStream persistedStream = persistedStream Event
+
 type CommandStream persistedStream = persistedStream Command
 type AggregateIdStream persistedStream = persistedStream AggregateId
-type CommandResponseStream persistedStream = persistedStream CommandResponse
-type ValidateStateStream persistedStream applicationState = persistedStream (ValidationState applicationState)
+type CommandTransactionStream persistedStream writeModel = persistedStream (CommandTransaction writeModel)
 
 type GetCommandStream persistedStream = (AggregateId -> CommandStream persistedStream)
-type GetCommandResponseStream persistedStream = (AggregateId -> CommandResponseStream persistedStream)
-type GetValidationStateStream persistedStream applicationState = (AggregateId -> ValidateStateStream persistedStream applicationState)
-type GetEventStream persistedStream = (AggregateId -> EventStream persistedStream)
+type GetCommandTransactionStream persistedStream writeModel = (AggregateId -> CommandTransactionStream persistedStream writeModel)
 
-data CQRSStreamRepository persistedStream applicationState = CQRSStreamRepository {
-                                      aggregateIdStream :: AggregateIdStream persistedStream,
-                                      getCommandStream :: GetCommandStream persistedStream,
-                                      getCommandResponseStream :: GetCommandResponseStream persistedStream,
-                                      getValidationStateStream :: GetValidationStateStream persistedStream applicationState,
-                                      getEventStream :: GetEventStream persistedStream
+
+data CQRSWriteStreamRepository persistedStream writeModel = CQRSWriteStreamRepository {
+                                      aggregateIdStream           :: AggregateIdStream           persistedStream,
+                                      getCommandStream            :: GetCommandStream            persistedStream,
+                                      getCommandTransactionStream :: GetCommandTransactionStream persistedStream writeModel
                                     }

@@ -4,6 +4,8 @@
 module Eventuria.GSD.Write.CommandSourcer.Service.Generic  where
 
 import           Control.Exception
+import           Data.Aeson
+
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
@@ -13,11 +15,10 @@ import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedIt
 import qualified Eventuria.Libraries.CQRS.Write.Service as CQRS.Service
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse()
-
+import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction()
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
 import           Eventuria.GSD.Write.Model.Commands.Command
 
 persistCommand ::  AggregateIdStream persistedStream ->
@@ -33,15 +34,15 @@ persistCommand aggregateIdStream getCommandStream querying writing gsdCommand =
     getCommandStream
     aggregateIdStream $ toCommand gsdCommand
 
-waitTillCommandResponseProduced ::
-                     GetCommandResponseStream persistedStream ->
+waitTillCommandResponseProduced :: (FromJSON writeModel) =>
+                     GetCommandTransactionStream persistedStream writeModel ->
                      Subscribing persistedStream ->
                      AggregateId ->
                      Offset ->
                      CommandId ->
-                     IO (Either SomeException (Persisted CommandResponse))
-waitTillCommandResponseProduced getCommandResponseStream subscribing @ Subscribing {subscribeOnOffset} aggregateId offset commandId =
-    (subscribeOnOffset (getCommandResponseStream aggregateId) offset)
+                     IO (Either SomeException (Persisted (CommandTransaction writeModel)))
+waitTillCommandResponseProduced getCommandTransactionStream subscribing @ Subscribing {subscribeOnOffset} aggregateId offset commandId =
+    (subscribeOnOffset (getCommandTransactionStream aggregateId) offset)
 
 
 

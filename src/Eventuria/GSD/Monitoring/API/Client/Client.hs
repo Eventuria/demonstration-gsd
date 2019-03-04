@@ -6,11 +6,9 @@
 module Eventuria.GSD.Monitoring.API.Client.Client (
   healthCheck,
   streamGsdCommandByWorkspaceId,
-  streamInfinitelyGsdCommandByWorkspaceId,
   streamGsdCommandResponseByWorkspaceId,
   streamGsdEventByWorkspaceId,
-  streamInfinitelyGsdEventByWorkspaceId,
-  streamGsdValidationStateByWorkspaceId,
+  streamGsdWriteModelHistoryByWorkspaceId,
   MonitoringServerDown) where
 
 import           Data.Proxy
@@ -32,9 +30,8 @@ import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.Model.Commands.Serialization ()
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.Events.Serialization()
-import           Eventuria.GSD.Write.Model.State
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
+import           Eventuria.GSD.Write.Model.WriteModel
+
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
 import           Eventuria.Commons.DevOps.Core
@@ -49,18 +46,14 @@ data MonitoringServerDown = MonitoringServerDown  deriving Show
 instance Exception MonitoringServerDown
 
 streamGsdCommandByWorkspaceId ::           Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted GsdCommand])
-streamInfinitelyGsdCommandByWorkspaceId :: Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted GsdCommand])
 streamGsdCommandResponseByWorkspaceId ::   Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted CommandResponse])
 streamGsdEventByWorkspaceId ::             Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted GsdEvent])
-streamInfinitelyGsdEventByWorkspaceId ::   Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted GsdEvent])
-streamGsdValidationStateByWorkspaceId ::   Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted (ValidationState GsdState)])
+streamGsdWriteModelHistoryByWorkspaceId :: Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted (Maybe GsdWriteModel)])
 
 streamGsdCommandByWorkspaceId =             bindWithSettings streamGsdCommandByWorkspaceIdOnPipe
-streamInfinitelyGsdCommandByWorkspaceId  =  bindWithSettings streamInfinitelyGsdCommandByWorkspaceIdOnPipe
 streamGsdCommandResponseByWorkspaceId  =    bindWithSettings streamGsdCommandResponseByWorkspaceIdOnPipe
 streamGsdEventByWorkspaceId  =              bindWithSettings streamGsdEventByWorkspaceIdOnPipe
-streamInfinitelyGsdEventByWorkspaceId  =    bindWithSettings streamInfinitelyGsdEventByWorkspaceIdOnPipe
-streamGsdValidationStateByWorkspaceId  =    bindWithSettings streamGsdValidationStateByWorkspaceIdOnPipe
+streamGsdWriteModelHistoryByWorkspaceId  =  bindWithSettings streamGsdWriteModelHistoryByWorkspaceIdOnPipe
 
 healthCheck :: Dependencies -> IO (Either MonitoringServerDown Healthy)
 healthCheck    Dependencies { httpClientManager, url, logger}  =
@@ -97,18 +90,14 @@ bindWithSettings call Dependencies { httpClientManager, url, logger} workspaceId
 
 healthCheckCall :: S.ClientM Healthy
 streamGsdCommandByWorkspaceIdOnPipe ::           WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand)                 IO ())
-streamInfinitelyGsdCommandByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand)                 IO ())
 streamGsdCommandResponseByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (Persisted CommandResponse)            IO ())
 streamGsdEventByWorkspaceIdOnPipe ::             WorkspaceId -> S.ClientM (P.Producer (Persisted GsdEvent)                   IO ())
-streamInfinitelyGsdEventByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (Persisted GsdEvent)                   IO ())
-streamGsdValidationStateByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (Persisted (ValidationState GsdState)) IO ())
+streamGsdWriteModelHistoryByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted (Maybe GsdWriteModel)) IO ())
 healthCheckCall
   :<|> streamGsdCommandByWorkspaceIdOnPipe
-  :<|> streamInfinitelyGsdCommandByWorkspaceIdOnPipe
   :<|> streamGsdCommandResponseByWorkspaceIdOnPipe
   :<|> streamGsdEventByWorkspaceIdOnPipe
-  :<|> streamInfinitelyGsdEventByWorkspaceIdOnPipe
-  :<|> streamGsdValidationStateByWorkspaceIdOnPipe = S.client gsdMonitoringApi
+  :<|> streamGsdWriteModelHistoryByWorkspaceIdOnPipe = S.client gsdMonitoringApi
  where
   gsdMonitoringApi :: Proxy GSDMonitoringStreamingApi
   gsdMonitoringApi = Proxy

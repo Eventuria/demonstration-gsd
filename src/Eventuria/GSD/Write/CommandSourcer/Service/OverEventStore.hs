@@ -1,6 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 module Eventuria.GSD.Write.CommandSourcer.Service.OverEventStore  where
 
+
 import           Control.Exception
 
 import qualified Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Client.Dependencies as EventStoreClient
@@ -12,13 +13,13 @@ import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.
 import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 
-
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
 import qualified Eventuria.GSD.Write.CommandSourcer.Service.Generic as GSD.Service.Generic
 import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.Repository.EventStoreStreams
+import           Eventuria.GSD.Write.Model.WriteModel
 
 persistCommand ::  EventStoreClient.Dependencies -> GsdCommand -> IO (Either SomeException PersistCommandResult)
 persistCommand eventStoreClientDependencies gsdCommand =
@@ -33,10 +34,10 @@ waitTillCommandResponseProduced :: EventStoreClient.Dependencies ->
                                    AggregateId ->
                                    Offset ->
                                    CommandId ->
-                                   IO (Either SomeException (Persisted CommandResponse))
+                                   IO (Either SomeException (Persisted (CommandTransaction GsdWriteModel)))
 waitTillCommandResponseProduced eventStoreClientDependencies aggregateId offset commandId =
   GSD.Service.Generic.waitTillCommandResponseProduced
-    (getCommandResponseStream $ getEventStoreStreamRepository eventStoreClientDependencies)
+    (getCommandTransactionStream $ getEventStoreStreamRepository eventStoreClientDependencies)
     getEventStoreSubscribing
     aggregateId
     offset

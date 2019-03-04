@@ -3,71 +3,53 @@
 {-# LANGUAGE DataKinds #-}
 module Eventuria.GSD.Write.CommandConsumer.Handling.Commands.SetGoal where
 
-import Data.Set (fromList,union,empty)
-import Data.List hiding (union)
-import Data.Text hiding (map,find,empty)
+import           Data.Set
+import           Data.List hiding (union)
+import           Data.Text hiding (map,find,empty)
+import qualified Data.UUID.V4 as Uuid
+import qualified Data.Time as Time
 
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.ResponseDSL
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-
-import Eventuria.GSD.Write.Model.Events.Event
-import Eventuria.GSD.Write.Model.State
-import Eventuria.GSD.Write.Model.Core
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+                 
+import           Eventuria.GSD.Write.Model.Events.Event
+import           Eventuria.GSD.Write.Model.WriteModel
+import           Eventuria.GSD.Write.Model.Core
 
 
 handle :: Offset ->
-          ValidationState GsdState ->
+          GsdWriteModel ->
           CommandId ->
           WorkspaceId ->
           GoalId ->
           Text  ->
-          CommandHandlingResponse GsdState
+          IO (CommandHandlerResult GsdWriteModel)
 handle offset
-       ValidationState {commandsProcessed, aggregateId,state}
+       writeModel @ GsdWriteModel {goals}
        commandId
        workspaceId
        goalId
        goalDescription =
-  case (state) of
-    Nothing ->
-      ValidateCommandWithFollowingTransactionPayload $ do
-          createdOn <- getCurrentTime
-          eventId <- getNewEventID
-          persistEvent $ toEvent $ GoalSet {eventId ,
-                                            createdOn,
-                                            workspaceId ,
-                                            goalId ,
-                                            goalDescription}
-          updateValidationState ValidationState {lastOffsetConsumed = offset ,
-                                                 commandsProcessed = union commandsProcessed (fromList [commandId]) ,
-                                                 aggregateId,
-                                                 state = Just $ GsdState {goals = [Goal{workspaceId,
-                                                                                        goalId,
-                                                                                        description = goalDescription,
-                                                                                        actions = empty ,
-                                                                                        status = Created}]}}
-    Just GsdState {goals} ->
-      case (isGoalFound goalId goals) of
-        True ->  RejectCommand "You can't set the same goal more than once"
-        False -> ValidateCommandWithFollowingTransactionPayload $ do
-            createdOn <- getCurrentTime
-            eventId <- getNewEventID
-            persistEvent $ toEvent $ GoalSet { eventId ,
-                                               createdOn,
-                                               workspaceId ,
-                                               goalId ,
-                                               goalDescription}
-            updateValidationState ValidationState {lastOffsetConsumed = offset ,
-                                                   commandsProcessed = union commandsProcessed (fromList [commandId]) ,
-                                                   aggregateId,
-                                                   state = Just $ GsdState {goals = (goals ++ [Goal{workspaceId,
-                                                                                                    goalId,
-                                                                                                    description = goalDescription,
-                                                                                                    actions = empty ,
-                                                                                                    status = Created}])}}
+  case (isGoalFound goalId goals) of
+    True ->  return $ rejectCommand
+                        (Just writeModel)
+                        "You can't set the same goal more than once"
+    False -> do
+       createdOn <- Time.getCurrentTime
+       eventId <- Uuid.nextRandom
+       return $ validateCommand
+                   GsdWriteModel {goals = (goals ++ [Goal{workspaceId,
+                                                          goalId,
+                                                          description = goalDescription,
+                                                          actions = empty ,
+                                                          status = Created}])}
+                   [toEvent GoalSet { eventId ,
+                                      createdOn,
+                                      workspaceId ,
+                                      goalId ,
+                                      goalDescription}]
 
   where
       isGoalFound :: GoalId -> [Goal] -> Bool

@@ -12,6 +12,22 @@ import           Data.Function ((&))
 import qualified Streamly.Prelude as S
 import           Streamly
 
+
+indexed :: (IsStream t, Monad m) => t m (Either SomeException a) -> t m (Either SomeException (Integer, a))
+indexed source =
+  (S.indexed source)
+  & S.map (\(index,either) ->
+    case either of
+       Left x -> Left x
+       Right y -> Right (toInteger $ fromIntegral index,y))
+
+concatMap ::(IsStream t, Monad m) => (a -> t m ( Either SomeException b)) -> t m ( Either SomeException a) -> t m ( Either SomeException b)
+concatMap transformation source = S.concatMap (apply transformation) source
+  where apply :: (IsStream t, Monad m) => (a -> t m ( Either SomeException b)) -> Either SomeException a -> t m ( Either SomeException b)
+        apply transformation (Left x) = S.yield $ Left x
+        apply transformation (Right y) = transformation y
+
+
 map :: (IsStream t, Monad m) => (a -> b) -> t m ( Either SomeException a) -> t m (Either SomeException b)
 map transformation stream = stream & S.map (\safeResponse -> case safeResponse of
         Right a -> Right $ transformation a

@@ -20,7 +20,6 @@ import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Readin
 
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
-import           Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 
 

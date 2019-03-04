@@ -3,50 +3,44 @@
 {-# LANGUAGE DataKinds #-}
 module Eventuria.GSD.Write.CommandConsumer.Handling.Commands.StartWorkingOnGoal where
 
-import Data.Set hiding (map)
-import Data.List (find)
+import           Data.List (find)
+import qualified Data.UUID.V4 as Uuid
+import qualified Data.Time as Time
 
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.ResponseDSL
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.ValidationStates.ValidationState
-
-import Eventuria.GSD.Write.Model.Events.Event
-import Eventuria.GSD.Write.Model.State
-import Eventuria.GSD.Write.Model.Core
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+                 
+import           Eventuria.GSD.Write.Model.Events.Event
+import           Eventuria.GSD.Write.Model.WriteModel
+import           Eventuria.GSD.Write.Model.Core
 
 
 handle :: Offset ->
-          ValidationState GsdState ->
+          GsdWriteModel ->
           CommandId ->
           WorkspaceId ->
           GoalId ->
-          CommandHandlingResponse GsdState
+          IO (CommandHandlerResult GsdWriteModel)
 handle offset
-       ValidationState {commandsProcessed, aggregateId, state}
+       writeModel @ GsdWriteModel {goals}
        commandId
        workspaceId
        goalId =
-        case state of
-          Nothing -> RejectCommand "Trying to start a goal but there are no goals in that workspace"
-          Just GsdState {goals} ->
-            case (findGoal goalId goals)  of
-              Nothing -> RejectCommand "Trying to start a goal that does not exist"
-              Just goal @ Goal {workspaceId,goalId,description,status} ->
-                case status of
-                  Created ->
-                    ValidateCommandWithFollowingTransactionPayload $ do
-                            createdOn <- getCurrentTime
-                            eventId <- getNewEventID
-                            persistEvent $ toEvent $ GoalStarted { eventId ,
-                                                                   createdOn,
-                                                                   workspaceId ,
-                                                                   goalId}
-                            updateValidationState ValidationState {lastOffsetConsumed = offset ,
-                                                                   commandsProcessed = union commandsProcessed (fromList [commandId]) ,
-                                                                   aggregateId,
-                                                                   state = Just $ GsdState {goals = updateGoalStatus goalId InProgress goals }}
-                  _ -> RejectCommand "Trying to start a goal that is already started"
+          case (findGoal goalId goals)  of
+            Nothing -> return $ rejectCommand (Just writeModel) "Trying to start a goal that does not exist"
+            Just goal @ Goal {workspaceId,goalId,description,status} ->
+              case status of
+                Created -> do
+                  createdOn <- Time.getCurrentTime
+                  eventId <- Uuid.nextRandom
+                  return $ validateCommand
+                              GsdWriteModel {goals = updateGoalStatus goalId InProgress goals }
+                              [toEvent GoalStarted { eventId ,
+                                                      createdOn,
+                                                      workspaceId ,
+                                                      goalId}]
+                _ -> return $ rejectCommand (Just writeModel) "Trying to start a goal that is already started"
 
 
   where

@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 module Eventuria.Libraries.CQRS.Write.CommandConsumption.ConsumeACommand (getConsumeACommandForAnAggregate) where
 
 import Data.Aeson
@@ -7,56 +8,68 @@ import Eventuria.Commons.Logger.Core
 
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.CommandHandlingResponseToTransactionDSL
+import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
 
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.StreamRepository
 import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
 import Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
-import Eventuria.Libraries.CQRS.Write.Serialization.ValidationState ()
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
+import Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction ()
 
 
-getConsumeACommandForAnAggregate :: (FromJSON applicationState, Show applicationState) =>
+getConsumeACommandForAnAggregate :: (FromJSON writeModel, ToJSON writeModel,Show writeModel) =>
                                       Logger ->
-                                      Querying persistedStreamEngine ->
-                                      GetValidationStateStream persistedStreamEngine applicationState ->
-                                      TransactionInterpreter applicationState () ->
-                                      CommandHandler applicationState ->
+                                      Querying persistedStream ->
+                                      Writing persistedStream ->
+                                      GetCommandTransactionStream persistedStream writeModel ->
+                                      CommandHandler writeModel ->
                                       (AggregateId -> ConsumeACommand)
-getConsumeACommandForAnAggregate logger querying getValidationStateStream transactionInterpreter commandHandler =
+getConsumeACommandForAnAggregate logger querying writing getCommandTransactionStream commandHandler =
   (\aggregateId ->
     consumeACommand
       logger
       querying
-      transactionInterpreter
+      writing
       commandHandler
-      (getValidationStateStream aggregateId))
+      (getCommandTransactionStream aggregateId))
 
-consumeACommand :: (FromJSON applicationState, Show applicationState) =>
+consumeACommand :: (FromJSON writeModel, ToJSON writeModel, Show writeModel) =>
                       Logger ->
-                      Querying persistedStreamEngine ->
-                      TransactionInterpreter applicationState ()->
-                      CommandHandler applicationState ->
-                      ValidateStateStream persistedStreamEngine applicationState ->
+                      Querying persistedStream ->
+                      Writing persistedStream ->
+                      CommandHandler writeModel ->
+                      CommandTransactionStream persistedStream writeModel ->
                       ConsumeACommand
 consumeACommand logger
                 Querying {retrieveLast}
-                transactionInterpreter
+                Writing {persist}
                 commandHandler
-                validationStateStream
+                commandTransactionStream
                 persistedCommand @ PersistedItem {
                                     item = Command { commandHeader = commandHeader@CommandHeader {commandId} }} = do
-  response <- (fmap.fmap.fmap) item $ retrieveLast validationStateStream
+  response <- (fmap.fmap.fmap) item $ retrieveLast commandTransactionStream
   case response of
-      Right lastValidationState -> do
+      Right (Nothing) -> do
           logInfo logger $ "[consume.command] consuming command " ++ (show persistedCommand)
-          logInfo logger $ "[consume.command] state when consuming command " ++ show lastValidationState
-          transactionInterpreter
-               persistedCommand
-               (translateResponseIntoTransaction
-                  lastValidationState
-                  persistedCommand
-                  (commandHandler persistedCommand lastValidationState))
+          logInfo logger $ "[consume.command] No write model for this command"
+          commandHandlingResponse <- commandHandler
+                                        Nothing
+                                        persistedCommand
+          logInfo logger $ "[consume.command] commandHandlingResponse : " ++ show commandHandlingResponse
+          persist commandTransactionStream $ toCommandTransaction
+                                                persistedCommand
+                                                commandHandlingResponse
+      Right (Just (CommandTransaction { snapshot = Snapshot {offset,writeModelMaybe}}))  -> do
+          logInfo logger $ "[consume.command] consuming command " ++ (show persistedCommand)
+          logInfo logger $ "[consume.command] last write model state " ++ show writeModelMaybe
+          commandHandlingResponse <- commandHandler
+                                        writeModelMaybe
+                                        persistedCommand
+          logInfo logger $ "[consume.command] commandHandlingResponse : " ++ show commandHandlingResponse
+          persist commandTransactionStream $ toCommandTransaction
+                                                persistedCommand
+                                                commandHandlingResponse
       Left error -> return $ Left error

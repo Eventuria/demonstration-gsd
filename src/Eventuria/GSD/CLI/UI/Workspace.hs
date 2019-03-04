@@ -45,7 +45,7 @@ data WorkspaceCommand = -- Workspace Commands
                       | ListCommandsReceived         Text
                       | ListCommandResponsesProduced Text
                       | ListEventsGenerated          Text
-                      | ListValidationStates         Text
+                      | ListWriteModelHistory         Text
                         -- Navigation
                       | GotoWorkOnAGoal              Text
                       | GotoWorkOnWorkspaces         Text
@@ -92,8 +92,8 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                             MonitoringCLI.ListEventsGenerated
                                             cliDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
-        ListValidationStates          _ -> runMonitoringCommand currentStep
-                                            MonitoringCLI.ListValidationStates
+        ListWriteModelHistory          _ -> runMonitoringCommand currentStep
+                                            MonitoringCLI.ListWriteModelHistory
                                             cliDependencies
                                             workspace >>= runNextStepOnErrorOrProposeAvailableWorkspaceCommandAgain
         GotoWorkOnAGoal               _ -> runWorkOnAGoal      currentStep >>= runNextStep
@@ -108,7 +108,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
             ListCommandsReceived          "List Commands Received",
             ListCommandResponsesProduced  "List Command Responses Produced",
             ListEventsGenerated           "List Events Generated",
-            ListValidationStates          "List Validation Dependencies History",
+            ListWriteModelHistory         "Show Write Model History",
             GotoWorkOnAGoal               "Work On A Goal",
             GotoWorkOnWorkspaces          "Work On Another Workspace",
             QuitCommand                   "Quit"]
@@ -118,7 +118,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                   ListCommandsReceived         "List Commands Received",
                   ListCommandResponsesProduced "List Command Responses Produced",
                   ListEventsGenerated          "List Events Generated",
-                  ListValidationStates         "List Validation Dependencies History",
+                  ListWriteModelHistory        "Show Write Model History",
                   GotoWorkOnWorkspaces         "Work On Another Workspace",
                   QuitCommand                  "Quit"]
 
@@ -130,7 +130,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
           ListCommandsReceived         description -> fg white <> text description
           ListCommandResponsesProduced description -> fg white <> text description
           ListEventsGenerated          description -> fg white <> text description
-          ListValidationStates         description -> fg white <> text description <> "\nNavigation"
+          ListWriteModelHistory         description -> fg white <> text description <> "\nNavigation"
           GotoWorkOnAGoal              description -> fg white <> text description
           GotoWorkOnWorkspaces         description -> fg white <> text description
           QuitCommand                  description -> fg white <> text description
@@ -140,7 +140,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
           ListCommandsReceived         description -> fg white <> text description
           ListCommandResponsesProduced description -> fg white <> text description
           ListEventsGenerated          description -> fg white <> text description
-          ListValidationStates         description -> fg white <> text description <> "\nNavigation"
+          ListWriteModelHistory         description -> fg white <> text description <> "\nNavigation"
           GotoWorkOnWorkspaces         description -> fg white <> text description
           QuitCommand                  description -> fg white <> text description
           _ -> fg red <> "Not handle"

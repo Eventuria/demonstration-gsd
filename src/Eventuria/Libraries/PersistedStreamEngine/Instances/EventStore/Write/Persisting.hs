@@ -36,8 +36,7 @@ persist eventStoreStream @ EventStoreStream {  clientDependencies = Dependencies
                 EventStore.anyVersion
                 eventInEventStoreDomain
                 (Just credentials) >>= wait
-
         return $ Right $ PersistenceResult $ toInteger $ EventStore.writeNextExpectedVersion writeResult)
     (\e @ SomeException {}  -> do
-        liftIO $ logInfo logger $ "[persist] exception raised "  ++ show e
+        logInfo logger $ "[persist] exception raised "  ++ show e
         return $ Left e)
