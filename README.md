@@ -62,7 +62,7 @@ https://www.linkedin.com/in/nhenin/
       ```bash
         docker run --name eventstore-service -it -p 2113:2113 -p 1113:1113 eventstore/eventstore
       ```
-      This command will :
+      This command `docker run` will :
         - [x] Download the docker image of the [EventStore](https://eventstore.org/)
            > *Warning* : This operation could take a while since you need to download the docker image...
         - [x] Run that docker image into a docker container named `eventstore-service`

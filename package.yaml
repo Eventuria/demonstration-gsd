@@ -1,10 +1,10 @@
-name:                gsdFlow
+name:                gsd
 version:             0.1.0.0
-github:              "githubuser/gsdFlow"
+github:              "https://github.com/Eventuria/gsd"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Nicolas Henin"
+maintainer:          "mr.henin@gmail.com"
+copyright:           "2018 Nicolas Henin"
 
 extra-source-files:
 - README.md
@@ -75,7 +75,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - gsdFlow
+    - gsd
   gsd-monitoring:
     main:                Executables.hs
     source-dirs:         app
@@ -85,7 +85,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - gsdFlow
+    - gsd
   gsd-cli:
     main:                Executables.hs
     source-dirs:         app
@@ -95,7 +95,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - gsdFlow
+    - gsd
   gsd-command-sourcer:
     main:                Executables.hs
     source-dirs:         app
@@ -105,7 +105,7 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - gsdFlow
+    - gsd
   gsd-command-consumer:
     main:                Executables.hs
     source-dirs:         app
@@ -115,10 +115,10 @@ executables:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - gsdFlow
+    - gsd
 
 tests:
-  gsdFlow-test:
+  gsd-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -126,7 +126,7 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - gsdFlow
+    - gsd
     - hspec == 2.6.0
     - QuickCheck
     - aeson
