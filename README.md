@@ -15,10 +15,10 @@ GSD  is a basic todo list command-line application
 
 ## Motivations
 
-- Learning and Practicing the Haskell language and environnement
+- Learning and Practicing the Haskell language and environment
 - Demonstrating skills in the following areas
-    - Distributed Domain Driven Design
-      - Eventuria.CQRS (Microservice Architecture)
+    - Distributed System and Domain Driven Design (D.D.D.D)
+      - CQRS (Micro-service Architecture)
       - Event Sourcing
       - Command Sourcing
       - Domain Driven Design
@@ -40,11 +40,33 @@ https://www.linkedin.com/in/nhenin/
 
 ### Build and Run
 
-- Clone this project
+- Git clone this project
 - Build the executables
-    - Go at the root of the clone
-    - ```stack build ```
-- run the backend microservices
+    - Go at the root of the clone :
+    ```bash
+    stack build
+    ```
+    - At the end, you should see something similar to :
+    ```bash
+      Installing library in /Users/nhenin/dev/gsdFlow/.stack-work/install/x86_64-osx/lts-13.0/8.6.3/lib/x86_64-osx-ghc-8.6.3/gsdFlow-0.1.0.0-I94do1kjiSNDk01E3dY4Vi
+      Installing executable gsd-command-sourcer in /Users/nhenin/dev/gsdFlow/.stack-work/install/x86_64-osx/lts-13.0/8.6.3/bin
+      Installing executable gsd-command-consumer in /Users/nhenin/dev/gsdFlow/.stack-work/install/x86_64-osx/lts-13.0/8.6.3/bin
+      Installing executable gsd-read in /Users/nhenin/dev/gsdFlow/.stack-work/install/x86_64-osx/lts-13.0/8.6.3/bin
+      Installing executable gsd-monitoring in /Users/nhenin/dev/gsdFlow/.stack-work/install/x86_64-osx/lts-13.0/8.6.3/bin
+      Installing executable gsd-cli in /Users/nhenin/dev/gsdFlow/.stack-work/install/x86_64-osx/lts-13.0/8.6.3/bin
+      Registering library for gsdFlow-0.1.0.0..
+    ```
+    - At this point, all the executables are installed on your Mac environment.
+- run the distributed application
+    - run the [eventStore](https://eventstore.org/) on docker :
+      ```bash
+        docker run --name eventstore-service -it -p 2113:2113 -p 1113:1113 eventstore/eventstore
+      ```
+      This command will :
+        - [x] Download the docker image of the [EventStore](https://eventstore.org/)
+           > *Warning* : This operation could take a while since you need to download the docker image...
+        - [x] Run that docker image into a docker container named `eventstore-service`
+        - [x] Open the docker container on the port 1113
 
 ## High-Level documentation
 ### Project Structure
