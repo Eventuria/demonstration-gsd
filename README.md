@@ -22,12 +22,13 @@
 </p>
 <h1> </h1>
 <p align="center">
-  <a href="/doc/setup.md">Try GSD Now ! </a> :stuck_out_tongue:  <br>
+  <a href="/doc/setup.md">Try GSD Now ! </a> :stuck_out_tongue:
+</p>
+<h1> </h1>
+<p align="center">
 For more details about my experience, please visit :
 <a href="https://www.linkedin.com/in/nhenin/">linkedin.com/in/nhenin/</a>
 </p>
-<h1> </h1>
-
 
 
 
