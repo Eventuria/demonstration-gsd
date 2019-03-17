@@ -10,7 +10,7 @@ import           Data.List hiding (union)
                  
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
                  
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
                  
 import           Eventuria.GSD.Write.Model.Events.Event
@@ -24,7 +24,7 @@ handle :: Offset ->
           WorkspaceId ->
           GoalId ->
           ActionId ->
-          IO (CommandHandlerResult GsdWriteModel)
+          IO (CommandHandlingResult)
 handle offset
        writeModel @ GsdWriteModel {goals}
        commandId
@@ -32,24 +32,17 @@ handle offset
        goalId
        actionId =
   case (findGoal goalId goals)  of
-    Nothing -> return $ rejectCommand (Just writeModel) "Trying to notify an action completion on a goal that does not exist"
+    Nothing -> return $ CommandRejected  "Trying to notify an action completion on a goal that does not exist"
     Just goal @ Goal {workspaceId,goalId, actions,  description,status} ->
       case (findAction actionId actions)  of
-        Nothing -> return $ rejectCommand (Just writeModel) "Trying to notify an action completion on a action that does not exist"
+        Nothing -> return $ CommandRejected  "Trying to notify an action completion on a action that does not exist"
         Just action @ Action {actionId,index,details,status}  ->
           case status of
-            Completed -> return $ rejectCommand (Just writeModel) "Trying to notify an action completion on a action already completed"
+            Completed -> return $ CommandRejected  "Trying to notify an action completion on a action already completed"
             Initiated -> do
                createdOn <- Time.getCurrentTime
                eventId <- Uuid.nextRandom
-               return $ validateCommand
-                            GsdWriteModel {goals = updateGoal goals (updateActions
-                                                                        goal
-                                                                        Action {actionId,
-                                                                                index,
-                                                                                details,
-                                                                                status = Completed})}
-                            [toEvent $ ActionCompleted {
+               return $ CommandValidated [toEvent $ ActionCompleted {
                                                eventId ,
                                                createdOn,
                                                workspaceId ,
@@ -63,25 +56,5 @@ handle offset
       findAction :: ActionId -> Set.Set Action -> Maybe Action
       findAction  actionIdToFind actions = find (\Action{actionId} -> actionIdToFind == actionId ) actions
 
-      updateActionStatus :: ActionId -> ActionStatus -> Set.Set Action -> Set.Set Action
-      updateActionStatus actionIdToUpdate newGoalStatus actions =
-        Set.map (\action@Action{actionId, details,index } -> case (actionIdToUpdate == actionId) of
-          True -> Action{actionId,details,index, status = Completed}
-          False -> action
-        ) $ actions
 
-      updateGoal :: [Goal] -> Goal -> [Goal]
-      updateGoal goals updatedGoal@Goal{goalId = goalIdToUpdate} =
-        map (\goal@Goal{goalId} -> case (goalId == goalIdToUpdate) of
-          True -> updatedGoal
-          False -> goal
-        ) $ goals
-
-      updateActions :: Goal -> Action -> Goal
-      updateActions Goal{workspaceId,goalId,description,status,actions} updatedAction @ Action {actionId = actionIdToUpdate} =
-        Goal {workspaceId,goalId,description,status,
-              actions = Set.map (\action@Action{actionId} -> case (actionId == actionIdToUpdate) of
-                                  True -> updatedAction
-                                  False -> action
-                                ) $ actions}
 

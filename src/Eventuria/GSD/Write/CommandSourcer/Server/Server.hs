@@ -46,7 +46,6 @@ import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.CommandSourcer.Definition
 import           Eventuria.GSD.Write.Model.Commands.Serialization ()
 import           Eventuria.GSD.Write.CommandSourcer.Server.Settings
-import           Eventuria.GSD.Write.Model.WriteModel
 
 start :: Settings -> IO ()
 start settings @ Settings {healthCheckLoggerId}  =
@@ -112,7 +111,7 @@ start settings @ Settings {healthCheckLoggerId}  =
                                          AggregateId ->
                                          Offset ->
                                          CommandId ->
-                                         Handler (Persisted (CommandTransaction GsdWriteModel))
+                                         Handler (Persisted CommandTransaction)
       waitTillCommandResponseProduced serverThreadId
                                       Server.Dependencies {logger,eventStoreClientDependencies}
                                       aggregateId

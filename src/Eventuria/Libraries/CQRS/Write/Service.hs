@@ -1,26 +1,39 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE RecordWildCards #-}
-module Eventuria.Libraries.CQRS.Write.Service where
+module Eventuria.Libraries.CQRS.Write.Service (
+  startCommandConsumption,
+  persistCommand) where
 
-import Control.Exception
-import Data.Either.Combinators
+import           Control.Exception
+import           Data.Either.Combinators
 
-import Eventuria.Libraries.CQRS.Write.StreamRepository
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
+import           Eventuria.Commons.Logger.Core
+import           Eventuria.Libraries.CQRS.Write.StreamRepository
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
+                 
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Core
+                 
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
+                 
+import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
+import           Eventuria.Libraries.CQRS.Write.Serialization.AggregateId ()
+                 
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.PersistenceResult
+import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
 
-import Eventuria.Libraries.CQRS.Write.Aggregate.Core
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
+import qualified Eventuria.Libraries.CQRS.Write.CommandConsumption.Service as Command.Consumption.Service
 
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
 
-import Eventuria.Libraries.CQRS.Write.Serialization.Command ()
-import Eventuria.Libraries.CQRS.Write.Serialization.AggregateId ()
-
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.PersistenceResult
-import Eventuria.Libraries.CQRS.Write.PersistCommandResult
-
+startCommandConsumption ::  Logger ->
+            AggregateIdStream persistedStreamEngine  ->
+            Streaming persistedStreamEngine ->
+            OrchestratreCommandConsumptionForAggregate writeModel ->
+            IO (Either SomeException ())
+startCommandConsumption = Command.Consumption.Service.startCommandConsumption
 
 persistCommand :: Writing persistedStream ->
                   Querying persistedStream ->

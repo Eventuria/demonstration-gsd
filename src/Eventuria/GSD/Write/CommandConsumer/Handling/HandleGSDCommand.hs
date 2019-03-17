@@ -1,10 +1,10 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
-module Eventuria.GSD.Write.CommandConsumer.Handling.CommandHandler (commandHandler) where
+module Eventuria.GSD.Write.CommandConsumer.Handling.HandleGSDCommand (handleGSDCommand) where
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 
 
 import           Eventuria.GSD.Write.Model.WriteModel
@@ -23,12 +23,12 @@ import qualified Eventuria.GSD.Write.CommandConsumer.Handling.Commands.NotifyAct
 
 type GSDCommandHandler  = Maybe GsdWriteModel ->
                          (Persisted GsdCommand) ->
-                         IO (CommandHandlerResult GsdWriteModel)
+                         IO (CommandHandlingResult)
 
-commandHandler :: CommandHandler GsdWriteModel
-commandHandler writeModelMaybe
+handleGSDCommand :: HandleCommand GsdWriteModel
+handleGSDCommand writeModelMaybe
                PersistedItem {offset , item = command }
-  | (isFirstCommand offset) && (not . isCreateWorkspaceCommand) command = return $ rejectCommand writeModelMaybe "CreateWorkspace should be the first command"
+  | (isFirstCommand offset) && (not . isCreateWorkspaceCommand) command = return $ CommandRejected "CreateWorkspace should be the first command"
   | otherwise =   gsdCommandHandler writeModelMaybe PersistedItem {offset , item = (fromCommand command) }
 
 gsdCommandHandler :: GSDCommandHandler
@@ -46,7 +46,7 @@ gsdCommandHandler
      (Just writeModel,GiveUpOnGoal             {commandId, workspaceId, goalId, reason})                  -> GiveUpOnGoal.handle             offset writeModel commandId workspaceId goalId reason
      (Just writeModel,ActionizeOnGoal          {commandId, workspaceId, goalId, actionId, actionDetails}) -> ActionizeOnGoal.handle          offset writeModel commandId workspaceId goalId actionId actionDetails
      (Just writeModel,NotifyActionCompleted    {commandId, workspaceId, goalId, actionId})                -> NotifyActionCompleted.handle    offset writeModel commandId workspaceId goalId actionId
-     (_            ,_)                                                                                    -> return $ rejectCommand writeModelMaybe "Scenario not handle"
+     (_            ,_)                                                                                    -> return $ CommandRejected "Scenario not handle"
 
 
 

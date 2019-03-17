@@ -19,7 +19,7 @@ import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.C
 import qualified Eventuria.GSD.Write.CommandSourcer.Service.Generic as GSD.Service.Generic
 import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.Repository.EventStoreStreams
-import           Eventuria.GSD.Write.Model.WriteModel
+
 
 persistCommand ::  EventStoreClient.Dependencies -> GsdCommand -> IO (Either SomeException PersistCommandResult)
 persistCommand eventStoreClientDependencies gsdCommand =
@@ -34,7 +34,7 @@ waitTillCommandResponseProduced :: EventStoreClient.Dependencies ->
                                    AggregateId ->
                                    Offset ->
                                    CommandId ->
-                                   IO (Either SomeException (Persisted (CommandTransaction GsdWriteModel)))
+                                   IO (Either SomeException (Persisted CommandTransaction))
 waitTillCommandResponseProduced eventStoreClientDependencies aggregateId offset commandId =
   GSD.Service.Generic.waitTillCommandResponseProduced
     (getCommandTransactionStream $ getEventStoreStreamRepository eventStoreClientDependencies)

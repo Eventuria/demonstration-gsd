@@ -24,7 +24,6 @@ import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction ()
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
 
-import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.CommandSourcer.Client.Dependencies
 import           Eventuria.GSD.Write.CommandSourcer.Definition
@@ -69,7 +68,7 @@ sendCommandAndWaitTillProcessed dependencies @ Dependencies { httpClientManager,
     waitTillCommandResponseProduced :: Dependencies ->
                                          AggregateId ->
                                               Offset ->
-                                           CommandId -> IO (Either CommandSourcerServerDown  (CommandTransaction GsdWriteModel))
+                                           CommandId -> IO (Either CommandSourcerServerDown CommandTransaction)
     waitTillCommandResponseProduced Dependencies { httpClientManager, url, logger} aggregateId offset commandId =
       (S.withClientM
        (waitTillCommandResponseProducedCall aggregateId offset commandId)
@@ -83,7 +82,7 @@ sendCommandCall :: GsdCommand -> S.ClientM PersistCommandResult
 waitTillCommandResponseProducedCall :: AggregateId ->
                                        Offset ->
                                        CommandId ->
-                                       S.ClientM (Persisted (CommandTransaction GsdWriteModel))
+                                       S.ClientM (Persisted CommandTransaction)
 healthCheckCall
   :<|> sendCommandCall
   :<|> waitTillCommandResponseProducedCall = S.client api

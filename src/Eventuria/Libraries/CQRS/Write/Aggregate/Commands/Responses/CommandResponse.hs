@@ -6,10 +6,9 @@ module Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandRespon
 import Eventuria.Libraries.CQRS.Write.Aggregate.Core
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-
-type RejectionReason = String
 
 
 data CommandResponse  = CommandSuccessfullyProcessed {aggregateId::AggregateId, commandId :: CommandId}
@@ -28,6 +27,6 @@ instance CommandJoinable CommandResponse where
 
 
 
-toCommandResponse :: CommandTransaction writeModel -> CommandResponse
-toCommandResponse CommandTransaction { result = CommandAccepted {} , .. } = CommandSuccessfullyProcessed {..}
-toCommandResponse CommandTransaction { result = CommandRejected {..} , ..} = CommandFailed {..}
+toCommandResponse :: CommandTransaction -> CommandResponse
+toCommandResponse CommandTransaction { commandHandlingResult = CommandValidated {} , .. } = CommandSuccessfullyProcessed {..}
+toCommandResponse CommandTransaction { commandHandlingResult = CommandRejected {..} , ..} = CommandFailed {..}

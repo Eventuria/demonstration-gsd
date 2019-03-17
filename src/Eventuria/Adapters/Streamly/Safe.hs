@@ -4,8 +4,7 @@
 module Eventuria.Adapters.Streamly.Safe where
 
 import           Control.Concurrent (ThreadId)
-import           Control.Exception
-
+import           Control.Exception hiding (try)
 import           Data.Either
 import           Data.Function ((&))
 
@@ -45,20 +44,42 @@ filter filtering stream = stream & S.filter (\safeResponse -> case safeResponse 
 
 
 foldx :: forall x m a b. Monad m => (x -> a ->  x)
-                     -> x
-                     -> (x -> b)
-                     -> SerialT m (Either SomeException a) -> m (Either SomeException b)
+                                 -> x
+                                 -> (x -> b)
+                                 -> SerialT m (Either SomeException a) -> m (Either SomeException b)
 foldx folding element extraction stream =
   S.foldx
     (\safeResponseA safeResponseB ->
             case (safeResponseA, safeResponseB) of
               (Left error , _ ) -> Left error
               (_ , Left error ) -> Left error
-              (Right a , Right b) ->
-                  Right $ folding a b)
+              (Right a , Right b) -> Right $ folding a b)
     (Right element)
     (\safeResponse -> fmap extraction safeResponse)
     stream
+
+
+foldxM :: forall x m a b. Monad m => (x -> a ->  m (Either SomeException x)) ->
+                                      m (Either SomeException x) ->
+                                      (x -> m (Either SomeException b)) ->
+                                      SerialT m (Either SomeException a) ->
+                                      m (Either SomeException b)
+foldxM folding element extraction stream =
+  S.foldxM
+    (\safeResponseA safeResponseB ->
+            case (safeResponseA, safeResponseB) of
+              (Left error , _ ) -> return $ Left error
+              (_ , Left error ) -> return $ Left error
+              (Right a , Right b) -> folding a b )
+    (element)
+    (\safeResponse -> case safeResponse of
+                        Left x -> return $ Left x
+                        Right x -> extraction x)
+    stream
+
+
+--(x -> a -> m x) -> m x -> (x -> m b) -> SerialT m a -> m b
+
 
 fromList :: (Monad m, IsStream t) => Either SomeException [a] -> t m (Either SomeException a)
 fromList safeResponse = case safeResponse of

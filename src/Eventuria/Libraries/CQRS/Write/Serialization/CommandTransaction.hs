@@ -4,76 +4,64 @@ module Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction where
 
 import Data.Aeson
 import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writable
 import Eventuria.Libraries.CQRS.Write.Serialization.Event()
 import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
 import qualified Data.Text as Text
 
-
-instance ToJSON writeModel => Writable (CommandTransaction writeModel) where
+instance Writable CommandTransaction  where
   getItemName commandTransaction  = "commandTransaction"
 
-instance ToJSON writeModel => ToJSON (CommandTransaction writeModel) where
+instance ToJSON CommandTransaction where
    toJSON (CommandTransaction{commandId,
+                              commandOffset,
                               aggregateId,
-                              snapshot,
-                              result} ) = object [
+                              commandHandlingResult} ) = object [
       "commandId" .= commandId,
+      "commandOffset" .= commandOffset,
       "aggregateId" .= aggregateId,
-      "snapshot" .= snapshot,
-      "result" .= result]
+      "commandHandlingResult" .= commandHandlingResult]
 
-instance FromJSON writeModel => FromJSON (CommandTransaction writeModel) where
+instance FromJSON CommandTransaction where
 
     parseJSON (Object jsonObject) = CommandTransaction <$> jsonObject .: "commandId"
+                                                       <*> jsonObject .: "commandOffset"
                                                        <*> jsonObject .: "aggregateId"
-                                                       <*> jsonObject .: "snapshot"
-                                                       <*> jsonObject .: "result"
-    parseJSON _ =  error $ "Json format not expected"
-
-
-instance ToJSON writeModel => ToJSON (Snapshot writeModel) where
-   toJSON Snapshot{offset, writeModelMaybe} = object [
-      "offset" .= offset,
-      "writeModelMaybe" .= writeModelMaybe]
-
-instance FromJSON writeModel => FromJSON (Snapshot writeModel) where
-
-    parseJSON (Object jsonObject) = Snapshot <$> jsonObject .: "offset"
-                                             <*> jsonObject .: "writeModelMaybe"
-
+                                                       <*> jsonObject .: "commandHandlingResult"
     parseJSON _ =  error $ "Json format not expected"
 
 
 
 
-resultTypeForCommandAccepted :: String
-resultTypeForCommandAccepted = "commandAccepted"
+
+resultTypeForCommandValidated :: String
+resultTypeForCommandValidated = "commandValidated"
 
 resultTypeForCommandRejected :: String
 resultTypeForCommandRejected = "commandRejected"
 
-instance Writable CommandProcessResult where
-  getItemName CommandAccepted {} = resultTypeForCommandAccepted
+instance Writable CommandHandlingResult where
+  getItemName CommandValidated {} = resultTypeForCommandValidated
   getItemName CommandRejected {} = resultTypeForCommandRejected
 
 
-instance ToJSON CommandProcessResult where
-   toJSON (commandResponse @ (CommandAccepted events )) = object [
-          "resultType" .= resultTypeForCommandAccepted,
+instance ToJSON CommandHandlingResult where
+   toJSON ((CommandValidated events )) = object [
+          "resultType" .= resultTypeForCommandValidated,
           "events" .= events]
-   toJSON (commandResponse @ (CommandRejected reason)) = object [
+   toJSON ((CommandRejected reason)) = object [
          "resultType" .= resultTypeForCommandRejected,
          "reason" .= reason]
 
-instance FromJSON CommandProcessResult  where
+instance FromJSON CommandHandlingResult  where
 
   parseJSON (Object jsonObject) = do
-               commandResponseNameMaybe <- jsonObject .: "resultType"
-               case commandResponseNameMaybe of
-                    Just (String commandResponseName) | (Text.unpack commandResponseName) == resultTypeForCommandAccepted -> CommandAccepted <$> jsonObject .: "events"
-                    Just (String commandResponseName) | (Text.unpack commandResponseName) == resultTypeForCommandRejected -> CommandRejected <$> jsonObject .: "reason"
-                    Just (String unknownCommandResponseName) -> error $ "Command Status unknown : " ++ Text.unpack unknownCommandResponseName
-                    Nothing -> error $ "Command Response name not provided"
+               resultTypeMaybe <- jsonObject .: "resultType"
+               case resultTypeMaybe of
+                    Just (String resultType) | (Text.unpack resultType) == resultTypeForCommandValidated -> CommandValidated <$> jsonObject .: "events"
+                    Just (String resultType) | (Text.unpack resultType) == resultTypeForCommandRejected  -> CommandRejected <$> jsonObject .: "reason"
+                    Just (String unknown) -> error $ "Command Result Type unknown : " ++ Text.unpack unknown
+                    Nothing -> error $ "Command Result Type name not provided"
                     _ -> error $ "Json format not expected"
   parseJSON _ = error $ "Json format not expected"

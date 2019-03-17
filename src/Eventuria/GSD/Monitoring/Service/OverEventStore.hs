@@ -16,6 +16,7 @@ import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Read.ReadProjections
 
+import           Eventuria.GSD.Write.CommandConsumer.Handling.ProjectGSDWriteModel
 import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.Core
@@ -64,5 +65,7 @@ streamWriteModelHistory :: EventStoreClient.Dependencies ->
                            SerialT IO (Either SomeException (Persisted (Maybe GsdWriteModel)))
 streamWriteModelHistory eventStoreClientDependencies workspaceId =
     GenericGSDMonitoring.streamWriteModelHistory
-      (getStreamAllWriteModelByAggregateId (getCommandTransactionStream $ getEventStoreStreamRepository eventStoreClientDependencies))
+      (getStreamAllWriteModelByAggregateId
+          (getCommandTransactionStream $ getEventStoreStreamRepository eventStoreClientDependencies)
+          projectGSDWriteModel)
       workspaceId

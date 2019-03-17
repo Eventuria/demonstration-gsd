@@ -7,8 +7,8 @@ import           Data.Aeson
 import           Data.Maybe
 import           Data.Function ((&))
 
-
 import qualified Eventuria.Adapters.Streamly.Safe as StreamlySafe
+
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
@@ -22,6 +22,7 @@ import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction()
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 
 
@@ -30,35 +31,46 @@ streamAllAggregateId :: AggregateIdStream EventStoreStream  ->  StreamAll Aggreg
 streamAllAggregateId  = streamAll
 
 
-getStreamAllEventsByAggregateId :: FromJSON writeModel =>
-                                   GetCommandTransactionStream EventStoreStream writeModel ->
+getStreamAllEventsByAggregateId :: GetCommandTransactionStream EventStoreStream ->
                                    GetStreamAll Event
 getStreamAllEventsByAggregateId  getCommandTransactionStream = (\aggregateId ->
   (streamAll $ getCommandTransactionStream aggregateId)
-      & StreamlySafe.concatMap (\PersistedItem{item = CommandTransaction {result} } ->
-          case result of
+      & StreamlySafe.concatMap (\PersistedItem{item = CommandTransaction {commandHandlingResult} } ->
+          case commandHandlingResult of
              CommandRejected {} ->       StreamlySafe.yield Nothing
-             CommandAccepted {events} -> StreamlySafe.fromList $ Right $ Just <$> events)
+             CommandValidated {events} -> StreamlySafe.fromList $ Right $ Just <$> events)
       & StreamlySafe.filter (\itemMaybe -> maybe (False) (\just -> True) itemMaybe)
       & StreamlySafe.map (\itemJustOnly -> fromJust $ itemJustOnly)
       & StreamlySafe.indexed
       & StreamlySafe.map (\(offset,event) -> PersistedItem {offset, item = event}))
 
-getStreamAllCommandResponseByAggregateId :: FromJSON writeModel =>
-                                   GetCommandTransactionStream EventStoreStream writeModel ->
-                                   GetStreamAll CommandResponse
+getStreamAllCommandResponseByAggregateId :: GetCommandTransactionStream EventStoreStream  ->
+                                            GetStreamAll CommandResponse
 getStreamAllCommandResponseByAggregateId  getCommandTransactionStream = (\aggregateId ->
   (streamAll $ getCommandTransactionStream aggregateId)
-    & StreamlySafe.map (\PersistedItem{item = CommandTransaction {result , snapshot = Snapshot {..}, ..} } ->
-        case result of
-           CommandRejected {..} ->  PersistedItem { offset , item = CommandFailed {..}}
-           CommandAccepted {} ->    PersistedItem { offset , item = CommandSuccessfullyProcessed {..}}))
+    & StreamlySafe.map (\PersistedItem{item = CommandTransaction {..} } ->
+        case commandHandlingResult of
+           CommandRejected {..} ->  PersistedItem { offset = commandOffset , item = CommandFailed {..}}
+           CommandValidated {} ->    PersistedItem { offset = commandOffset , item = CommandSuccessfullyProcessed {..}}))
 
 getStreamAllWriteModelByAggregateId :: FromJSON writeModel =>
-                                   GetCommandTransactionStream EventStoreStream writeModel ->
+                                   GetCommandTransactionStream EventStoreStream  ->
+                                   ProjectWriteModel writeModel ->
                                    GetStreamAll (Maybe writeModel)
-getStreamAllWriteModelByAggregateId  getCommandTransactionStream = (\aggregateId ->
+getStreamAllWriteModelByAggregateId  getCommandTransactionStream
+                                     projectWriteModel = (\aggregateId ->
     (streamAll $ getCommandTransactionStream aggregateId)
-      & StreamlySafe.map (\PersistedItem{item = CommandTransaction {snapshot = Snapshot {offset,writeModelMaybe}} } ->
-          PersistedItem { offset , item = writeModelMaybe}))
-
+      & StreamlySafe.mapM
+          (\PersistedItem {item = CommandTransaction {..} } -> do
+            writeModelMaybeResult <- StreamlySafe.foldx
+                                    (\writeModelMaybe PersistedItem { item = CommandTransaction {commandHandlingResult}}  ->
+                                        projectWriteModel writeModelMaybe commandHandlingResult )
+                                    Nothing
+                                    id
+                                    (streamFromRangeInclusive
+                                      (getCommandTransactionStream aggregateId)
+                                      0
+                                      commandOffset)
+            return $ fmap
+                      (\writeModelUpToDateMaybe -> PersistedItem { offset = commandOffset , item = writeModelUpToDateMaybe})
+                      writeModelMaybeResult))

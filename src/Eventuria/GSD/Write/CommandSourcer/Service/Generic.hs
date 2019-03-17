@@ -4,8 +4,6 @@
 module Eventuria.GSD.Write.CommandSourcer.Service.Generic  where
 
 import           Control.Exception
-import           Data.Aeson
-
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
@@ -34,13 +32,12 @@ persistCommand aggregateIdStream getCommandStream querying writing gsdCommand =
     getCommandStream
     aggregateIdStream $ toCommand gsdCommand
 
-waitTillCommandResponseProduced :: (FromJSON writeModel) =>
-                     GetCommandTransactionStream persistedStream writeModel ->
-                     Subscribing persistedStream ->
-                     AggregateId ->
-                     Offset ->
-                     CommandId ->
-                     IO (Either SomeException (Persisted (CommandTransaction writeModel)))
+waitTillCommandResponseProduced :: GetCommandTransactionStream persistedStream ->
+                                   Subscribing persistedStream ->
+                                   AggregateId ->
+                                   Offset ->
+                                   CommandId ->
+                                   IO (Either SomeException (Persisted CommandTransaction))
 waitTillCommandResponseProduced getCommandTransactionStream subscribing @ Subscribing {subscribeOnOffset} aggregateId offset commandId =
     (subscribeOnOffset (getCommandTransactionStream aggregateId) offset)
 

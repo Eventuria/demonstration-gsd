@@ -8,14 +8,14 @@ import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTran
 
 type CommandStream persistedStream = persistedStream Command
 type AggregateIdStream persistedStream = persistedStream AggregateId
-type CommandTransactionStream persistedStream writeModel = persistedStream (CommandTransaction writeModel)
+type CommandTransactionStream persistedStream = persistedStream CommandTransaction
 
 type GetCommandStream persistedStream = (AggregateId -> CommandStream persistedStream)
-type GetCommandTransactionStream persistedStream writeModel = (AggregateId -> CommandTransactionStream persistedStream writeModel)
+type GetCommandTransactionStream persistedStream = (AggregateId -> CommandTransactionStream persistedStream)
 
 
 data CQRSWriteStreamRepository persistedStream writeModel = CQRSWriteStreamRepository {
                                       aggregateIdStream           :: AggregateIdStream           persistedStream,
                                       getCommandStream            :: GetCommandStream            persistedStream,
-                                      getCommandTransactionStream :: GetCommandTransactionStream persistedStream writeModel
+                                      getCommandTransactionStream :: GetCommandTransactionStream persistedStream
                                     }

@@ -11,7 +11,7 @@ import qualified Data.Time as Time
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
                  
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.WriteModel
@@ -23,7 +23,7 @@ handle :: Offset ->
           WorkspaceId ->
           GoalId ->
           Text  ->
-          IO (CommandHandlerResult GsdWriteModel)
+          IO (CommandHandlingResult)
 handle offset
        writeModel @ GsdWriteModel {goals}
        commandId
@@ -31,29 +31,19 @@ handle offset
        goalId
        refinedGoalDescription =
   case (isGoalFound goalId goals) of
-    False -> return $ rejectCommand
-                        (Just writeModel)
-                        "Refining a goal description for a goal that does not exist."
+    False -> return $ CommandRejected "Refining a goal description for a goal that does not exist."
     True -> do
       createdOn <- Time.getCurrentTime
       eventId <- Uuid.nextRandom
-      return $ validateCommand
-                GsdWriteModel {goals = updateGoals goalId refinedGoalDescription goals }
-                [toEvent $ GoalDescriptionRefined {
-                              eventId ,
-                              createdOn,
-                              workspaceId ,
-                              goalId ,
-                              refinedGoalDescription}]
+      return $ CommandValidated [toEvent $ GoalDescriptionRefined {
+                                              eventId ,
+                                              createdOn,
+                                              workspaceId ,
+                                              goalId ,
+                                              refinedGoalDescription}]
   where
     isGoalFound :: GoalId -> [Goal] -> Bool
     isGoalFound  goalIdToRefine goals = case (find (\Goal{goalId} -> goalIdToRefine == goalId ) goals) of
                                   Just goal -> True
                                   Nothing -> False
 
-    updateGoals :: GoalId -> Text -> [Goal] -> [Goal]
-    updateGoals goalIdToUpdate refinedGoalDescription goals =
-      map (\goal@Goal{workspaceId,goalId,actions,status} -> case (goalIdToUpdate == goalId) of
-        True -> Goal{workspaceId,goalId, actions,description = refinedGoalDescription,status}
-        False -> goal
-      ) $ goals

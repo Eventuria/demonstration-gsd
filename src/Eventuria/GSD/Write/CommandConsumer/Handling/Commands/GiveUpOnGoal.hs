@@ -10,7 +10,7 @@ import qualified Data.Time as Time
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
                  
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
                  
 import           Eventuria.GSD.Write.Model.Events.Event
@@ -24,7 +24,7 @@ handle :: Offset ->
           WorkspaceId ->
           GoalId ->
           Text ->
-          IO (CommandHandlerResult GsdWriteModel)
+          IO (CommandHandlingResult)
 handle offset
        writeModel @ GsdWriteModel {goals}
        commandId
@@ -32,38 +32,28 @@ handle offset
        goalId
        reasonToGiveUp =
   case (findGoal goalId goals)  of
-    Nothing -> return $ rejectCommand (Just writeModel) "Trying to pause a goal that does not exist"
+    Nothing -> return $ CommandRejected  "Trying to pause a goal that does not exist"
     Just goal @ Goal {workspaceId,goalId,description,status} ->
       case status of
-          Accomplished -> return $ rejectCommand (Just writeModel) "Trying to give up a goal that is already accomplished"
-          GivenUp      -> return $ rejectCommand (Just writeModel) "Trying to give up a goal that is already given up"
+          Accomplished -> return $ CommandRejected  "Trying to give up a goal that is already accomplished"
+          GivenUp      -> return $ CommandRejected  "Trying to give up a goal that is already given up"
           InProgress   -> validate goals reasonToGiveUp
           Created      -> validate goals reasonToGiveUp
           Paused       -> validate goals reasonToGiveUp
 
   where
-      validate :: [Goal] ->
-                         Text ->
-                         IO (CommandHandlerResult GsdWriteModel)
-      validate goals
-                      reasonToGiveUp  = do
+      validate :: [Goal] -> Text -> IO (CommandHandlingResult)
+      validate goals reasonToGiveUp  = do
         createdOn <- Time.getCurrentTime
         eventId <- Uuid.nextRandom
-        return $ validateCommand
-                  GsdWriteModel {goals = updateGoalStatus goalId GivenUp goals }
-                  [toEvent $ GoalGivenUp {
-                              eventId ,
-                              createdOn,
-                              workspaceId ,
-                              goalId,
-                              reason = reasonToGiveUp}]
+        return $ CommandValidated [toEvent $ GoalGivenUp {
+                                                eventId ,
+                                                createdOn,
+                                                workspaceId ,
+                                                goalId,
+                                                reason = reasonToGiveUp}]
 
       findGoal :: GoalId -> [Goal] -> Maybe Goal
       findGoal  goalIdToFind goals = find (\Goal{goalId} -> goalIdToFind == goalId ) goals
 
-      updateGoalStatus :: GoalId -> GoalStatus -> [Goal] -> [Goal]
-      updateGoalStatus goalIdToUpdate newGoalStatus goals =
-        map (\goal@Goal{workspaceId,goalId,actions,description} -> case (goalIdToUpdate == goalId) of
-          True -> Goal{workspaceId,goalId,actions, description, status = newGoalStatus}
-          False -> goal
-        ) $ goals
+      

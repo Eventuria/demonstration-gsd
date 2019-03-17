@@ -28,19 +28,21 @@ import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 startCommandConsumption ::  Logger ->
             AggregateIdStream persistedStreamEngine  ->
             Streaming persistedStreamEngine ->
-            ConsumeAnAggregate ->
+            OrchestratreCommandConsumptionForAggregate writeModel ->
             IO (Either SomeException ())
 startCommandConsumption  logger
                          aggregateIdStream
                          Streaming {streamAllInfinitely}
-                         consumeAnAggregate = do
+                         orchestratreCommandConsumptionForAggregate = do
   threadId <-  myThreadId
   logInfo logger "runnning command consummers on all aggregates"
 
   try $ StreamlySafe.runStreamOnIOAndThrowFailureTo threadId
-      $ parallely $
-          streamAllInfinitely aggregateIdStream &
-          StreamlySafe.mapM consumeAnAggregate
+        $ parallely
+        $ streamAllInfinitely aggregateIdStream & StreamlySafe.mapM
+             (\persistedAggregateId -> try $ StreamlySafe.runStreamOnIOAndThrowFailureTo
+                                        threadId
+                                        (orchestratreCommandConsumptionForAggregate persistedAggregateId))
 
 
 

@@ -9,7 +9,7 @@ import qualified Data.Time as Time
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
                  
 import           Eventuria.GSD.Write.Model.Events.Event
@@ -22,7 +22,7 @@ handle :: Offset ->
           CommandId ->
           WorkspaceId ->
           Text  ->
-          IO (CommandHandlerResult GsdWriteModel)
+          IO (CommandHandlingResult)
 handle offset
       writeModel
       commandId
@@ -30,10 +30,7 @@ handle offset
       workspaceNewName = do
        createdOn <- Time.getCurrentTime
        eventId <- Uuid.nextRandom
-       return $ validateCommand
-                 writeModel
-                 [toEvent $ WorkspaceRenamed {
-                              eventId ,
-                              createdOn,
-                              workspaceId ,
-                              workspaceNewName}]
+       return $ CommandValidated [toEvent $ WorkspaceRenamed { eventId ,
+                                                               createdOn,
+                                                               workspaceId ,
+                                                               workspaceNewName}]

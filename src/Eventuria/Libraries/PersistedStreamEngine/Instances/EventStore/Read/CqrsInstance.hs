@@ -10,7 +10,8 @@ import Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.EventStore
 
 getEventStoreStreaming :: Streaming EventStoreStream
 getEventStoreStreaming = Streaming {
-                  streamFromOffset = EventStoreStreaming.streamFromOffset,
+                  streamFromOffsetInclusive = EventStoreStreaming.streamFromOffsetInclusive,
+                  streamFromRangeInclusive = EventStoreStreaming.streamFromRangeInclusive,
                   streamAllInfinitely = EventStoreStreaming.streamAllInfinitely,
                   streamAll = EventStoreStreaming.streamAll }
 

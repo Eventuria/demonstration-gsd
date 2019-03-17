@@ -9,31 +9,20 @@ import Eventuria.Commons.Logger.Core
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.PersistenceResult
 
-import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import Eventuria.Libraries.CQRS.Write.StreamRepository
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Handling.CommandHandler
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 
-type ConsumeACommand          = Persisted Command     ->  IO (Either SomeException PersistenceResult)
-type ConsumeAnAggregateStream = Persisted AggregateId ->  SerialT IO (Either SomeException ())
-type ConsumeAnAggregate       = Persisted AggregateId ->  IO (Either SomeException ())
+type OrchestratreCommandConsumptionForAggregate writeModel = Persisted AggregateId ->  SerialT IO (Either SomeException (Maybe writeModel))
 
-
-type GetConsumeAnAggregate persistedStream writeModel =
+type GetAggregateCommandConsumptionOrchestration persistedStream writeModel =
        Logger ->
        GetCommandStream persistedStream ->
-       GetCommandTransactionStream persistedStream writeModel ->
+       GetCommandTransactionStream persistedStream  ->
        Reading persistedStream ->
        Writing persistedStream ->
-       CommandHandler writeModel ->
-       GetConsumeACommand persistedStream writeModel ->
-       ConsumeAnAggregate
+       ProjectWriteModel writeModel ->
+       HandleCommand writeModel ->
+       OrchestratreCommandConsumptionForAggregate writeModel
 
-type GetConsumeACommand persistedStream writeModel = Logger ->
-                          Querying persistedStream ->
-                          Writing persistedStream ->
-                          GetCommandTransactionStream persistedStream writeModel ->
-                          CommandHandler writeModel ->
-                          (AggregateId -> ConsumeACommand)

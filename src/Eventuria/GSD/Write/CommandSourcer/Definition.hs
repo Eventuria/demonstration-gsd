@@ -21,7 +21,7 @@ import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Commons.DevOps.Core
 import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
-import Eventuria.GSD.Write.Model.WriteModel
+
 
 type GsdWriteApi =  HealthCheck :<|>  SendGsdCommand :<|>  WaitTillCommandResponseProduced
 
@@ -36,4 +36,4 @@ type WaitTillCommandResponseProduced = "gsd" :> "write" :> "waitTillCommandRespo
                                        :> Capture "agreggateId" AggregateId
                                        :> Capture "offset" Offset
                                        :> Capture "commandId" CommandId
-                                       :> Get '[JSON] (Persisted (CommandTransaction GsdWriteModel))
+                                       :> Get '[JSON] (Persisted CommandTransaction)

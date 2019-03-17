@@ -1,24 +1,28 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 module Eventuria.GSD.Write.Model.WriteModel where
 
+import qualified Data.Set as Set
+import qualified Data.Text as Text
+import qualified Data.List as List
 
 import Data.Aeson
 import GHC.Generics
 import Eventuria.GSD.Write.Model.Core
-import Data.Text hiding (index)
-import Data.Set
 
-type GoalDescription = Text
+type RefinedGoalDescription = Text.Text
+type ActionDetails = Text.Text
+type GoalDescription = Text.Text
 
 data GoalStatus = Created | InProgress | Paused | Accomplished | GivenUp deriving (Show , Eq , Generic )
 
 
 data ActionStatus = Initiated | Completed deriving (Show , Eq , Generic )
 
-data Action = Action {actionId :: ActionId, index :: Int , details :: Text ,status :: ActionStatus } deriving (Show , Eq , Generic )
+data Action = Action {actionId :: ActionId, index :: Int , details :: ActionDetails ,status :: ActionStatus } deriving (Show , Eq , Generic )
 
 instance Ord Action where
   (<=) a b =  (index a) <= (index b)
@@ -26,7 +30,7 @@ instance Ord Action where
 data Goal = Goal {workspaceId ::WorkspaceId ,
                   goalId :: GoalId ,
                   description :: GoalDescription ,
-                  actions :: Set Action,
+                  actions :: Set.Set Action,
                   status :: GoalStatus} deriving (Show , Eq , Generic )
 
 
@@ -69,7 +73,7 @@ instance ToJSON ActionStatus where
 
 instance FromJSON ActionStatus  where
 
-  parseJSON (String s) = case unpack s of
+  parseJSON (String s) = case Text.unpack s of
           "initiated" -> return Initiated
           "completed" -> return Completed
           _ -> error $ "FromJSON ActionStatus : Json format not expected"
@@ -91,7 +95,7 @@ instance ToJSON GoalStatus where
 
 instance FromJSON GoalStatus  where
 
- parseJSON (String s) = case unpack s of
+ parseJSON (String s) = case Text.unpack s of
     "created" -> return Created
     "inProgress" -> return InProgress
     "paused" -> return Paused
@@ -99,3 +103,69 @@ instance FromJSON GoalStatus  where
     "givenUp" -> return GivenUp
     _ -> error $ "FromJSON GoalStatus : Json format not expected"
  parseJSON _ =  error $ "FromJSON GoalStatus : Json format not expected"
+
+
+findGoal :: GoalId -> [Goal] -> Maybe Goal
+findGoal  goalIdToFind goals = List.find (\Goal{goalId} -> goalIdToFind == goalId ) goals
+
+findAction :: ActionId -> Set.Set Action -> Maybe Action
+findAction  actionIdToFind actions = List.find (\Action{actionId} -> actionIdToFind == actionId ) actions
+
+updateGoalStatus :: GoalId -> GoalStatus -> [Goal] -> [Goal]
+updateGoalStatus goalIdToUpdate newGoalStatus goals =
+  map (\goal@Goal{workspaceId,goalId,description,actions} -> case (goalIdToUpdate == goalId) of
+    True -> Goal{workspaceId,goalId, description, actions, status = newGoalStatus}
+    False -> goal
+  ) $ goals
+
+updateGoalWithNewRefinedGoalDescription :: GoalId -> RefinedGoalDescription -> [Goal] -> [Goal]
+updateGoalWithNewRefinedGoalDescription goalIdToUpdate refinedGoalDescription goals =
+  map (\goal@Goal{workspaceId,goalId,actions,status} -> case (goalIdToUpdate == goalId) of
+    True -> Goal{workspaceId,goalId, actions,description = refinedGoalDescription,status}
+    False -> goal
+  ) $ goals
+
+addAction :: [Goal] -> GoalId -> ActionId -> ActionDetails -> [Goal]
+addAction goals goalId actionId actionDetails = case (findGoal goalId goals) of
+   Nothing -> error ("logique issue in the write model")
+   Just goal @ Goal {actions}  -> updateAction goalId
+                                               Action {actionId,
+                                                       index = Set.size actions,
+                                                       details = actionDetails,
+                                                       status = Initiated}
+                                               goals
+  where
+    updateAction :: GoalId -> Action -> [Goal] -> [Goal]
+    updateAction goalIdToUpdate action goals =
+      map (\goal@Goal{workspaceId,goalId,description, status ,actions} -> case (goalIdToUpdate == goalId) of
+        True -> Goal{workspaceId,goalId, description, status , actions = Set.union actions $ Set.fromList [action]}
+        False -> goal
+      ) $ goals
+
+updateGoal :: [Goal] -> Goal -> [Goal]
+updateGoal goals updatedGoal@Goal{goalId = goalIdToUpdate} =
+ map (\goal@Goal{goalId} -> case (goalId == goalIdToUpdate) of
+   True -> updatedGoal
+   False -> goal
+ ) $ goals
+
+updateAction :: [Goal] -> GoalId -> ActionId -> ActionStatus -> [Goal]
+updateAction goals goalId actionId actionStatus = case (findGoal goalId goals) of
+   Nothing -> error ("logique issue in the write model")
+   Just goal @ Goal {actions}  -> case (findAction actionId actions) of
+      Nothing -> error ("logique issue in the write model")
+      Just action @ Action {actionId,index,details,status}  ->
+                  updateGoal
+                  goals
+                  (updateGoalWithUpdatedAction goal Action {status = actionStatus, ..})
+
+
+ where
+
+  updateGoalWithUpdatedAction :: Goal -> Action -> Goal
+  updateGoalWithUpdatedAction Goal{workspaceId,goalId,description,status,actions} updatedAction @ Action {actionId = actionIdToUpdate} =
+   Goal {workspaceId,goalId,description,status,
+         actions = Set.map (\action@Action{actionId} -> case (actionId == actionIdToUpdate) of
+                             True -> updatedAction
+                             False -> action
+                           ) $ actions}

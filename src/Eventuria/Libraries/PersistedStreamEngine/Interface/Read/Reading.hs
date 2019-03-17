@@ -16,10 +16,15 @@ data Reading persistedStream = Reading {
     subscribing :: Subscribing persistedStream }
 
 data Streaming persistedStream = Streaming {
-           streamFromOffset    :: forall stream monad item . Streamable stream monad item =>
+           streamFromOffsetInclusive    :: forall stream monad item . Streamable stream monad item =>
                                                               persistedStream item ->
                                                               Offset ->
                                                               stream monad (Either SomeException (Persisted item)),
+           streamFromRangeInclusive    :: forall stream monad item . Streamable stream monad item =>
+                                                                         persistedStream item ->
+                                                                         Offset ->
+                                                                         Offset ->
+                                                                         stream monad (Either SomeException (Persisted item)),
            streamAllInfinitely :: forall stream monad item . Streamable stream monad item =>
                                                               persistedStream item ->
                                                               stream monad (Either SomeException (Persisted item)) ,
