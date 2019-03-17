@@ -128,19 +128,22 @@ The services can run till they call an unhealthy dependency, at this moment they
 `Eventuria` is the name of the company hosting te codebase and it's the root package of the codebase.
 By flicking through the codebase under `Eventuria`, you'll see the following packages :
 
-<img align="right" src="packages.png"> <div>
-- `Adapters` : it contains wrapper, tweaks on external libraries used within the company
-    - `Byline` : the command line interface library used for the `cli` service
-    - `Servant` : HTTP Client and Server library used for micro-services communication
-    - `Streamly` : a Streaming Library
+<img align="right" src="packages.png"> <div><br>
+- `Adapters` : it contains wrappers, tweaks on external libraries
+    - `Byline` : a command line interface [library](http://hackage.haskell.org/package/byline) used for the `cli` service
+    - `Servant` : HTTP Client and Server [library](https://github.com/haskell-servant) used for micro-services communication
+    - `Streamly` : a Streaming [library](https://github.com/composewell/streamly)
+
 - `Commons` : are tiny bounded contexts used within the company.
-- `GSD` : Bounded Context specific to the gsd application, you'll find the 4 services cited previously
+
+- `GSD` : Bounded Context specific to the gsd application, you'll find the 4 services explained previously in that doc
     - `CLI` : the `gsd-cli` implementation
     - `Write` :
         - `gsd-command-consumer`
         - `gsd-command-sourcer`
     - `Read` : the `gsd-read` implementation
     - `Monitoring` : the `gsd-monitoring` implementation
+
 - `Libraries`
     - `CQRS` : Bounded Context Specific to the pattern, it could be eventually reused by other application implementing the same architecture
     - `PersistedStreamEngine`
@@ -149,6 +152,12 @@ By flicking through the codebase under `Eventuria`, you'll see the following pac
 
 All these packages will eventually be in their own github repository as they get more mature.
 </div>
+<br><br><br>
+
+##  4. Data Flow
+
+##  5. Emergent CQRS framework
+
 <h1> </h1>
 
 

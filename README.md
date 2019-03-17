@@ -22,7 +22,7 @@
 </p>
 <h1> </h1>
 <p align="center">
-  <a href="/doc/setup.md">Try GSD Now ! </a> :stuck_out_tongue:
+  <a href="/doc/setup.md">Install and Try GSD Now ! </a> :stuck_out_tongue:
 </p>
 <h1> </h1>
 <p align="center">
