@@ -8,7 +8,7 @@
     - Cabal build system
     - Stack tool
 
-# Build and Run The Distributed Application
+# Build and Run GSD
 
 ## Build
 
@@ -24,14 +24,15 @@
 
 You are about to run 6 services :
 
-- 1 user interface `gsd-cli` : command-line user interface to pilot the gsd application
+- 1 user interface `gsd-cli`
 - Relying on 5 services:
-    - `eventstore-service` : database where all the data is persisted (embedded into a docker container)
-    - `gsd-command-sourcer` : receives and store commands sent by the cli
-    - `gsd-command-consumer` : consumes the commands from the sourcer and produces events
-    - `gsd-read` : read the events and offers a read model for the cli
-    - `gsd-monitoring` : shows what the command consumer produced.
+    - `eventstore-service`
+    - `gsd-command-sourcer`
+    - `gsd-command-consumer`
+    - `gsd-read`
+    - `gsd-monitoring`
 
+(For more information about these services, please read the [Technical Feature Set](technical.md) Section)
 
 In order to understand the technical aspects of the system, I recommend you to run 1 service per terminal as in this example :
 
@@ -43,7 +44,7 @@ In order to understand the technical aspects of the system, I recommend you to r
     docker run --name eventstore-service -dit -p 2113:2113 -p 1113:1113 eventstore/eventstore
     ```
     This command `docker run` will :
-    - [x] Download the docker image of the [EventStore](https://eventstore.org/)
+    - [x] Download the [EventStore](https://eventstore.org/) docker image
        > *Warning* : This operation could take a while since you need to download the docker image...
     - [x] Run that docker image into a docker container named `eventstore-service` (in background mode)
     - [x] Open the docker container on the port 1113 for gsd services
@@ -54,29 +55,29 @@ In order to understand the technical aspects of the system, I recommend you to r
     - `docker start eventstore-service` to start the service.
     - `docker rm eventstore-service` to delete the container.
 
-2) run the command sourcer service
-    ```
+2) run the Command Sourcer service
+    ```bash
     stack run gsd-command-sourcer
     ```
-3) run the command consumer service
-    ```
+3) run the Command Consumer service
+    ```bash
     stack run gsd-command-consumer
     ```
 4) run the read service
-    ```
+    ```bash
     stack run gsd-read
     ```
 5) run the monitoring service
-    ```
+    ```bash
     stack run gsd-monitoring
     ```
 
-6) run the command line interface
-    ```
+6) run the Command Line Interface service
+    ```bash
     stack run gsd-cli
     ```
 
-Once all the services are up and running, the `gsd-cli` will give access to gsd commands, you should see something similar to the following :
+Once all the services are up and running, the `gsd-cli` will give access to gsd features, you should see something similar to the following :
 
 ```bash
 ###############################################

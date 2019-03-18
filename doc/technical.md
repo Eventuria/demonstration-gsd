@@ -1,16 +1,28 @@
-# Technical features
-1. <a href="#1-definitions">Definitions</a>
-2. <a href="#2-microservices">Microservices</a>
-   1. <a href="#21-overview">Overview</a>
-   2. <a href="#22-resiliency-and-high-availability--health-check-mechanism">Resiliency and high availability</a>
-   3. <a href="#23-demo">Health-check Mechanism Demo</a>
-3. <a href="#">Bounded Contexts</a>
-4. <a href="#">Packaging</a>
+<p align="center">
+  TECHNICAL FEATURE SET <br>
+  <a href="#">Domain Driven Design</a> |
+  <a href="#">Command Sourcing</a> |
+  <a href="#">CQRS</a> |
+  <a href="#">Functional Reactive Programing</a> |
+  <a href="#">Haskell</a>
+  <br>
+</p>
+<h1> </h1>
+
+- <a href="#1-definitions">1. Definitions</a>
+- <a href="#2-microservices">2. Microservices</a>
+   - <a href="#21-overview">2.1 Overview</a>
+   - <a href="#22-resiliency-and-high-availability">2.2 Resiliency and high availability</a>
+   - <a href="#23-health-check-mechanism-demo">2.3 Health-Check Mechanism Demo</a>
+- <a href="#3-bounded-contexts">3. Bounded Contexts</a>
+- <a href="#4-streams-and-logs">4. Streams and Logs</a>
+- <a href="#5-emergent-cqrs-framework">5. Emergent CQRS framework</a>
+
 <h1> </h1>
 
 ## 1. Definitions
 
-GSD is distributed application based on the following concepts :
+GSD is a distributed application based on the following concepts :
 - [Domain Driven Design](https://en.wikipedia.org/wiki/Domain-driven_design) (DDD)
     - Place the project's primary focus on the core domain and domain logic
     - Base complex designs on a model of the domain
@@ -22,29 +34,35 @@ GSD is distributed application based on the following concepts :
         - Capture all changes to an application state as a sequence of events
         - Capture all the commands sent to the system
     - Commands sent to the system are stored and consumed asynchronously as opposed to Event Sourcing
-        - The command loss when the service is down is reduced.
+        - Command losses are reduced when the service is down
         - The data flow is pulled as opposed to pushed in Event Sourcing
-        - you work in a stream from A-Z
-    - This command consumption produces and stores in a single transaction containing
-        - The Events
-        - The Command Response
+        - Processes are embedded in a stream from A-Z
+    - This command consumption produces and stores a single transaction :
+```haskell
+data CommandHandlingResult =   CommandRejected   { reason ::  RejectionReason}
+                             | CommandValidated  { events ::  [Event]}
+
+data CommandTransaction = CommandTransaction {
+                              commandId :: CommandId,
+                              commandOffset :: Offset ,
+                              aggregateId :: AggregateId ,
+                              commandHandlingResult :: CommandHandlingResult }
+```
 - [Functional Reactive Programing](https://en.wikipedia.org/wiki/Functional_reactive_programming)
     - it's a programming paradigm for reactive programming (asynchronous dataflow programming) using the building blocks of functional programming (e.g. map, reduce, filter).
-    - Streams (dataflow) are ubiquitous in GSD and Logs (FIFO) are the persisted version of them.
+    - Streams and Logs (FIFO) are natural DDDD Architecture Building Blocks.
 - [Micro-service Architecture](https://en.wikipedia.org/wiki/Microservices)
     - Services are small in size
-    - Messaging (Commands) enabled
+    - Messaging enabled
     - Bounded by contexts
     - Autonomously developed
     - Independently deployable
     - Decentralized
     - Built and released with automated processes.
 
-All these concepts are building blocks for implementing [Kahn process networks (KPNs, or process networks)](https://en.wikipedia.org/wiki/Kahn_process_networks)
+All these concepts are building blocks for implementing the [Kahn process networks (KPNs, or process networks)](https://en.wikipedia.org/wiki/Kahn_process_networks). They are a concurrent [model of computation](https://en.wikipedia.org/wiki/Model_of_computation) which can be also considered as a Pattern / Architecture for distributed systems.
 
-it's a concurrent [model of computation](https://en.wikipedia.org/wiki/Model_of_computation) which can be also considered as a Pattern / Architecture for distributed systems
-
-related articles :
+Related Articles :
 
 - https://martinfowler.com/eaaDev/EventSourcing.html
 - http://www.cqrs.nu/faq
@@ -56,40 +74,38 @@ related articles :
 
 ### 2.1 Overview
 
-GSD is made of 6 distributed services :
+The GSD application is made of 6 distributed services :
 
-- `cli` : it's a command line interface to pilot the system.
-    - Sent commands to the system
-    - Move to the next interface when the command is processed
-    - Read eventually updated projections from its read service (hosting the gsd read model)
-    - Read eventually updated projections from a monitoring service
+- `cli` - Command Line Interface to pilot the system.
+    - Send commands to the system
+    - Read eventually up-to-date projections from the Read service
+    - Read eventually up-to-date projections from a Monitoring service
 
 - `command-sourcer`
-    - Receives commands
-    - Dispatch and Persist these commands in an aggregate command stream
+    - Receive commands
+    - Dispatch and Persist these commands
 
-- `command-consumer` : It is an orchestration from the CQRS Sagas Terminology, this service orchestrates the consumption of commands on a specific aggregate.
+- `command-consumer` - Command Consumption Orchestration (CQRS Sagas Terminology)
     - Listen on commands arriving on the command stream for each aggregates
     - Re-build the write model from the previous command transactions
-    - perform the transactions on each command persisted (`handleCommand`), a command can be :
+    - Perform the transactions on each command persisted (`handleCommand`), a command can be :
         - Accepted (contains events)
         - Rejected (contains the reason of rejection)
-    - persists these command transactions
+    - Persist these command transactions
 
 - `gsd-read`
-    - reads events from the command transaction streams
-    - projects a model from these events optimised for the read
-    - serves that read model to the cli service
+    - Read from the command transaction streams
+    - Project a model optimised for the read
+    - Serve that model to the cli service
 
 - `gsd-monitoring`
-    - reads the command transaction and the command streams
-    - projects a model from these events optimised for the monitoring the system
-    - serves that monitoring model to the cli service
+    - Read the command transaction and the command streams
+    - Project a model optimised for monitoring the system
+    - Serve that model to the cli service
 
-- `eventstore-service`
-    - persist and give access to streams for the system
-    - it's embedded into a docker container
-    - it could be replaced by any other engine that implement the interfaces provided in the project.
+- `eventstore-service` - embedded into a docker container
+    - Implement the [`PersistedStreamEngine` interface](../src/Eventuria/Libraries/PersistedStreamEngine) .
+    - Persist and give access to Logs
 
 <p align="center">
   <img src="microservices.png">
@@ -97,25 +113,25 @@ GSD is made of 6 distributed services :
 
 ### 2.2 Resiliency and high availability
 
-Each service are safe (streams and bootstrap) and can only terminate by
+Each service is safe and can only be terminated by
 - a SIG-INT (releasing resources properly)
 - a SIG-KILL
 
-Each service has a built-in bootstrap health-check mechanism.
-The services can run till they call an unhealthy dependency, at this moment they come back in that health-check mechanism.
+Each service has a built-in bootstrap health-check mechanism and come back in that mechanism whenever it becomes unhealthy.
 
-- `cli` is healthy, when the following dependencies are healthy :
-    - `command-sourcer`
-    - `command-consumer`
-    - `gsd-read`
-    - `gsd-monitoring`
+- Regarding the GSD application
+    - `cli` is healthy, when the following dependencies are healthy :
+        - `command-sourcer`
+        - `command-consumer`
+        - `gsd-read`
+        - `gsd-monitoring`
 
-- `command-sourcer` is healthy, when `eventstore-service` is healthy
-- `command-consumer` is healthy, when `eventstore-service` is healthy
-- `gsd-read` is healthy, when `eventstore-service` is healthy
-- `gsd-monitoring` is healthy, when `eventstore-service` is healthy
+    - `command-sourcer` is healthy, when `eventstore-service` is healthy
+    - `command-consumer` is healthy, when `eventstore-service` is healthy
+    - `gsd-read` is healthy, when `eventstore-service` is healthy
+    - `gsd-monitoring` is healthy, when `eventstore-service` is healthy
 
-### 2.3 Health-check Mechanism Demo
+### 2.3 Health-Check Mechanism Demo
 
 <p align="center">
   <img src="https://github.com/Eventuria/media/raw/master/healthcheck.gif">
@@ -124,56 +140,86 @@ The services can run till they call an unhealthy dependency, at this moment they
 
 ##  3. Bounded Contexts
 
-`Eventuria` is the name of the company hosting te codebase and it's the root package of the codebase.
-By flicking through the codebase under `Eventuria`, you'll see the following packages :
+`Eventuria` is the name of the company hosting the project (root package). By flicking through the codebase under `Eventuria`, you'll see the following packages :
 
 <img align="right" src="packages.png"> <div><br>
-- `Adapters` : it contains wrappers, tweaks on external libraries
-    - `Byline` : a command line interface [library](http://hackage.haskell.org/package/byline) used for the `cli` service
-    - `Servant` : HTTP Client and Server [library](https://github.com/haskell-servant) used for micro-services communication
-    - `Streamly` : a Streaming [library](https://github.com/composewell/streamly)
+- [`Adapters`](../src/Eventuria/Adapters) : Contains wrappers, tweaks on external libraries
+    - [`Byline`](../src/Eventuria/Adapters/ByLine) : Command Line Interface [Library](http://hackage.haskell.org/package/byline) used for the `cli` service
+    - [`Servant`](../src/Eventuria/Adapters/Servant) : HTTP Client and Server [Library](https://github.com/haskell-servant) used for micro-services communication
+    - [`Streamly`](../src/Eventuria/Adapters/Streamly) : Streaming [Library](https://github.com/composewell/streamly)
 
-- `Commons` : are tiny bounded contexts used within the company.
+- [`Commons`](../src/Eventuria/Commons) : Tiny Bounded Contexts
 
-- `GSD` : Bounded Context specific to the gsd application, you'll find the 4 services explained previously in that doc
-    - `CLI` : the `gsd-cli` implementation
-    - `Write` :
+- [`GSD`](../src/Eventuria/GSD) : GSD Application Bounded Context, you'll find the 4 services cited previously in that doc
+    - [`CLI`](../src/Eventuria/GSD/CLI) : `gsd-cli` implementation
+    - [`Write`](../src/Eventuria/GSD/Write) :
         - `gsd-command-consumer`
         - `gsd-command-sourcer`
-    - `Read` : the `gsd-read` implementation
-    - `Monitoring` : the `gsd-monitoring` implementation
+    - [`Read`](../src/Eventuria/GSD/Read) : `gsd-read` implementation
+    - [`Monitoring`](../src/Eventuria/GSD/Monitoring) : `gsd-monitoring` implementation
 
-- `Libraries`
-    - `CQRS` : Bounded Context Specific to the pattern, it could be eventually reused by other application implementing the same architecture
-    - `PersistedStreamEngine`
-        - It's an interface for reading/subscribing/writing messages streams (commands and command transactions streams in our case)
-        - It contains one instance for the [EventStore](https://eventstore.org/)
+- [`Libraries`](../src/Eventuria/Libraries)
+    - [`CQRS`](../src/Eventuria/Libraries/CQRS) : CQRS Bounded Context (this Library will eventually become a Framework - see [Emergent CQRS framework](#5-emergent-cqrs-framework) Section )
+    - [`PersistedStreamEngine`](../src/Eventuria/Libraries/PersistedStreamEngine)
+        - Interface for Reading/Subscribing/Writing messages to Logs (persisted streams)
+        - Contain one instance for the [EventStore](https://eventstore.org/)
 
-All these packages will eventually be in their own github repository as they get more mature.
+All these packages will eventually be in their own git repository as they get more mature.
 </div>
 <br><br><br>
 
-##  4. Emergent CQRS framework
+##  4. Streams and Logs
 
-One of the intent when starting this project was to get a CQRS Framework out of a concrete application.
-This is what the package `Eventuria.CQRS` will eventually become...
-To use this framework, you need to provide the following :
+- `command-sourcer`
+    - Handle an Aggregate index  (AggregateId Stream)
+    - Serve Command Requests - Feed the Command Streams (1 Command Stream per Aggregate)
+- `command-consumer` - Per aggregate :
+    - Subscribe to Commands
+    - Project a write Model
+    - Handle each command by providing a Command Transaction :
+        - Accepted (contains events)
+        - Rejected (contains the reason of rejection)
+    - Feed the Command Transaction Stream
+- `gsd-read`
+    - Read a Command Transaction Stream
+    - Project from command transaction to a specific read model
+    - Serve clients with this model
+- `gsd-monitoring`
+    - Read a Command Transaction Stream
+    - Project from command transaction to a specific read model
+    - Serve clients with this model
 
-- a specific WriteModel for your application ([gsd example](../src/Eventuria/GSD/Write/Model/WriteModel.hs))
-- mapping between the application events and the cqrs events ([gsd example](../src/Eventuria/GSD/Write/Model/Events/Event.hs))
-- mapping between the application commands and the cqrs commands ([gsd example](../src/Eventuria/GSD/Write/Model/Commands/Command.hs))
-- the orchestration flow for command consumption ([gsd example](../src/Eventuria/Libraries/CQRS/Write/CommandConsumption/Orchestration.hs))
-    - 2 functions (ProjectWriteModel and HandleCommand)
-        ```haskell
-            data CommandHandlingResult =   CommandRejected   { reason ::  RejectionReason}
-                                         | CommandValidated  { events ::  [Event]} deriving (Eq,Show)
+<p align="center">
+  <img src="dataFlow.png">
+</p>
 
-            type ProjectWriteModel writeModel = Maybe writeModel -> CommandHandlingResult -> Maybe writeModel
 
-            type HandleCommand writeModel = Maybe writeModel -> (Persisted Command) -> IO (CommandHandlingResult)
-        ```
-        - [Gsd `ProjectWriteModel` example](../src/Eventuria/GSD/Write/CommandConsumer/Handling/ProjectGSDWriteModel.hs)
-        - [Gsd `HandleCommand` example](../src/Eventuria/GSD/Write/CommandConsumer/Handling/HandleGSDCommand.hs)
+##  5. Emergent CQRS framework
+
+One of the intents when starting this project was to formalize the CQRS pattern and get eventually a Framework out of a concrete application like GSD. This is what the package [`Eventuria.CQRS`](../src/Eventuria/Libraries/CQRS)  will eventually become...
+To use this framework, the GSD application provides the following :
+
+- a specific WriteModel ([GSD `WriteModel`](../src/Eventuria/GSD/Write/Model/WriteModel.hs))
+- a map between the application and CQRS events ([GSD `Commands`](../src/Eventuria/GSD/Write/Model/Events/Event.hs))
+- a map between the application and CQRS commands ([GSD `Events`](../src/Eventuria/GSD/Write/Model/Commands/Command.hs))
+- a Command Consumption Orchestration ([GSD `Orchestration`](../src/Eventuria/Libraries/CQRS/Write/CommandConsumption/Orchestration.hs))
+- 2 functions (`ProjectWriteModel` and `HandleCommand`)
+    ```haskell
+    data CommandHandlingResult =   CommandRejected   { reason ::  RejectionReason}
+                                 | CommandValidated  { events ::  [Event]}
+
+    type ProjectWriteModel writeModel = Maybe writeModel ->
+                                        CommandHandlingResult ->
+                                        Maybe writeModel
+
+    type HandleCommand writeModel = Maybe writeModel ->
+                                    (Persisted Command) ->
+                                    IO (CommandHandlingResult)
+    ```
+- [GSD `ProjectWriteModel`](../src/Eventuria/GSD/Write/CommandConsumer/Handling/ProjectGSDWriteModel.hs)
+- [GSD `HandleCommand`](../src/Eventuria/GSD/Write/CommandConsumer/Handling/HandleGSDCommand.hs)
+
+
 <h1> </h1>
 
 
