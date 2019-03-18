@@ -31,7 +31,7 @@ import qualified Streamly.Prelude as Streamly
 import           Eventuria.Adapters.Servant.Wrapper
 import           Eventuria.Adapters.Streamly.Adapters
 
-import           Eventuria.Commons.DevOps.Core
+import           Eventuria.Commons.Dependencies.Core
 import           Eventuria.Commons.Logger.Core
 import           Eventuria.Commons.Dependencies.HealthChecking
 import           Eventuria.Commons.Network.Core

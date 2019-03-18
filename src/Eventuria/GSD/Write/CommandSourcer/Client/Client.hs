@@ -13,7 +13,7 @@ import           Data.Either.Combinators
 import qualified Servant.Client.Streaming as S
 import           Servant
 
-import           Eventuria.Commons.DevOps.Core
+import           Eventuria.Commons.Dependencies.Core
 
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId

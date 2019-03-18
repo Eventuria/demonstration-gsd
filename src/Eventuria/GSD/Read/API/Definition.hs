@@ -18,16 +18,16 @@ import Eventuria.GSD.Read.Model.Goal
 import Eventuria.GSD.Read.Model.Action
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.GSD.Write.Model.Core
-import Eventuria.Commons.DevOps.Core
+import Eventuria.Commons.Dependencies.Core
 
-type GSDReadApi =   HealthCheck
+type GSDReadApi =   HealthCheckRequest
                       :<|> StreamWorkspace
                       :<|>   StreamGoal
                       :<|>   StreamAction
                       :<|>   FetchWorkspace
                       :<|>   FetchGoal
 
-type HealthCheck =      "health" :> Get '[JSON]  Healthy
+type HealthCheckRequest =      "health" :> Get '[JSON]  Healthy
 
 type StreamWorkspace =   "gsd" :> "read" :> "streamWorkspace"
                                          :> StreamGet NewlineFraming JSON (P.Producer (Persisted Workspace) IO () )

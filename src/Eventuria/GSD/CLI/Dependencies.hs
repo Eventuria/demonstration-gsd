@@ -21,9 +21,9 @@ import qualified Eventuria.GSD.Write.CommandSourcer.Client.Dependencies         
 import qualified Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Client       as Command.Consumer.Client
 import qualified Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Dependencies as Command.Consumer.Client
 
-import           Eventuria.Commons.DevOps.Core
-import           Eventuria.GSD.CLI.Settings
 import           Eventuria.Commons.Dependencies.Core
+import           Eventuria.GSD.CLI.Settings
+
 
 
 

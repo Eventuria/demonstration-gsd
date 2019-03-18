@@ -9,7 +9,7 @@ import           Control.Concurrent
 import           Servant
 import           Network.Wai.Handler.Warp hiding (Settings)
                  
-import           Eventuria.Commons.DevOps.Core
+import           Eventuria.Commons.Dependencies.Core
 import           Eventuria.Commons.Logger.Core
 import           Eventuria.Commons.Network.Core
                  

@@ -1,7 +1,18 @@
 module Eventuria.Commons.Dependencies.Core where
 
-import Eventuria.Commons.DevOps.Core
 import Data.List.NonEmpty
+
+type UnhealthyReason = String
+type Healthy = ()
+type HealthCheckResult = Either UnhealthyReason Healthy
+
+healthy :: HealthCheckResult
+healthy = Right ()
+
+unhealthy :: String -> HealthCheckResult
+unhealthy = Left
+
+
 
 type Name = String
 data UnhealthyDependency = UnhealthyDependency {name :: Name,

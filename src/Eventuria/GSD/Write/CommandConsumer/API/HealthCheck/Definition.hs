@@ -13,8 +13,8 @@
 module Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Definition where
 
 import Servant
-import Eventuria.Commons.DevOps.Core
+import Eventuria.Commons.Dependencies.Core
 
-type GsdCommandConsumerApi =  HealthCheck
+type GsdCommandConsumerApi =  "health" :> Get '[JSON]  Healthy
 
-type HealthCheck = "health" :> Get '[JSON]  Healthy
+

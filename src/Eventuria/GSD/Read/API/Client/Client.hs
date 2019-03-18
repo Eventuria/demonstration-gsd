@@ -25,7 +25,7 @@ import qualified Streamly.Prelude as Streamly
 
 import           Eventuria.Adapters.Streamly.Adapters
 
-import           Eventuria.Commons.DevOps.Core
+import           Eventuria.Commons.Dependencies.Core
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 

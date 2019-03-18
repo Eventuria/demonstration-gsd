@@ -6,7 +6,7 @@ import Data.Function ((&))
 import Control.Concurrent
 
 import Eventuria.Adapters.Time.Core
-import Eventuria.Commons.DevOps.Core
+
 import Eventuria.Commons.Dependencies.Core
 import Eventuria.Commons.Logger.Core
 import Data.List.NonEmpty

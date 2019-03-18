@@ -5,15 +5,20 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 module Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Client where
 
-import Servant
-import Eventuria.Adapters.Servant.Wrapper
 import           Control.Exception
-import Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Dependencies
+
+import           Servant
 import qualified Servant.Client.Streaming as S
-import Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Definition
-import Eventuria.GSD.Write.Model.Commands.Serialization ()
-import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
-import Eventuria.Commons.DevOps.Core
+import           Eventuria.Adapters.Servant.Wrapper
+
+import           Eventuria.Commons.Dependencies.Core
+
+import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
+
+import           Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Client.Dependencies
+import           Eventuria.GSD.Write.CommandConsumer.API.HealthCheck.Definition
+
+import           Eventuria.GSD.Write.Model.Commands.Serialization ()
 
 data CommandConsumerDown = CommandConsumerDown  deriving Show
 

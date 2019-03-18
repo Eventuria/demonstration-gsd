@@ -24,6 +24,9 @@ import           Eventuria.GSD.Monitoring.API.Definition
 
 import           Eventuria.Adapters.Streamly.Adapters
 
+import           Eventuria.Commons.Dependencies.Core
+import           Eventuria.Commons.Logger.Core
+
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.GSD.Write.Model.Core
 import           Eventuria.GSD.Write.Model.Commands.Command
@@ -34,10 +37,8 @@ import           Eventuria.GSD.Write.Model.WriteModel
 
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
-import           Eventuria.Commons.DevOps.Core
 
 import           Eventuria.GSD.Monitoring.API.Client.Dependencies
-import           Eventuria.Commons.Logger.Core
 
 
 

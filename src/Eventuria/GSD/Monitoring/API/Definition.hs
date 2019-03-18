@@ -19,20 +19,20 @@ import Eventuria.GSD.Write.Model.Events.Event
 import Eventuria.GSD.Write.Model.Commands.Command
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.GSD.Write.Model.WriteModel
-
+import Eventuria.Commons.Dependencies.Core
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
-import Eventuria.Commons.DevOps.Core
+
 import qualified Pipes as P
 
 
-type GSDMonitoringStreamingApi =   HealthCheck
+type GSDMonitoringStreamingApi =   HealthCheckRequest
                              :<|>  StreamGsdCommandsByWorkspaceId
                              :<|>  StreamGsdCommandResponseByWorkspaceId
                              :<|>  StreamGsdEventsByWorkspaceId
                              :<|>  StreamGsdWriteModelHistoryByWorkspaceId
 
 
-type HealthCheck =      "health" :> Get '[JSON]  Healthy
+type HealthCheckRequest = "health" :> Get '[JSON]  Healthy
 
 type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "command" :>
                                       Capture "workspaceId" WorkspaceId :>

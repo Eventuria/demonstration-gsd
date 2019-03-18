@@ -15,7 +15,7 @@ import Data.Function ((&))
 
 import Eventuria.Adapters.Time.Core
 
-import Eventuria.Commons.DevOps.Core
+
 import Eventuria.Commons.Dependencies.Core
 
 import Eventuria.GSD.CLI.Dependencies
