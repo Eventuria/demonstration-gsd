@@ -152,14 +152,14 @@ orchestrate logger
         (\writeModelMaybe -> return $ Right writeModelMaybe)
         (streamFromOffsetInclusive commandStream $ commandOffset)
 
-listeningUpcomingCommands :: (Streamable stream monad Command, Streamable stream monad AggregateId) =>
-                                       Subscribing persistedStream ->
-                                       CommandStream persistedStream ->
-                                       Persisted AggregateId ->
-                                       stream monad (Either SomeException (Persisted AggregateId))
-listeningUpcomingCommands Subscribing {subscribe}
-                          commandStream
-                          persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =
-  (StreamlySafe.yield persistedAggregate)
-    <> ((subscribe $ commandStream)
-    & StreamlySafe.map (\newCommand -> PersistedItem { offset = offset,item = aggregateId }))
+    listeningUpcomingCommands :: (Streamable stream monad Command, Streamable stream monad AggregateId) =>
+                                           Subscribing persistedStream ->
+                                           CommandStream persistedStream ->
+                                           Persisted AggregateId ->
+                                           stream monad (Either SomeException (Persisted AggregateId))
+    listeningUpcomingCommands Subscribing {subscribe}
+                              commandStream
+                              persistedAggregate @ PersistedItem { offset = offset , item = aggregateId} =
+      (StreamlySafe.yield persistedAggregate)
+        <> ((subscribe $ commandStream)
+        & StreamlySafe.map (\newCommand -> PersistedItem { offset = offset,item = aggregateId }))

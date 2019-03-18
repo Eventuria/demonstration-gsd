@@ -4,7 +4,7 @@
    1. <a href="#21-overview">Overview</a>
    2. <a href="#22-resiliency-and-high-availability--health-check-mechanism">Resiliency and high availability</a>
    3. <a href="#23-demo">Health-check Mechanism Demo</a>
-3. <a href="#">DataFlow</a>
+3. <a href="#">Bounded Contexts</a>
 4. <a href="#">Packaging</a>
 <h1> </h1>
 
@@ -68,14 +68,13 @@ GSD is made of 6 distributed services :
     - Receives commands
     - Dispatch and Persist these commands in an aggregate command stream
 
-- `command-consumer`
-    - subscribe to new commands on each aggregate
-    - Consume the command
-        - updates the write model : : `WriteModel -> Events -> WriteModel`
-        - handles the command : `Command -> WriteModel -> CommandTransaction`
-        - persists these CommandTransaction stream (1 per aggregate), a command transaction can be :
-            - Accepted (contains events)
-            - Rejected (contains the reason of rejection)
+- `command-consumer` : It is an orchestration from the CQRS Sagas Terminology, this service orchestrates the consumption of commands on a specific aggregate.
+    - Listen on commands arriving on the command stream for each aggregates
+    - Re-build the write model from the previous command transactions
+    - perform the transactions on each command persisted (`handleCommand`), a command can be :
+        - Accepted (contains events)
+        - Rejected (contains the reason of rejection)
+    - persists these command transactions
 
 - `gsd-read`
     - reads events from the command transaction streams
@@ -154,10 +153,27 @@ All these packages will eventually be in their own github repository as they get
 </div>
 <br><br><br>
 
-##  4. Data Flow
+##  4. Emergent CQRS framework
 
-##  5. Emergent CQRS framework
+One of the intent when starting this project was to get a CQRS Framework out of a concrete application.
+This is what the package `Eventuria.CQRS` will eventually become...
+To use this framework, you need to provide the following :
 
+- a specific WriteModel for your application ([gsd example](../src/Eventuria/GSD/Write/Model/WriteModel.hs))
+- mapping between the application events and the cqrs events ([gsd example](../src/Eventuria/GSD/Write/Model/Events/Event.hs))
+- mapping between the application commands and the cqrs commands ([gsd example](../src/Eventuria/GSD/Write/Model/Commands/Command.hs))
+- the orchestration flow for command consumption ([gsd example](../src/Eventuria/Libraries/CQRS/Write/CommandConsumption/Orchestration.hs))
+    - 2 functions (ProjectWriteModel and HandleCommand)
+        ```haskell
+            data CommandHandlingResult =   CommandRejected   { reason ::  RejectionReason}
+                                         | CommandValidated  { events ::  [Event]} deriving (Eq,Show)
+
+            type ProjectWriteModel writeModel = Maybe writeModel -> CommandHandlingResult -> Maybe writeModel
+
+            type HandleCommand writeModel = Maybe writeModel -> (Persisted Command) -> IO (CommandHandlingResult)
+        ```
+        - [Gsd `ProjectWriteModel` example](../src/Eventuria/GSD/Write/CommandConsumer/Handling/ProjectGSDWriteModel.hs)
+        - [Gsd `HandleCommand` example](../src/Eventuria/GSD/Write/CommandConsumer/Handling/HandleGSDCommand.hs)
 <h1> </h1>
 
 
