@@ -1,4 +1,4 @@
-<p align="left">
+<p align="center">
    <img src="https://github.com/Eventuria/media/raw/master/headerGSD.jpg">
 </p>
 <h1> </h1>
