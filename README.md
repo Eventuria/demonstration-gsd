@@ -1,6 +1,7 @@
-<p align="left">
-   <img src="https://github.com/Eventuria/media/raw/master/headerGSD.png">
-</p>
+<img align="Left" width="33px" height="60px" src="https://github.com/Eventuria/media/raw/master/logoTight.jpg">
+<b>GSD (Get Stuffs Done)</b><br>
+Basic Todo list for demonstrating CQRS/Command Sourcing in Haskell
+<h1> </h1>
 <p align="center">
   BUSINESS FEATURE SET :bulb:<br>
   <a href="#">Create Workspaces</a> |
