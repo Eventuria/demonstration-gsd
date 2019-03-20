@@ -1,5 +1,5 @@
 <p align="center">
-   <img src="https://github.com/Eventuria/media/raw/master/headerGSD.jpg">
+   <img src="https://github.com/Eventuria/media/raw/master/headerGSD.png">
 </p>
 <h1> </h1>
 <p align="center">
