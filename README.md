@@ -1,6 +1,5 @@
-<p align="center">
-  <b>GSD (Get Stuffs Done)</b> <br>
-   Basic Todo list for demonstrating CQRS/Command Sourcing in Haskell
+<p align="left">
+   <img src="https://github.com/Eventuria/media/raw/master/headerGSD.jpg">
 </p>
 <h1> </h1>
 <p align="center">
