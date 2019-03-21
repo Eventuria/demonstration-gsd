@@ -20,7 +20,7 @@ import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Commons.Dependencies.Core
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
 
 
 type GsdWriteApi =  HealthCheckRequest :<|>  SendGsdCommand :<|>  WaitTillCommandResponseProduced

@@ -128,10 +128,10 @@ tests:
     dependencies:
     - gsd
     - hspec == 2.6.0
-    - QuickCheck
-    - aeson
-    - generic-arbitrary
-    - quickcheck-instances
-    - aeson-qq
-    - generic-random
-    - wreq >= 0.5.2.1
+    - QuickCheck == 2.12.6.1
+    - generic-arbitrary == 0.1.0
+    - quickcheck-instances == 0.3.19
+    - aeson-qq == 0.8.2
+    - generic-random == 1.2.0.0
+    - vector == 0.12.0.2
+

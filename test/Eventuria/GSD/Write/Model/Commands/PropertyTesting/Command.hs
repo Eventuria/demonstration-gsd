@@ -1,16 +1,16 @@
 {-# LANGUAGE InstanceSigs, TypeApplications #-}
-module Eventuria.GSD.Write.Arbitrary where
+module Eventuria.GSD.Write.Model.Commands.PropertyTesting.Command where
 
 import Test.QuickCheck
-import Generic.Random
-import Test.QuickCheck.Instances.UnorderedContainers ()
-import Test.QuickCheck.Instances.Vector ()
-import Test.QuickCheck.Instances.Scientific ()
 import Test.QuickCheck.Instances.Text ()
 import Test.QuickCheck.Instances.Time ()
-import Eventuria.GSD.Write.Model.Commands.Command
 import Test.QuickCheck.Instances.UUID ()
+
+import Generic.Random
+
+import Eventuria.GSD.Write.Model.Commands.Command
 
 instance Arbitrary GsdCommand where
   arbitrary :: Gen  GsdCommand
   arbitrary = genericArbitraryU
+

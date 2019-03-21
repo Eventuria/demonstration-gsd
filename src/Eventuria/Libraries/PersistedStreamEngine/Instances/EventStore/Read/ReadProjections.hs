@@ -19,10 +19,12 @@ import           Eventuria.Libraries.CQRS.Read.StreamRepository
 
 import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.EventStoreStream
 import           Eventuria.Libraries.PersistedStreamEngine.Instances.EventStore.Read.Streaming
+
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction()
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandResponse
 
 

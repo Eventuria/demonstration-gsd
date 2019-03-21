@@ -10,9 +10,15 @@ import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Read.Reading
 import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writing
 
+import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import Eventuria.Libraries.CQRS.Write.StreamRepository
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
+
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
+
+type ProjectWriteModel writeModel = Maybe writeModel -> CommandHandlingResult -> Maybe writeModel
+
+type HandleCommand writeModel = Maybe writeModel -> (Persisted Command) -> IO (CommandHandlingResult)
 
 type OrchestratreCommandConsumptionForAggregate writeModel = Persisted AggregateId ->  SerialT IO (Either SomeException (Maybe writeModel))
 

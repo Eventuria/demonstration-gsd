@@ -4,7 +4,8 @@ module Eventuria.GSD.Write.CommandConsumer.Handling.HandleGSDCommand (handleGSDC
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
 
 
 import           Eventuria.GSD.Write.Model.WriteModel

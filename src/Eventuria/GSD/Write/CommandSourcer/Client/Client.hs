@@ -22,7 +22,7 @@ import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction ()
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
 
 import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.CommandSourcer.Client.Dependencies

@@ -24,13 +24,12 @@ import           Eventuria.Libraries.PersistedStreamEngine.Interface.Streamable
 
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import           Eventuria.Libraries.CQRS.Write.StreamRepository
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 
 import           Eventuria.Libraries.CQRS.Write.Serialization.Command ()
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction ()
 
 getOrchestrationForAnAggregate :: (FromJSON writeModel, Show writeModel) =>

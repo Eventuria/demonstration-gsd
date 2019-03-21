@@ -37,7 +37,7 @@ import           Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import           Eventuria.Libraries.CQRS.Write.Serialization.PersistenceResult ()
 import           Eventuria.Libraries.CQRS.Write.PersistCommandResult
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
 
 
 import qualified Eventuria.GSD.Write.CommandSourcer.Service.OverEventStore as Service

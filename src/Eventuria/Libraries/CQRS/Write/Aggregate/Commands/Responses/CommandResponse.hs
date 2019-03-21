@@ -5,11 +5,10 @@ module Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Responses.CommandRespon
 
 import Eventuria.Libraries.CQRS.Write.Aggregate.Core
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
 
 data CommandResponse  = CommandSuccessfullyProcessed {aggregateId::AggregateId, commandId :: CommandId}
                       | CommandFailed { aggregateId::AggregateId, commandId :: CommandId, reason :: RejectionReason}  deriving (Show,Eq)

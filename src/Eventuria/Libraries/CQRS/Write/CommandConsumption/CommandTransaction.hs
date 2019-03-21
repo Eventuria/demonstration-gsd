@@ -2,15 +2,17 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-module Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction where
+module Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction where
+
+import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
+import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import Eventuria.Libraries.CQRS.Write.Aggregate.Ids.AggregateId
-import Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.Command
 import Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandHeader
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
+
+import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
 
 import GHC.Generics
 

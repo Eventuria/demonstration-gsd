@@ -2,13 +2,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 module Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction where
 
-import Data.Aeson
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.Transaction.CommandTransaction
-import Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
-import Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writable
-import Eventuria.Libraries.CQRS.Write.Serialization.Event()
-import Eventuria.Libraries.CQRS.Write.Serialization.CommandResponse ()
+import           Data.Aeson
 import qualified Data.Text as Text
+
+import           Eventuria.Libraries.PersistedStreamEngine.Interface.Write.Writable
+
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
+import           Eventuria.Libraries.CQRS.Write.Serialization.Event()
+
 
 instance Writable CommandTransaction  where
   getItemName commandTransaction  = "commandTransaction"

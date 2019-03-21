@@ -31,5 +31,5 @@ spec :: Spec
 spec = do
   describe "Action" $ do
     it "can be marshalled and unmarshalled"
-      $  verbose
+      $ property
       $ \action -> ((decode . encode) action) == (Just (action) :: Maybe (Action))

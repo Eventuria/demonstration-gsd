@@ -9,7 +9,7 @@ import qualified Data.Time as Time
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
 
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
 import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
                  
 import           Eventuria.GSD.Write.Model.Events.Event

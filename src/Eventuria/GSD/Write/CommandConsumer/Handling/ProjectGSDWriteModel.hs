@@ -4,11 +4,13 @@
 module Eventuria.GSD.Write.CommandConsumer.Handling.ProjectGSDWriteModel (projectGSDWriteModel) where
 
 import qualified Data.Set as Set
-import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandling.Definition
+
 import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Events.Event
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
 
+import           Eventuria.Libraries.CQRS.Write.Aggregate.Events.Event
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
+import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
 
 projectGSDWriteModel :: ProjectWriteModel GsdWriteModel
 projectGSDWriteModel writeModelMaybe commandHandlingResult =
