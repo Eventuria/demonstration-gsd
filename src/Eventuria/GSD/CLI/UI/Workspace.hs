@@ -11,7 +11,6 @@ import           Prelude hiding (length,read)
 import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Data.Text hiding (foldr,map)
 import           Data.UUID.V4
-import           Data.UUID
 import           Data.Functor
 import qualified Data.List                       as List
 
@@ -152,7 +151,6 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                         workspace @ Workspace {workspaceId}
                                         workOnWorkspaces) = do
       commandId <- liftIO $ nextRandom
-      sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceNewName <- askUntil "Enter a new workspace name : " Nothing atLeastThreeChars
       response <- liftIO $ sendCommandAndWaitTillProcessed
                             (commandSourcer  clientDependencies)
@@ -182,9 +180,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                     workspace @ Workspace {workspaceId}
                                     workOnWorkspaces) = do
         commandId <- liftIO $ nextRandom
-        sayLn $ fg green <> "generating a new Command Id (" <> text (toText commandId) <>") "
         goalId <- liftIO $ nextRandom
-        sayLn $ fg green <> "generating a new goal Id (" <> text (toText goalId) <>") "
         goalDescription <- askUntil "Enter a goal description : " Nothing atLeastThreeChars
         response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer  clientDependencies) SetGoal {commandId,
                                                                             workspaceId,

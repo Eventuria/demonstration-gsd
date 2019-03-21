@@ -11,7 +11,6 @@ import           Prelude hiding (length,read)
 import           Control.Monad.IO.Class (MonadIO(liftIO))
 import           Data.Text hiding (map,foldr)
 import           Data.UUID.V4
-import           Data.UUID
 import qualified Data.List                      as List
 
 import           System.Console.Byline hiding (askWithMenuRepeatedly)
@@ -83,8 +82,6 @@ run cliDependencies  @ Dependencies { clientDependencies} = do
       displayBeginningOfACommand
       workspaceId <- liftIO $ nextRandom
       commandId <- liftIO $ nextRandom
-      sayLn $ fg cyan <> "generating a new Workspace Id (" <> text (toText workspaceId) <> ") "
-      sayLn $ fg cyan <> "generating a new Command Id (" <> text (toText commandId) <>") "
       workspaceName <- askUntil ("> enter a workspace name : " ) Nothing atLeastThreeChars
 
       response <- liftIO $ sendCommandAndWaitTillProcessed

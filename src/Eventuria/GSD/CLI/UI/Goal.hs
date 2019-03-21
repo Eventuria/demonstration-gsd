@@ -12,7 +12,6 @@ import           Prelude hiding (length,read)
 import           Data.Text hiding (foldr,map)
 import           Data.Functor
 import           Data.UUID.V4
-import           Data.UUID
 import qualified Data.List                                    as List
 
 import           Control.Monad.IO.Class (MonadIO(liftIO))
@@ -201,7 +200,6 @@ run cliDependencies  @ Dependencies { clientDependencies}
                onError    = "please enter a valid index..."
            Action {actionId} <- askWithMenuRepeatedly menuConfig prompt onError
            commandId <- liftIO $ nextRandom
-           sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
            response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer clientDependencies) NotifyActionCompleted {commandId ,
                                                                                              workspaceId ,
                                                                                              goalId,
@@ -240,7 +238,6 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                      workOnWorkspace
                                                      workOnWorkspaces) = do
       commandId <- liftIO $ nextRandom
-      sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
       refinedGoalDescription <- askUntil "Enter a new goal description : " Nothing atLeastThreeChars
       response <- liftIO $ sendCommandAndWaitTillProcessed commandSourcer RefineGoalDescription {commandId ,
                                                                       workspaceId ,
@@ -278,9 +275,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                 workOnWorkspace
                                                 workOnWorkspaces) = do
       commandId <- liftIO $ nextRandom
-      sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
       actionId <- liftIO $ nextRandom
-      sayLn $ fg green <> "generated a new Action Id (" <> text (toText commandId) <>") "
       actionDetails <- askUntil "Enter the details of the action : " Nothing atLeastThreeChars
       response <- liftIO $ sendCommandAndWaitTillProcessed
                             (commandSourcer clientDependencies)
@@ -360,7 +355,6 @@ run cliDependencies  @ Dependencies { clientDependencies}
 
                 nextStatus <- askWithMenuRepeatedly menuConfig prompt onError
                 commandId <- liftIO $ nextRandom
-                sayLn $ fg green <> "generated a new Command Id (" <> text (toText commandId) <>") "
                 commandToSent <- getCommandToSend nextStatus commandId goalId workspaceId
                 response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer clientDependencies) commandToSent
                 case response of
