@@ -20,11 +20,11 @@ spec = do
   describe "Gsd Command" $ do
     it "can be converted back and forth to CQRS Command"
       $ property
-      $ \gsdCommand -> ((fromCommand . toCommand) gsdCommand) == (gsdCommand :: GsdCommand)
+      $ \gsdCommand -> ((fromCommand . toCommand) gsdCommand) == (gsdCommand :: GSDCommand)
 
 
     it "can be marshalled and unmarshalled"
       $ property
-      $ \command -> ((decode . encode) command) == (Just (command) :: Maybe (GsdCommand))
+      $ \command -> ((decode . encode) command) == (Just (command) :: Maybe (GSDCommand))
 
 

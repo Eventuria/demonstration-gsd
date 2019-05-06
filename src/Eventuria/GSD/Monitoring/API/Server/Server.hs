@@ -125,7 +125,7 @@ start settings @ Settings {healthCheckLoggerId}  = do
         streamCommand :: ServerThreadId ->
                          Server.Dependencies ->
                          WorkspaceId ->
-                         Handler (PipeStream (Persisted GsdCommand))
+                         Handler (PipeStream (Persisted GSDCommand))
         streamCommand serverThreadId
                       Server.Dependencies {logger,eventStoreClientDependencies}
                       workspaceId =

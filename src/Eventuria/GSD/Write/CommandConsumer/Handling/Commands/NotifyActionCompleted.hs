@@ -7,30 +7,17 @@ import qualified Data.Set as Set
 import qualified Data.UUID.V4 as Uuid
 import qualified Data.Time as Time
 import           Data.List hiding (union)
-                 
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-                 
+
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-                 
+
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Core
+import           Eventuria.GSD.Write.Model.Commands.Command
 
-
-handle :: Offset ->
-          GsdWriteModel ->
-          CommandId ->
-          WorkspaceId ->
-          GoalId ->
-          ActionId ->
-          IO (CommandHandlingResult)
-handle offset
-       writeModel @ GsdWriteModel {goals}
-       commandId
-       workspaceId
-       goalId
-       actionId =
+handle :: GsdWriteModel -> NotifyActionCompleted -> IO (CommandHandlingResult)
+handle writeModel @ GsdWriteModel {goals}
+       NotifyActionCompleted {commandId, workspaceId, goalId, actionId} =
   case (findGoal goalId goals)  of
     Nothing -> return $ CommandRejected  "Trying to notify an action completion on a goal that does not exist"
     Just goal @ Goal {workspaceId,goalId, actions,  description,status} ->

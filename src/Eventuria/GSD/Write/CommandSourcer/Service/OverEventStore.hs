@@ -21,7 +21,7 @@ import           Eventuria.GSD.Write.Model.Commands.Command
 import           Eventuria.GSD.Write.Repository.EventStoreStreams
 
 
-persistCommand ::  EventStoreClient.Dependencies -> GsdCommand -> IO (Either SomeException PersistCommandResult)
+persistCommand ::  EventStoreClient.Dependencies -> GSDCommand -> IO (Either SomeException PersistCommandResult)
 persistCommand eventStoreClientDependencies gsdCommand =
   GSD.Service.Generic.persistCommand
     (aggregateIdStream $ getEventStoreStreamRepository eventStoreClientDependencies)

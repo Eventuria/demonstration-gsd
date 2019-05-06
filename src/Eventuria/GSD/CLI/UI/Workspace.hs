@@ -154,7 +154,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
       workspaceNewName <- askUntil "Enter a new workspace name : " Nothing atLeastThreeChars
       response <- liftIO $ sendCommandAndWaitTillProcessed
                             (commandSourcer  clientDependencies)
-                            RenameWorkspace {commandId ,
+                            $ GSDCommand RenameWorkspaceRep RenameWorkspace {commandId ,
                                              workspaceId,
                                              workspaceNewName}
       case response of
@@ -182,7 +182,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
         commandId <- liftIO $ nextRandom
         goalId <- liftIO $ nextRandom
         goalDescription <- askUntil "Enter a goal description : " Nothing atLeastThreeChars
-        response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer  clientDependencies) SetGoal {commandId,
+        response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer  clientDependencies) $ GSDCommand SetGoalRep SetGoal {commandId,
                                                                             workspaceId,
                                                                             goalId,
                                                                             goalDescription}

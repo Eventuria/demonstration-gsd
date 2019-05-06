@@ -3,7 +3,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -96,7 +95,7 @@ start settings @ Settings {healthCheckLoggerId}  =
 
       sendGsdCommand :: ServerThreadId ->
                         Server.Dependencies ->
-                        GsdCommand ->
+                        GSDCommand ->
                         Handler PersistCommandResult
       sendGsdCommand serverThreadId
                      Server.Dependencies {logger,eventStoreClientDependencies}

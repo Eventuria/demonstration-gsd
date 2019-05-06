@@ -36,7 +36,7 @@ streamWorkspaceId eventStoreClientDependencies =
 
 streamCommand :: EventStoreClient.Dependencies ->
                  WorkspaceId ->
-                 SerialT IO (Either SomeException (Persisted GsdCommand))
+                 SerialT IO (Either SomeException (Persisted GSDCommand))
 streamCommand eventStoreClientDependencies workspaceId =
    GenericGSDMonitoring.streamCommand
      (getCommandStream $ getEventStoreStreamRepository eventStoreClientDependencies)

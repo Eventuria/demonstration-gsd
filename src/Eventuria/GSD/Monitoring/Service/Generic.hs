@@ -29,6 +29,7 @@ import           Eventuria.Libraries.CQRS.Read.StreamRepository
 
 import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Commands.Command
+import           Eventuria.GSD.Write.Model.Commands.Mapper
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.Core
 
@@ -39,7 +40,7 @@ streamWorkspaceId streamAll = streamAll
 streamCommand ::  Streamable stream monad Command => GetCommandStream persistedStream ->
                     Streaming persistedStream ->
                     WorkspaceId ->
-                    stream monad (Either SomeException (Persisted GsdCommand))
+                    stream monad (Either SomeException (Persisted GSDCommand))
 streamCommand getCommandStream Streaming {streamAll} workspaceId =
   (streamAll $ getCommandStream workspaceId) &
       S.map (\result -> over _Right (\PersistedItem { offset = offset, item = cqrsCommand} ->

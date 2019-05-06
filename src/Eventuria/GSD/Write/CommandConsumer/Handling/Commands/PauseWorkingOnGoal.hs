@@ -1,33 +1,24 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DataKinds #-}
+
 module Eventuria.GSD.Write.CommandConsumer.Handling.Commands.PauseWorkingOnGoal where
 
 import           Data.List (find)
 import qualified Data.UUID.V4 as Uuid
 import qualified Data.Time as Time
 
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-                 
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
-                 
+
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Core
+import           Eventuria.GSD.Write.Model.Commands.Command
 
-
-handle :: Offset ->
-          GsdWriteModel ->
-          CommandId ->
-          WorkspaceId ->
-          GoalId ->
+handle :: GsdWriteModel ->
+          PauseWorkingOnGoal ->
           IO (CommandHandlingResult)
-handle offset
-       writeModel @ GsdWriteModel {goals}
-       commandId
-       workspaceId
-       goalId =
+handle writeModel @ GsdWriteModel {goals}
+       PauseWorkingOnGoal { commandId, workspaceId, goalId} =
   case (findGoal goalId goals)  of
     Nothing -> return $ CommandRejected  "Trying to pause a goal that does not exist"
     Just goal @ Goal {workspaceId,goalId,description,status} ->

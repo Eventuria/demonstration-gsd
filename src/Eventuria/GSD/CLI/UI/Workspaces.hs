@@ -86,7 +86,7 @@ run cliDependencies  @ Dependencies { clientDependencies} = do
 
       response <- liftIO $ sendCommandAndWaitTillProcessed
                             (commandSourcer  clientDependencies)
-                            CreateWorkspace {commandId ,
+                            $ GSDCommand CreateWorkspaceRep CreateWorkspace {commandId ,
                                              workspaceId ,
                                              workspaceName}
       case response of

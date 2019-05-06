@@ -46,7 +46,7 @@ healthCheck    Dependencies { httpClientManager, url, logger}  =
             Right healthy  -> return $ Right () ))
     (\SomeException {} -> return $ Left CommandSourcerServerDown )
 
-sendCommandAndWaitTillProcessed :: Dependencies -> GsdCommand -> IO (Either CommandSourcerServerDown CommandResponse )
+sendCommandAndWaitTillProcessed :: Dependencies -> GSDCommand -> IO (Either CommandSourcerServerDown CommandResponse )
 sendCommandAndWaitTillProcessed dependencies @ Dependencies { httpClientManager, url, logger} gsdCommand =
    catch
     (S.withClientM
@@ -78,7 +78,7 @@ sendCommandAndWaitTillProcessed dependencies @ Dependencies { httpClientManager,
           Right PersistedItem {item} -> return $ Right item))
 
 healthCheckCall :: S.ClientM Healthy
-sendCommandCall :: GsdCommand -> S.ClientM PersistCommandResult
+sendCommandCall :: GSDCommand -> S.ClientM PersistCommandResult
 waitTillCommandResponseProducedCall :: AggregateId ->
                                        Offset ->
                                        CommandId ->

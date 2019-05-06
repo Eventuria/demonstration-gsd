@@ -200,7 +200,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                onError    = "please enter a valid index..."
            Action {actionId} <- askWithMenuRepeatedly menuConfig prompt onError
            commandId <- liftIO $ nextRandom
-           response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer clientDependencies) NotifyActionCompleted {commandId ,
+           response <- liftIO $ sendCommandAndWaitTillProcessed (commandSourcer clientDependencies) $ GSDCommand NotifyActionCompletedRep NotifyActionCompleted {commandId ,
                                                                                              workspaceId ,
                                                                                              goalId,
                                                                                              actionId}
@@ -239,7 +239,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
                                                      workOnWorkspaces) = do
       commandId <- liftIO $ nextRandom
       refinedGoalDescription <- askUntil "Enter a new goal description : " Nothing atLeastThreeChars
-      response <- liftIO $ sendCommandAndWaitTillProcessed commandSourcer RefineGoalDescription {commandId ,
+      response <- liftIO $ sendCommandAndWaitTillProcessed commandSourcer $ GSDCommand RefineGoalDescriptionRep  RefineGoalDescription {commandId ,
                                                                       workspaceId ,
                                                                       goalId,
                                                                       refinedGoalDescription}
@@ -279,7 +279,7 @@ run cliDependencies  @ Dependencies { clientDependencies}
       actionDetails <- askUntil "Enter the details of the action : " Nothing atLeastThreeChars
       response <- liftIO $ sendCommandAndWaitTillProcessed
                             (commandSourcer clientDependencies)
-                              ActionizeOnGoal {commandId ,
+                              $ GSDCommand ActionizeOnGoalRep ActionizeOnGoal {commandId ,
                                                workspaceId ,
                                                goalId,
                                                actionId ,
@@ -381,15 +381,15 @@ run cliDependencies  @ Dependencies { clientDependencies}
 
 
       where
-          getCommandToSend :: GoalStatus -> CommandId -> GoalId -> WorkspaceId -> Byline IO (GsdCommand)
+          getCommandToSend :: GoalStatus -> CommandId -> GoalId -> WorkspaceId -> Byline IO (GSDCommand)
           getCommandToSend goalStatus commandId goalId workspaceId = case goalStatus of
             Created -> error "Can't have Created as the next step"
-            InProgress -> return $ StartWorkingOnGoal {commandId,goalId,workspaceId}
-            Paused -> return $ PauseWorkingOnGoal {commandId,goalId,workspaceId}
-            Accomplished -> return $ NotifyGoalAccomplishment {commandId,goalId,workspaceId}
+            InProgress -> return $ GSDCommand StartWorkingOnGoalRep StartWorkingOnGoal {commandId,goalId,workspaceId}
+            Paused -> return $ GSDCommand PauseWorkingOnGoalRep PauseWorkingOnGoal {commandId,goalId,workspaceId}
+            Accomplished -> return $ GSDCommand NotifyGoalAccomplishmentRep NotifyGoalAccomplishment {commandId,goalId,workspaceId}
             GivenUp -> do
                 reason <- askUntil "Enter a reason why you give up on that goal : " Nothing atLeastThreeChars
-                return $ GiveUpOnGoal {commandId,goalId,workspaceId,reason}
+                return $ GSDCommand GiveUpOnGoalRep GiveUpOnGoal {commandId,goalId,workspaceId,reason}
 
 
     displayGoal :: Workspace -> Goal -> [Action] ->  Stylized

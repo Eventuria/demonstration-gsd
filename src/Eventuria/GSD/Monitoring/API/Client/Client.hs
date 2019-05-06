@@ -46,7 +46,7 @@ data MonitoringServerDown = MonitoringServerDown  deriving Show
 
 instance Exception MonitoringServerDown
 
-streamGsdCommandByWorkspaceId ::           Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted GsdCommand])
+streamGsdCommandByWorkspaceId ::           Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted GSDCommand])
 streamGsdCommandResponseByWorkspaceId ::   Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted CommandResponse])
 streamGsdEventByWorkspaceId ::             Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted GsdEvent])
 streamGsdWriteModelHistoryByWorkspaceId :: Dependencies -> WorkspaceId -> IO (Either MonitoringServerDown [Persisted (Maybe GsdWriteModel)])
@@ -90,7 +90,7 @@ bindWithSettings call Dependencies { httpClientManager, url, logger} workspaceId
 
 
 healthCheckCall :: S.ClientM Healthy
-streamGsdCommandByWorkspaceIdOnPipe ::           WorkspaceId -> S.ClientM (P.Producer (Persisted GsdCommand)                 IO ())
+streamGsdCommandByWorkspaceIdOnPipe ::           WorkspaceId -> S.ClientM (P.Producer (Persisted GSDCommand)                 IO ())
 streamGsdCommandResponseByWorkspaceIdOnPipe ::   WorkspaceId -> S.ClientM (P.Producer (Persisted CommandResponse)            IO ())
 streamGsdEventByWorkspaceIdOnPipe ::             WorkspaceId -> S.ClientM (P.Producer (Persisted GsdEvent)                   IO ())
 streamGsdWriteModelHistoryByWorkspaceIdOnPipe :: WorkspaceId -> S.ClientM (P.Producer (Persisted (Maybe GsdWriteModel)) IO ())

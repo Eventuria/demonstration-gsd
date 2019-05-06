@@ -10,7 +10,7 @@ import Generic.Random
 
 import Eventuria.GSD.Write.Model.Commands.Command
 
-instance Arbitrary GsdCommand where
-  arbitrary :: Gen  GsdCommand
+instance Arbitrary GSDCommand where
+  arbitrary :: Gen  GSDCommand
   arbitrary = genericArbitraryU
 

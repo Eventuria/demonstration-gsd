@@ -18,12 +18,13 @@ import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import           Eventuria.Libraries.CQRS.Write.Serialization.CommandTransaction()
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandTransaction
 import           Eventuria.GSD.Write.Model.Commands.Command
+import           Eventuria.GSD.Write.Model.Commands.Mapper
 
 persistCommand ::  AggregateIdStream persistedStream ->
                    GetCommandStream persistedStream->
                    Querying persistedStream ->
                    Writing persistedStream ->
-                   GsdCommand ->
+                   GSDCommand ->
                    IO ( Either SomeException PersistCommandResult)
 persistCommand aggregateIdStream getCommandStream querying writing gsdCommand =
   CQRS.Service.persistCommand

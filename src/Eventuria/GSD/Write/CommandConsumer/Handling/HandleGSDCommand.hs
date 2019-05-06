@@ -1,5 +1,6 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE GADTs #-}
 module Eventuria.GSD.Write.CommandConsumer.Handling.HandleGSDCommand (handleGSDCommand) where
 
 import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedItem
@@ -7,10 +8,9 @@ import           Eventuria.Libraries.PersistedStreamEngine.Interface.PersistedIt
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.Definitions
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
 
-
 import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Commands.Command
-import           Eventuria.GSD.Write.CommandConsumer.Handling.CommandPredicates
+import           Eventuria.GSD.Write.Model.Commands.Mapper
 import qualified Eventuria.GSD.Write.CommandConsumer.Handling.Commands.CreateWorkspace          as CreateWorkspace
 import qualified Eventuria.GSD.Write.CommandConsumer.Handling.Commands.RenameWorkspace          as RenameWorkspace
 import qualified Eventuria.GSD.Write.CommandConsumer.Handling.Commands.SetGoal                  as SetGoal
@@ -22,33 +22,28 @@ import qualified Eventuria.GSD.Write.CommandConsumer.Handling.Commands.GiveUpOnG
 import qualified Eventuria.GSD.Write.CommandConsumer.Handling.Commands.ActionizeOnGoal          as ActionizeOnGoal
 import qualified Eventuria.GSD.Write.CommandConsumer.Handling.Commands.NotifyActionCompleted    as NotifyActionCompleted
 
-type GSDCommandHandler  = Maybe GsdWriteModel ->
-                         (Persisted GsdCommand) ->
-                         IO (CommandHandlingResult)
+
+
+type GSDCommandHandler  = Maybe GsdWriteModel -> (Persisted GSDCommand) -> IO (CommandHandlingResult)
+
 
 handleGSDCommand :: HandleCommand GsdWriteModel
-handleGSDCommand writeModelMaybe
-               PersistedItem {offset , item = command }
-  | (isFirstCommand offset) && (not . isCreateWorkspaceCommand) command = return $ CommandRejected "CreateWorkspace should be the first command"
-  | otherwise =   gsdCommandHandler writeModelMaybe PersistedItem {offset , item = (fromCommand command) }
+handleGSDCommand writeModelMaybe PersistedItem {offset , item = command } = gsdCommandHandler writeModelMaybe PersistedItem {offset , item = (fromCommand command) }
+
+
 
 gsdCommandHandler :: GSDCommandHandler
-gsdCommandHandler
-        writeModelMaybe
-        PersistedItem {offset , item = gsdCommand } =
-  case (writeModelMaybe, gsdCommand) of
-     (Nothing        ,CreateWorkspace          {commandId, workspaceId, workspaceName})                   -> CreateWorkspace.handle          offset            commandId workspaceId workspaceName
-     (Just writeModel,RenameWorkspace          {commandId, workspaceId, workspaceNewName})                -> RenameWorkspace.handle          offset writeModel commandId workspaceId workspaceNewName
-     (Just writeModel,SetGoal                  {commandId, workspaceId, goalId, goalDescription})         -> SetGoal.handle                  offset writeModel commandId workspaceId goalId goalDescription
-     (Just writeModel,RefineGoalDescription    {commandId, workspaceId, goalId, refinedGoalDescription})  -> RefineGoalDescription.handle    offset writeModel commandId workspaceId goalId refinedGoalDescription
-     (Just writeModel,StartWorkingOnGoal       {commandId, workspaceId, goalId})                          -> StartWorkingOnGoal.handle       offset writeModel commandId workspaceId goalId
-     (Just writeModel,PauseWorkingOnGoal       {commandId, workspaceId, goalId})                          -> PauseWorkingOnGoal.handle       offset writeModel commandId workspaceId goalId
-     (Just writeModel,NotifyGoalAccomplishment {commandId, workspaceId, goalId})                          -> NotifyGoalAccomplishment.handle offset writeModel commandId workspaceId goalId
-     (Just writeModel,GiveUpOnGoal             {commandId, workspaceId, goalId, reason})                  -> GiveUpOnGoal.handle             offset writeModel commandId workspaceId goalId reason
-     (Just writeModel,ActionizeOnGoal          {commandId, workspaceId, goalId, actionId, actionDetails}) -> ActionizeOnGoal.handle          offset writeModel commandId workspaceId goalId actionId actionDetails
-     (Just writeModel,NotifyActionCompleted    {commandId, workspaceId, goalId, actionId})                -> NotifyActionCompleted.handle    offset writeModel commandId workspaceId goalId actionId
-     (_            ,_)                                                                                    -> return $ CommandRejected "Scenario not handle"
-
+gsdCommandHandler Nothing           PersistedItem {offset , item = (GSDCommand CreateWorkspaceRep          (createWorkspace         ))} = CreateWorkspace.handle                     createWorkspace
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand RenameWorkspaceRep          (renameWorkspace         ))} = RenameWorkspace.handle          writeModel renameWorkspace
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand SetGoalRep                  (setGoal                 ))} = SetGoal.handle                  writeModel setGoal
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand RefineGoalDescriptionRep    (refineGoalDescription   ))} = RefineGoalDescription.handle    writeModel refineGoalDescription
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand StartWorkingOnGoalRep       (startWorkingOnGoal      ))} = StartWorkingOnGoal.handle       writeModel startWorkingOnGoal
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand PauseWorkingOnGoalRep       (pauseWorkingOnGoal      ))} = PauseWorkingOnGoal.handle       writeModel pauseWorkingOnGoal
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand NotifyGoalAccomplishmentRep (notifyGoalAccomplishment))} = NotifyGoalAccomplishment.handle writeModel notifyGoalAccomplishment
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand GiveUpOnGoalRep             (giveUpOnGoal            ))} = GiveUpOnGoal.handle             writeModel giveUpOnGoal
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand ActionizeOnGoalRep          (actionizeOnGoal         ))} = ActionizeOnGoal.handle          writeModel actionizeOnGoal
+gsdCommandHandler (Just writeModel) PersistedItem {offset , item = (GSDCommand NotifyActionCompletedRep    (notifyActionCompleted   ))} = NotifyActionCompleted.handle    writeModel notifyActionCompleted
+gsdCommandHandler _ _ = return $ CommandRejected "Scenario not handle"
 
 
 

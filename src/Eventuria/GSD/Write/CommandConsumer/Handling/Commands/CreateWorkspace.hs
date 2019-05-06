@@ -1,28 +1,19 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DuplicateRecordFields #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE GADTs #-}
 module Eventuria.GSD.Write.CommandConsumer.Handling.Commands.CreateWorkspace where
 
-import           Data.Text
 import qualified Data.UUID.V4 as Uuid
 import qualified Data.Time as Time
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-                 
+
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
                  
 import           Eventuria.GSD.Write.Model.Events.Event
-import           Eventuria.GSD.Write.Model.Core
+import           Eventuria.GSD.Write.Model.Commands.Command
 
-handle :: Offset ->
-          CommandId ->
-          WorkspaceId  ->
-          Text ->
-          IO (CommandHandlingResult)
-handle offset
-       commandId
-       workspaceId
-       workspaceName = do
+handle :: CreateWorkspace -> IO (CommandHandlingResult)
+handle CreateWorkspace { commandId, workspaceId, workspaceName} = do
          createdOn <- Time.getCurrentTime
          eventIdWorkspaceCreated <- Uuid.nextRandom
          eventIdWorkspaceNamed <- Uuid.nextRandom
@@ -36,4 +27,5 @@ handle offset
                                createdOn,
                                workspaceId ,
                                workspaceName}]
+
 

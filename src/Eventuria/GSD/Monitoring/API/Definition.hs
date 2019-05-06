@@ -39,7 +39,7 @@ type StreamGsdCommandsByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "comm
                                       StreamGet
                                         NewlineFraming
                                         JSON
-                                        (P.Producer (Persisted GsdCommand) IO () )
+                                        (P.Producer (Persisted GSDCommand) IO () )
 
 type StreamGsdCommandResponseByWorkspaceId = "gsd" :> "monitoring" :> "stream" :> "commandResponses" :>
                                              Capture "workspaceId" WorkspaceId :>

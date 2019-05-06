@@ -28,7 +28,7 @@ type GsdWriteApi =  HealthCheckRequest :<|>  SendGsdCommand :<|>  WaitTillComman
 type HealthCheckRequest =      "health" :> Get '[JSON]  Healthy
 
 type SendGsdCommand = "gsd" :> "write" :> "sendCommand"
-                                       :> ReqBody '[JSON] GsdCommand
+                                       :> ReqBody '[JSON] GSDCommand
                                        :> PostAccepted '[JSON] PersistCommandResult
 
 

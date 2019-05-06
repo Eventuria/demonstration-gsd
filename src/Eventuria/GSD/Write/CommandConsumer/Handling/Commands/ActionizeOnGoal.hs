@@ -3,34 +3,22 @@
 {-# LANGUAGE DataKinds #-}
 module Eventuria.GSD.Write.CommandConsumer.Handling.Commands.ActionizeOnGoal where
 
-import           Data.Text hiding (map,find)
 import           Data.Set hiding (map)
 import           Data.List hiding (union)
 import qualified Data.UUID.V4 as Uuid
 import qualified Data.Time as Time
 
-import           Eventuria.Libraries.PersistedStreamEngine.Interface.Offset
-
-import           Eventuria.Libraries.CQRS.Write.Aggregate.Commands.CommandId
 import           Eventuria.Libraries.CQRS.Write.CommandConsumption.CommandHandlingResult
 
 
 import           Eventuria.GSD.Write.Model.Events.Event
 import           Eventuria.GSD.Write.Model.WriteModel
 import           Eventuria.GSD.Write.Model.Core
+import           Eventuria.GSD.Write.Model.Commands.Command
 
-
-handle :: Offset ->
-          GsdWriteModel ->
-          CommandId ->
-          WorkspaceId ->
-          GoalId ->
-          ActionId ->
-          Text  ->
-          IO (CommandHandlingResult)
-handle offset
-       writeModel @ GsdWriteModel {goals}
-       commandId workspaceId goalId actionId actionDetails =
+handle :: GsdWriteModel -> ActionizeOnGoal  -> IO (CommandHandlingResult)
+handle writeModel @ GsdWriteModel {goals}
+       ActionizeOnGoal {commandId, workspaceId, goalId, actionId, actionDetails} =
   case (findGoal goalId goals)  of
     Nothing -> return $ CommandRejected "Trying to actionize on a goal that does not exist"
     Just goal @ Goal {workspaceId,goalId, actions,  description,status} ->
@@ -46,8 +34,6 @@ handle offset
                                                   goalId ,
                                                   actionId,
                                                   actionDetails}]
-
-
   where
       findGoal :: GoalId -> [Goal] -> Maybe Goal
       findGoal  goalIdToFind goals = find (\Goal{goalId} -> goalIdToFind == goalId ) goals
