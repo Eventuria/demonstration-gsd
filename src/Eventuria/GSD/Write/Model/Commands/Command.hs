@@ -65,9 +65,6 @@ data GSDCommand where
 instance Show GSDCommand where
   show (GSDCommand _ command) = show command
 
-instance Generic GSDCommand where
-   (GSDCommand _ command) = show command
-
 
 -- Typecase Pattern
 data GSDCommandRep commandType where
